@@ -15,7 +15,7 @@ load_dotenv()
 
 bot_owner_id = int(os.getenv('BOT_OWNER_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
-startup_guild_id = int(os.getenv('MAIN_GUILD_ID'))
+startup_guild_id = int(os.getenv('DEV_GUILD_ID'))
 print(f"{startup_channel_id}, {startup_guild_id}")
 
 async def load_cogs(bot, directory='./cogs'):
