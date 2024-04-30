@@ -56,12 +56,14 @@ class TimeoutLoggingCog(commands.Cog):
 
             if after.timed_out_until is not None:
                 timeout_time = after.timed_out_until.timestamp()
-                timeout_time_stamp = "<t:{}>:<t:{}>".format(int(timeout_time), int(timeout_time))
+                timeout_time_stamp = "<t:{}> | <t:{}:R>".format(int(timeout_time), int(timeout_time))
 
-                embed = discord.Embed(title=f"{after.display_name} がタイムアウトしました", color=discord.Color.red())
+                embed = discord.Embed(title=f"{after.display_name} がタイムアウトされました", color=discord.Color.red())
                 embed.set_thumbnail(url=after.avatar.url)
                 embed.set_author(name=after.display_name, icon_url=after.avatar.url)
                 embed.add_field(name="タイムアウト期限", value=timeout_time_stamp, inline=False)
+                embed.add_field(name="理由", value=after.timed_out_reason, inline=False)
+                embed.add_field(name="タイムアウトを実行したユーザー", value=after.timed_out_by.mention, inline=False)
                 embed.set_footer(text=before.guild.name, icon_url=before.guild.icon.url)
                 
                 await log_channel.send(embed=embed)
@@ -70,6 +72,8 @@ class TimeoutLoggingCog(commands.Cog):
                 embed = discord.Embed(title=f"{after.display_name} のタイムアウトが解除されました", color=discord.Color.green())
                 embed.set_thumbnail(url=after.avatar.url)
                 embed.set_author(name=after.display_name, icon_url=after.avatar.url)
+                if before.timed_out_by is not None:
+                    embed.add_field(name="タイムアウトを解除したユーザー", value=before.timed_out_by.mention, inline=False)
                 embed.set_footer(text=before.guild.name, icon_url=before.guild.icon.url)
 
                 await log_channel.send(embed=embed)
