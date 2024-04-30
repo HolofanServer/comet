@@ -12,3 +12,5 @@ dev/
 
 # データディレクトリ
 data/
+# Pythonのバイトコード
+/__pycache__/
