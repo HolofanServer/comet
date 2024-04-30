@@ -55,7 +55,11 @@ class HelpModal(Modal):
         if channel is None:
             return
         e = discord.Embed(title="質問", description=f"{command_name}\n{question_content}", color=discord.Color.blurple())
-        e.set_footer(text=f"{interaction.user}", icon_url=interaction.user.avatar.url)
+        if interaction.client.user.avatar:
+            icon_url = interaction.client.user.avatar.url
+        else:
+            icon_url = ""  # ここにデフォルトのアバターURLを設定
+        e.set_footer(text=f"{interaction.user}", icon_url=icon_url)
         help_embed = await channel.send(embed=e)
         await help_embed.edit(view=HelpReplyView(interaction.user, help_embed))
 
@@ -80,7 +84,11 @@ class HelpReplyModal(Modal):
         e = discord.Embed(title="質問に対しての回答", description="", color=discord.Color.blurple())
         e.add_field(name="質問内容", value=f"{interaction.message.embeds[0].description}", inline=False)
         e.add_field(name="返信内容", value=f"{self.children[0].value}", inline=False)
-        e.set_footer(text=f"{interaction.user}", icon_url=interaction.user.avatar.url)
+        if interaction.user.avatar:
+            icon_url = interaction.user.avatar.url
+        else:
+            icon_url = ""  # ここにデフォルトのアバターURLを設定
+        e.set_footer(text=f"{interaction.user}", icon_url=icon_url)
         reply_msg = await user.send(embed=e)
         await self.help_embed.delete()
 
@@ -105,7 +113,11 @@ class HelpReplyEditModal(Modal):
         e = discord.Embed(title="質問に対しての回答", description="", color=discord.Color.blurple())
         e.add_field(name="質問内容", value=f"{interaction.message.embeds[0].description}", inline=False)
         e.add_field(name="返信内容", value=f"{self.children[0].value}", inline=False)
-        e.set_footer(text=f"{interaction.user}", icon_url=interaction.user.avatar.url)
+        if interaction.user.avatar:
+            icon_url = interaction.user.avatar.url
+        else:
+            icon_url = ""  # ここにデフォルトのアバターURLを設定
+        e.set_footer(text=f"{interaction.user}", icon_url=icon_url)
         reply_msg = await interaction.user.send(embed=e)
         await self.help_embed.edit(embed=self.help_embed.embeds[0].add_field(name="返信内容", value=f"{self.children[0].value}", inline=False), view=None)
 
@@ -168,17 +180,21 @@ class HelpSelect(Select):
             e = discord.Embed(title='メンションを使った募集方法', colour=color, timestamp=now)
             e.add_field(name='メンションを使用する場合', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数> <ここでメンションしたいロールを選択> <最大三つまで同時に可能です> <ここには3個目>\n - コマンドを入力した際に[オプション]として表示されます。詳しくは画像をご覧ください。', inline=False)
             e.set_footer(text="メンションを使った募集方法の説明")
-            e.set_thumbnail(url=interaction.client.user.avatar.url)
-            e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=interaction.client.user.avatar.url)
-            e.set_image(url="https://cdn.discordapp.com/attachments/1232610580628635719/1232610580628635719/unknown.png")
+            if interaction.client.user.avatar:
+                icon_url = interaction.client.user.avatar.url
+            else:
+                icon_url = ""  # ここにデフォルトのアバターURLを設定
+            e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
         elif selected_value == "time":
             e = discord.Embed(title='募集方法', colour=color, timestamp=now)
             e.add_field(name='時間を指定した募集', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数> <募集メッセージを送信する時刻>\n - 時間は[12:00]または[30分後]の形式で指定してください', inline=False)
             e.set_footer(text="時間を指定した募集方法の説明")
-            e.set_thumbnail(url=interaction.client.user.avatar.url)
-            e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=interaction.client.user.avatar.url)
-            e.set_image(url="https://cdn.discordapp.com/attachments/1232610580628635719/1232610580628635719/unknown.png")
+            if interaction.client.user.avatar:
+                icon_url = interaction.client.user.avatar.url
+            else:
+                icon_url = ""  # ここにデフォルトのアバターURLを設定
+            e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
         elif selected_value == "home":
             if interaction.guild:
@@ -193,9 +209,11 @@ class HelpSelect(Select):
             e.add_field(name='募集コマンドの使い方', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数>', inline=False)
             e.add_field(name='メンションを使用する場合', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数> <ここでメンションしたいロールを選択> <最大三つまで同時に可能です> <ここには3個目>\n - コマンドを入力した際に[オプション]として表示されます。詳しくは画像をご覧ください。', inline=False)
             e.add_field(name='時間を指定した募集', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数> <募集メッセージを送信する時刻>\n - 時間は[12:00]または[30分後]の形式で指定してください', inline=False)
-            e.set_thumbnail(url=interaction.client.user.avatar.url)
-            e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=interaction.client.user.avatar.url)
-            e.set_image(url="https://cdn.discordapp.com/attachments/1232610580628635719/1232610580628635719/unknown.png")
+            if interaction.client.user.avatar:
+                icon_url = interaction.client.user.avatar.url
+            else:
+                icon_url = ""  # ここにデフォルトのアバターURLを設定
+            e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
         else:
             e = discord.Embed(title="エラー", description="不明なカテゴリが選択されました。", color=discord.Color.red())
@@ -217,7 +235,7 @@ class HelpCog(commands.Cog):
         try:
             self.help_command_id = int(help_command_id_env)
         except ValueError:
-            self.help_command_id = 1232610580628635719
+            self.help_command_id = 1234691197008875611
 
     @app_commands.command(name="help", description="ヘルプを表示します")
     @app_commands.describe(option="ヘルプを表示するカテゴリ名")
@@ -239,10 +257,12 @@ class HelpCog(commands.Cog):
             e.add_field(name='募集コマンドの使い方', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数>', inline=False)
             e.add_field(name='メンションを使用する場合', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数> <ここでメンションしたいロールを選択> <最大三つまで同時に可能です> <ここには3個目>\n - コマンドを入力した際に[オプション]として表示されます。詳しくは画像をご覧ください。', inline=False)
             e.add_field(name='時間を指定した募集', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数> <募集メッセージを送信する時刻>\n - 時間は[12:00]または[30分後]の形式で指定してください', inline=False)
+            if interaction.client.user.avatar:
+                icon_url = interaction.client.user.avatar.url
+            else:
+                icon_url = ""  # ここにデフォルトのアバターURLを設定
             e.set_footer(text="募集方法")
-            e.set_thumbnail(url=interaction.client.user.avatar.url)
-            e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=interaction.client.user.avatar.url)
-            e.set_image(url="https://cdn.discordapp.com/attachments/1232610580628635719/1232610580628635719/unknown.png")
+            e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
             await interaction.response.send_message(embed=e, view=HelpView(), ephemeral=True)
 
@@ -259,18 +279,22 @@ class HelpCog(commands.Cog):
             if selected_value == "mention":
                 e = discord.Embed(title='メンションを使った募集方法', colour=color, timestamp=now)
                 e.add_field(name='メンションを使用する場合', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数> <ここでメンションしたいロールを選択> <最大三つまで同時に可能です> <ここには3個目>\n - コマンドを入力した際に[オプション]として表示されます。詳しくは画像をご覧ください。', inline=False)
+                if interaction.client.user.avatar:
+                    icon_url = interaction.client.user.avatar.url
+                else:
+                    icon_url = ""  # ここにデフォルトのアバターURLを設定
                 e.set_footer(text="メンションを使った募集方法の説明")
-                e.set_thumbnail(url=interaction.client.user.avatar.url)
-                e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=interaction.client.user.avatar.url)
-                e.set_image(url="https://cdn.discordapp.com/attachments/1232610580628635719/1232610580628635719/unknown.png")
+                e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
             elif selected_value == "time":
                 e = discord.Embed(title='募集方法', colour=color, timestamp=now)
                 e.add_field(name='時間を指定した募集', value='/募集 <募集のタイトル> <募集の怖しい説明> <使用予定のVC> <募集する人数> <募集メッセージを送信する時刻>\n - 時間は[12:00]または[30分後]の形式で指定してください', inline=False)
+                if interaction.client.user.avatar:
+                    icon_url = interaction.client.user.avatar.url
+                else:
+                    icon_url = ""  # ここにデフォルトのアバターURLを設定
                 e.set_footer(text="時間を指定した募集方法の説明")
-                e.set_thumbnail(url=interaction.client.user.avatar.url)
-                e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=interaction.client.user.avatar.url)
-                e.set_image(url="https://cdn.discordapp.com/attachments/1232610580628635719/1232610580628635719/unknown.png")
+                e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
             await interaction.response.send_message(embed=e, view=HelpView(), ephemeral=True)
 

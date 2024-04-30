@@ -34,10 +34,9 @@ logger.addHandler(SessionIDHandler())
 
 TOKEN = os.getenv('BOT_TOKEN')
 command_prefix = ['gz/']
-main_guild_id = int(os.getenv('MAIN_GUILD_ID'))
+main_guild_id = int(os.getenv('DEV_GUILD_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
 main_dev_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
-main_dev_server_id = int(os.getenv('MAIN_GUILD_ID'))
 bug_report_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
 
 class BugReportModal(discord.ui.Modal, title="バグ報告"):
