@@ -54,6 +54,14 @@ class TimeoutLoggingCog(commands.Cog):
                 print("Log channel is not set and no form thread is available.")
                 return 
 
+            reason = None
+            executor = None
+            async for entry in after.guild.audit_logs(action=discord.AuditLogAction.member_update, limit=1):
+                if entry.target.id == after.id and entry.after.timed_out_until == after.timed_out_until:
+                    reason = entry.reason
+                    executor = entry.user
+                    break
+
             if after.timed_out_until is not None:
                 timeout_time = after.timed_out_until.timestamp()
                 timeout_time_stamp = "<t:{}> | <t:{}:R>".format(int(timeout_time), int(timeout_time))
@@ -62,8 +70,8 @@ class TimeoutLoggingCog(commands.Cog):
                 embed.set_thumbnail(url=after.avatar.url)
                 embed.set_author(name=after.display_name, icon_url=after.avatar.url)
                 embed.add_field(name="タイムアウト期限", value=timeout_time_stamp, inline=False)
-                embed.add_field(name="理由", value=after.timed_out_reason, inline=False)
-                embed.add_field(name="タイムアウトを実行したユーザー", value=after.timed_out_by.mention, inline=False)
+                embed.add_field(name="理由", value=reason, inline=False)
+                embed.add_field(name="タイムアウトを実行したユーザー", value=executor.mention, inline=False)
                 embed.set_footer(text=before.guild.name, icon_url=before.guild.icon.url)
                 
                 await log_channel.send(embed=embed)
@@ -72,8 +80,8 @@ class TimeoutLoggingCog(commands.Cog):
                 embed = discord.Embed(title=f"{after.display_name} のタイムアウトが解除されました", color=discord.Color.green())
                 embed.set_thumbnail(url=after.avatar.url)
                 embed.set_author(name=after.display_name, icon_url=after.avatar.url)
-                if before.timed_out_by is not None:
-                    embed.add_field(name="タイムアウトを解除したユーザー", value=before.timed_out_by.mention, inline=False)
+                if executor is not None:
+                    embed.add_field(name="タイムアウトを解除したユーザー", value=executor.mention, inline=False)
                 embed.set_footer(text=before.guild.name, icon_url=before.guild.icon.url)
 
                 await log_channel.send(embed=embed)

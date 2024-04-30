@@ -157,16 +157,13 @@ class MessageDeleteLoggingCog(commands.Cog):
         else:
             embed.add_field(name="消去者", value="不明", inline=True)
 
-        # 最初の埋め込みを送信
         await log_channel.send(embed=embed)
         print(log_channel)
 
-        # 添付ファイルがある場合、リンクを含む別の埋め込みをフォローアップとして送信
         attachment_urls = []
         image_urls = []
         other_files_info = []
 
-        # 添付ファイルを画像とその他に分類
         for attachment in message.attachments:
             filename, file_extension = os.path.splitext(attachment.filename)
             if file_extension.lower() in ['.png', '.jpg', '.jpeg', '.gif']:
@@ -174,29 +171,21 @@ class MessageDeleteLoggingCog(commands.Cog):
             else:
                 other_files_info.append(f"[{filename}{file_extension}]({attachment.url})")
 
-        # 画像以外の添付ファイル情報を含む埋め込みを送信
         if other_files_info:
             non_image_files_text = "\n".join(other_files_info)
             embed_links = discord.Embed(title="消去されたメッセージのその他の添付ファイル", description=non_image_files_text, color=discord.Color.greyple())
             await log_channel.send(embed=embed_links)
 
-        # 画像ファイルがある場合、それらを合成して送信
         if image_urls:
-            # 最初の埋め込みメッセージを送信
             embed_image = discord.Embed(title="消去されたメッセージの添付画像", description="複数の画像を合成しています...", color=discord.Color.greyple())
             message_embed = await log_channel.send(embed=embed_image)
 
-
-            # 画像のURLリストを含む新しい埋め込みを作成
             image_links_text = "\n".join([f"[画像{i+1}]({url})" for i, url in enumerate(image_urls)])
             embed_image_links = discord.Embed(title="消去されたメッセージの添付画像", description=image_links_text, color=discord.Color.greyple())
 
-            # 最初に送信したメッセージの埋め込みを更新
             await message_embed.edit(embed=embed_image_links)
 
-            # 合成した画像ファイルを送信
             await send_images_in_chunks(image_urls, log_channel, spoiler=True)
-
 
 async def setup(bot):
     await bot.add_cog(MessageDeleteLoggingCog(bot))
