@@ -60,7 +60,10 @@ class NicknameLoggingCog(commands.Cog):
             if after.nick is None:
                 embed = discord.Embed(description=f"{after.display_name}のニックネームが`{before.nick}`から`{after.display_name}`に変更されました", color=discord.Color.orange())
             else:
-                embed = discord.Embed(description=f"{after.display_name}のニックネームが{before.nick}から{after.nick}に変更されました", color=discord.Color.orange())
+                if before.nick is None:
+                    embed = discord.Embed(description=f"{after.display_name}のニックネームが`{after.display_name}`から`{after.nick}`に変更されました", color=discord.Color.orange())
+                else:
+                    embed = discord.Embed(description=f"{after.display_name}のニックネームが{before.nick}から{after.nick}に変更されました", color=discord.Color.orange())
             embed.set_thumbnail(url=after.avatar.url)
             embed.set_author(name=after.display_name, icon_url=after.avatar.url)
             embed.set_footer(text=before.guild.name, icon_url=before.guild.icon.url)
