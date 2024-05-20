@@ -5,6 +5,7 @@ import subprocess
 import platform
 import asyncio
 import time
+import os
 
 from utils import api
 
@@ -33,6 +34,26 @@ class ManagementBotCog(commands.Cog):
 
         e.add_field(name="Bot Ping", value=f"{bot_ping}ms", inline=True)
         await sent_message.edit(embed=e)
+
+    @commands.hybrid_command(name='embedtetst', hidden=True)
+    async def embedtest(self, ctx):
+        """Embedのテスト"""
+
+        e1 = discord.Embed(title="Botのバージョン", color=discord.Color.blue())
+        e1.add_field(name="Bot", value=f"{self.bot.user.name} {self.bot.user.id}")
+        e1.add_field(name="Python", value=f"{platform.python_version()}")
+        e1.add_field(name="discord.py", value=f"{discord.__version__}")
+
+        e2 = discord.Embed(title="システム情報", color=discord.Color.blue())
+        e2.add_field(name="OS", value=f"{platform.system()} {platform.release()}")
+        e2.add_field(name="CPU", value=f"{platform.processor()}")
+
+        e3 = discord.Embed(title="プロセス情報", color=discord.Color.blue())
+        e3.add_field(name="プロセスID", value=f"{os.getpid()}")
+
+        embed = [e1, e2, e3]
+
+        await ctx.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(ManagementBotCog(bot))
