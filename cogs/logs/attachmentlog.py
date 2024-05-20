@@ -8,12 +8,14 @@ load_dotenv()
 
 guild_id = int(os.getenv("MAIN_GUILD_ID"))
 channel_id = int(os.getenv("ATTACHMENT_CHANNEL_ID"))
+thread_id = int(os.getenv("ATTACHMENT_THREAD_ID"))
 
 class AttachmentLogCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.target_guild_id = guild_id
         self.target_channel_id = channel_id
+        self.target_thread_id = thread_id
         self.special_extensions = {'ogg'}
 
     @commands.Cog.listener()
@@ -24,7 +26,15 @@ class AttachmentLogCog(commands.Cog):
         if message.guild is None or message.guild.id != self.target_guild_id:
             return
 
-        target_channel = self.bot.get_channel(self.target_channel_id)
+        # 親チャンネルを取得
+        parent_channel = self.bot.get_channel(self.target_channel_id)
+        if parent_channel is None:
+            return
+
+        # スレッドを取得
+        target_thread = discord.utils.get(parent_channel.threads, id=self.target_thread_id)
+        if target_thread is None:
+            return
 
         if message.attachments:
             for attachment in message.attachments:
@@ -38,7 +48,7 @@ class AttachmentLogCog(commands.Cog):
                             timestamp=message.created_at
                         )
                         await message.delete()
-                        await target_channel.send(embed=embed)
+                        await target_thread.send(embed=embed)
                         await message.author.send(f'事故防止のため{message.author.mention}さんが送信した[{attachment.filename}]({attachment.url})は消去されました。')
                     else:
                         async with aiohttp.ClientSession() as session:
@@ -57,7 +67,7 @@ class AttachmentLogCog(commands.Cog):
                             timestamp=message.created_at
                         )
                         embed.set_image(url=attachment.url)
-                        await target_channel.send(embed=embed, silent=True)
+                        await target_thread.send(embed=embed, silent=True)
 
                 else:
                     embed = discord.Embed(
@@ -66,7 +76,7 @@ class AttachmentLogCog(commands.Cog):
                         timestamp=message.created_at
                     )
                     embed.set_image(url=attachment.url)
-                    await target_channel.send(embed=embed, silent=True)
+                    await target_thread.send(embed=embed, silent=True)
 
 async def setup(bot):
     await bot.add_cog(AttachmentLogCog(bot))
