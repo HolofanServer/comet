@@ -1,11 +1,11 @@
-<h1 align="center">Sudo-BOT Developed by FreeWiFi7749</h1>
-<h3 align="center">ファイルログ、おみくじコマンド、sudo(一時的権限付与)コマンドを備えたGizmodo woods専属BOT</h3>
+<h1 align="center">iPhone3G Developed by FreeWiFi7749</h1>
+<h3 align="center">全てのログ、おみくじコマンド、sudo(一時的権限付与)コマンドを備えたGizmodo woods専属BOTv2</h3>
 
 - 👑/sudo **コマンドで一時的に指定した権限を付与します。**
 
 - 🕘/omikuji **お楽しみ要素のおみくじを引けます。(毎日24時JSTにリセットがかかります)**
 
-- 📁ファイルログ **BOTが閲覧可能なチャンネルに投稿された添付ファイルを全てログとして保存します。**
+- 📁全てのログ **メッセージ、VC、参加退出、Automod、その他全てに対応したログ機能**
 
 - 🚫メッセージ通報 **メッセージをさまざまな理由で通報し、モデレータがすぐに対応できる機能です。**
 <img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif">
