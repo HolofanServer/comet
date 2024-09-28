@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from typing import Optional
 
 class ServerInfoCog(commands.Cog):
     def __init__(self, bot):
@@ -105,8 +106,10 @@ class ServerInfoCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @info_group.command(name='channel')
-    async def channel_info(self, ctx, *, channel: discord.abc.GuildChannel = None):
+    async def channel_info(self, ctx, *, channel: Optional[discord.abc.GuildChannel] = None):
         """チャンネルの情報を表示します"""
+        await ctx.defer()
+
         channel = channel or ctx.channel
 
         if channel.type == discord.ChannelType.text:
@@ -120,15 +123,12 @@ class ServerInfoCog(commands.Cog):
         elif channel.type == discord.ChannelType.category:
             channel_type = "カテゴリー"
 
-        channel_messages = len(await channel.history(limit=None).flatten())
-
         description = (
             f'**名前:** {channel.mention}\n'
             f'**ID:** {channel.id}\n'
             f'**作成日:** {channel.created_at.strftime("%Y-%m-%d %H:%M:%S")}\n'
             f'**カテゴリー:** {channel.category.mention}\n'
             f'**種類:** {channel_type}\n'
-            f'**メッセージ数:** {channel_messages}\n'
         )
 
         embed = discord.Embed(title=f'{channel.name} チャンネル情報', description=description, color=discord.Color.blue())
@@ -177,7 +177,12 @@ class ServerInfoCog(commands.Cog):
         embed.set_thumbnail(url=str(ctx.guild.icon.url))
 
         await ctx.send(embed=embed)
-    
+
+    @info_group.command(name='test')
+    async def test(self, ctx):
+        """テスト"""
+        ans = 20 / 0
+        await ctx.send(ans)
 
 async def setup(bot):
     await bot.add_cog(ServerInfoCog(bot))
