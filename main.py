@@ -105,7 +105,7 @@ class BugReportView(discord.ui.View):
                 item.disabled = True
         await interaction.edit_original_response(view=self)
 
-    @discord.ui.button(label="バグを報告する", style=discord.ButtonStyle.red, custom_id="report_bug_button", emoji="<:Bughunter:1289674918169935934>")
+    @discord.ui.button(label="バグを報告する", style=discord.ButtonStyle.red, custom_id="report_bug_button", emoji="<:Bughunter:1289674918169935934>hunter:1289674918169935934>")
     async def report_bug_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         modal = BugReportModal(self.bot, self.error_id, self.channel_id, self.server_id, self.command_name, self.server_name)
         await interaction.response.send_modal(modal)
@@ -209,7 +209,7 @@ class MyBot(commands.AutoShardedBot):
             e = discord.Embed(
                 title="エラー通知",
                 description=(
-                    "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
+                    "> <:Error:1289674741845594193>コマンド実行中にエラーが発生しました。\n"
                     f"**エラーID**: `{error_id}`\n"
                     f"**コマンド**: {ctx.command.qualified_name if ctx.command else 'N/A'}\n"
                     f"**ユーザー**: {ctx.author.mention}\n"
@@ -226,7 +226,7 @@ class MyBot(commands.AutoShardedBot):
                 ed = discord.Embed(
                     title="エラーが発生しました",
                     description=(
-                        "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
+                        "> <:Error:1289674741845594193>コマンド実行中にエラーが発生しました。\n"
                         f"エラーID: `{error_id}`\n"
                         f"チャンネル: {channel_mention}\n"
                         f"サーバー: `{server_name}`\n\n"
@@ -247,7 +247,7 @@ class MyBot(commands.AutoShardedBot):
                 ed = discord.Embed(
                     title="エラーが発生しました",
                     description=(
-                        "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
+                        "> <:Error:1289674741845594193>コマンド実行中にエラーが発生しました。\n"
                         f"エラーID: `{error_id}`\n"
                         f"チャンネル: {channel_mention}\n"
                         f"サーバー: `{server_name}`\n\n"
@@ -313,7 +313,7 @@ class MyBot(commands.AutoShardedBot):
             e = discord.Embed(
                 title="エラー通知",
                 description=(
-                    "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
+                    "> <:Error:1289674741845594193>コマンド実行中にエラーが発生しました。\n"
                     f"**エラーID**: `{error_id}`\n"
                     f"**コマンド**: {interaction.command.qualified_name if interaction.command else 'N/A'}\n"
                     f"**ユーザー**: {interaction.user.mention}\n"
@@ -328,7 +328,7 @@ class MyBot(commands.AutoShardedBot):
             es = discord.Embed(
                 title="エラーが発生しました",
                 description=(
-                    "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
+                    "> <:Error:1289674741845594193>コマンド実行中にエラーが発生しました。\n"
                     f"エラーID: `{error_id}`\n"
                     f"チャンネル: {channel_mention}\n"
                     f"サーバー: `{server_name}`\n\n"
