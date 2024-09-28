@@ -5,6 +5,24 @@ class ServerInfoCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    role_parmission = {
+        "administrator": "管理者",
+        "manage_guild": "サーバー管理",
+        "manage_channels": "チャンネル管理",
+        "manage_roles": "ロール管理",
+        "manage_webhooks": "ウェブフック管理",
+        "manage_emojis_and_stickers": "絵文字とスタンプ管理",
+        "manage_events": "イベント管理",
+        "manage_threads": "スレッド管理",
+        "manage_nicknames": "ニックネーム管理",
+        "manage_permissions": "パーミッション管理",
+        "manage_messages": "メッセージ管理",
+        "manage_server": "サーバー管理",
+        "manage_emojis": "絵文字管理",
+        "manage_stickers": "スタンプ管理"
+        
+    }
+
     @commands.hybrid_group(name='info', invoke_without_command=True)
     async def info_group(self, ctx):
         """情報コマンドのグループ"""
@@ -19,9 +37,31 @@ class ServerInfoCog(commands.Cog):
         number_of_voice_channels = len(guild.voice_channels)
         number_of_stage_channels = len(guild.stage_channels)
         number_of_categories = len(guild.categories)
-        
+
+        guild_verification_level = str(guild.verification_level).replace('VerificationLevel.', ' ').title()
+        if guild_verification_level == "None":
+            guild_verification_level = "なし"
+        elif guild_verification_level == "Low":
+            guild_verification_level = "低"
+        elif guild_verification_level == "Medium":
+            guild_verification_level = "中"
+        elif guild_verification_level == "High":
+            guild_verification_level = "高"
+        elif guild_verification_level == "Very High":
+            guild_verification_level = "非常に高"
+
         nsfw_level = str(guild.nsfw_level).replace('_', ' ').title()
         nsfw_level = str(guild.nsfw_level).replace('Nsfwlevel.', ' ').title()
+        if nsfw_level == "None":
+            nsfw_level = "なし"
+        elif nsfw_level == "Low":
+            nsfw_level = "低"
+        elif nsfw_level == "Medium":
+            nsfw_level = "中"
+        elif nsfw_level == "High":
+            nsfw_level = "高"
+        elif nsfw_level == "Very High":
+            nsfw_level = "非常に高"
 
         description = (
             f'**オーナー/ID:** {guild.owner} ({guild.owner_id})\n'
@@ -57,7 +97,7 @@ class ServerInfoCog(commands.Cog):
             boosting_since = 'ブーストはしていません'
         roles_description = ", ".join(role.mention for role in user.roles[1:])
 
-        description = f"**ID:** {user.id}\n**作成日:** {user.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n**参加日:** {user.joined_at.strftime('%Y-%m-%d %H:%M:%S')}\n**ロール:** \n{roles_description}\n**一番上のロール:** {user.top_role.mention}\n**ブースト:** {boosting_since}\n"
+        description = f"**名前**{user.mention}\n**ID:** {user.id}\n**作成日:** {user.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n**参加日:** {user.joined_at.strftime('%Y-%m-%d %H:%M:%S')}\n**ロール:** \n{roles_description}\n**一番上のロール:** {user.top_role.mention}\n**ブースト:** {boosting_since}\n"
 
         embed = discord.Embed(title=f'{user} ユーザー情報', description=description, color=discord.Color.blue())
         embed.set_thumbnail(url=str(user.avatar.url))
@@ -69,10 +109,26 @@ class ServerInfoCog(commands.Cog):
         """チャンネルの情報を表示します"""
         channel = channel or ctx.channel
 
+        if channel.type == discord.ChannelType.text:
+            channel_type = "テキスト"
+        elif channel.type == discord.ChannelType.voice:
+            channel_type = "ボイス"
+        elif channel.type == discord.ChannelType.stage:
+            channel_type = "ステージ"
+        elif channel.type == discord.ChannelType.forum:
+            channel_type = "フォーラム"
+        elif channel.type == discord.ChannelType.category:
+            channel_type = "カテゴリー"
+
+        channel_messages = len(await channel.history(limit=None).flatten())
+
         description = (
+            f'**名前:** {channel.mention}\n'
             f'**ID:** {channel.id}\n'
             f'**作成日:** {channel.created_at.strftime("%Y-%m-%d %H:%M:%S")}\n'
-            f'**種類:** {channel.type}\n'
+            f'**カテゴリー:** {channel.category.mention}\n'
+            f'**種類:** {channel_type}\n'
+            f'**メッセージ数:** {channel_messages}\n'
         )
 
         embed = discord.Embed(title=f'{channel.name} チャンネル情報', description=description, color=discord.Color.blue())
@@ -81,10 +137,11 @@ class ServerInfoCog(commands.Cog):
     
     @info_group.command(name='emoji')
     async def emoji_info(self, ctx, *, emoji: discord.Emoji):
-        """絵文字の情報を表示するします"""
+        """絵文字の情報を表示します"""
         description = (
             f'**ID:** {emoji.id}\n'
             f'**作成日:** {emoji.created_at.strftime("%Y-%m-%d %H:%M:%S")}\n'
+            f'**作成者:** {emoji.user}\n'
             f'**URL:** [Link]({emoji.url})\n'
         )
 
@@ -95,11 +152,10 @@ class ServerInfoCog(commands.Cog):
     
     @info_group.command(name='emoji_list')
     async def emoji_list(self, ctx):
-        """絵文字のリストを表示するにぇ"""
-        emojis_str = "\n".join(str(emoji) for emoji in ctx.guild.emojis)
-        chars_per_embed = 2000
+        """絵文字のリストを表示します"""
+        emojis_str = "\n".join(f"{emoji} `{emoji}`" for emoji in ctx.guild.emojis)
 
-        emojis_chunks = [emojis_str[i:i+chars_per_embed] for i in range(0, len(emojis_str), chars_per_embed)]
+        emojis_chunks = [emojis_str[i:i+2000] for i in range(0, len(emojis_str), 2000)]
 
         for chunk in emojis_chunks:
             embed = discord.Embed(title="絵文字リスト", description=chunk, color=discord.Color.blue())
@@ -107,12 +163,13 @@ class ServerInfoCog(commands.Cog):
 
     @info_group.command(name='role')
     async def role_info(self, ctx, *, role: discord.Role):
-        """役職の情報を表示します"""
+        """ロールの情報を表示します"""
+        role_permissions = "\n".join(f"{perm[0]}: {self.role_parmission.get(perm[0], 'Unknown')}" for perm in role.permissions if perm[1])
         description = (
             f'**ID:** {role.id}\n'
             f'**作成日:** {role.created_at.strftime("%Y-%m-%d %H:%M:%S")}\n'
             f'**色:** {role.color}\n'
-            f'**権限:** {role.permissions}\n'
+            f'**権限:** {role_permissions}\n'
             f'**位置:** {role.position}\n'
         )
 
