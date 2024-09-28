@@ -178,11 +178,5 @@ class ServerInfoCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @info_group.command(name='test')
-    async def test(self, ctx):
-        """テスト"""
-        ans = 20 / 0
-        await ctx.send(ans)
-
 async def setup(bot):
     await bot.add_cog(ServerInfoCog(bot))
