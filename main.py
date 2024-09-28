@@ -27,9 +27,12 @@ class SessionIDHandler(logging.Handler):
             session_id = match.group(1)
             print(f"セッションIDを検出しました: {session_id}")
 
-logger = logging.getLogger('discord.gateway')
+logger_session = logging.getLogger('discord.gateway')
+logger_session.setLevel(logging.INFO)
+logger_session.addHandler(SessionIDHandler())
+
+logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-logger.addHandler(SessionIDHandler())
 
 TOKEN = os.getenv('BOT_TOKEN')
 command_prefix = ['gz/']
@@ -102,7 +105,7 @@ class BugReportView(discord.ui.View):
                 item.disabled = True
         await interaction.edit_original_response(view=self)
 
-    @discord.ui.button(label="バグを報告する", style=discord.ButtonStyle.red, custom_id="report_bug_button", emoji="<:bug_hunter:1226787664020242482>")
+    @discord.ui.button(label="バグを報告する", style=discord.ButtonStyle.red, custom_id="report_bug_button", emoji="<:Bughunter:1289674918169935934>")
     async def report_bug_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         modal = BugReportModal(self.bot, self.error_id, self.channel_id, self.server_id, self.command_name, self.server_name)
         await interaction.response.send_modal(modal)
@@ -206,7 +209,7 @@ class MyBot(commands.AutoShardedBot):
             e = discord.Embed(
                 title="エラー通知",
                 description=(
-                    "> <:error:1226790218552836167>コマンド実行中にエラーが発生しました。\n"
+                    "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
                     f"**エラーID**: `{error_id}`\n"
                     f"**コマンド**: {ctx.command.qualified_name if ctx.command else 'N/A'}\n"
                     f"**ユーザー**: {ctx.author.mention}\n"
@@ -223,7 +226,7 @@ class MyBot(commands.AutoShardedBot):
                 ed = discord.Embed(
                     title="エラーが発生しました",
                     description=(
-                        "> <:error:1226790218552836167>コマンド実行中にエラーが発生しました。\n"
+                        "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
                         f"エラーID: `{error_id}`\n"
                         f"チャンネル: {channel_mention}\n"
                         f"サーバー: `{server_name}`\n\n"
@@ -244,7 +247,7 @@ class MyBot(commands.AutoShardedBot):
                 ed = discord.Embed(
                     title="エラーが発生しました",
                     description=(
-                        "> <:error:1226790218552836167>コマンド実行中にエラーが発生しました。\n"
+                        "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
                         f"エラーID: `{error_id}`\n"
                         f"チャンネル: {channel_mention}\n"
                         f"サーバー: `{server_name}`\n\n"
@@ -263,43 +266,43 @@ class MyBot(commands.AutoShardedBot):
         if isinstance(error, commands.CommandNotFound):
             await interaction.response.send_message("そのコマンドは存在しません。", ephemeral=True)
             interaction.handled = True
-            logging.error(f"CommandNotFound: {error}")
+            logger.error(f"CommandNotFound: {error}")
             return
         
         if isinstance(error, commands.MissingRequiredArgument):
             await interaction.response.send_message("引数が不足しています。", ephemeral=True)
             interaction.handled = True
-            logging.error(f"MissingRequiredArgument: {error}")
+            logger.error(f"MissingRequiredArgument: {error}")
             return
         
         if isinstance(error, commands.BadArgument):
             await interaction.response.send_message("引数が不正です。", ephemeral=True)
             interaction.handled = True
-            logging.error(f"BadArgument: {error}")
+            logger.error(f"BadArgument: {error}")
             return
         
         if isinstance(error, commands.MissingPermissions):
             await interaction.response.send_message("あなたはのコマンドを実行する権限がありません。", ephemeral=True)
             interaction.handled = True
-            logging.error(f"MissingPermissions: {error}")
+            logger.error(f"MissingPermissions: {error}")
             return
         
         if isinstance(error, commands.BotMissingPermissions):
             await interaction.response.send_message("BOTがこのコマンドを実行する権限がありません。", ephemeral=True)
             interaction.handled = True
-            logging.error(f"BotMissingPermissions: {error}")
+            logger.error(f"BotMissingPermissions: {error}")
             return
         
         if isinstance(error, commands.CommandOnCooldown):
             await interaction.response.send_message(f"このコマンドは{error.retry_after:.2f}秒後に再実行できます。", ephemeral=True)
             interaction.handled = True
-            logging.error(f"CommandOnCooldown: {error}")
+            logger.error(f"CommandOnCooldown: {error}")
             return
 
         if not interaction.handled:
             error_id = uuid.uuid4()
             
-            logging.error(f"UnknownError: {error}")
+            logger.error(f"UnknownError: {error}")
 
             channel_id = interaction.channel_id
             server_id = interaction.guild_id if interaction.guild else 'DM'
@@ -310,7 +313,7 @@ class MyBot(commands.AutoShardedBot):
             e = discord.Embed(
                 title="エラー通知",
                 description=(
-                    "> <:error:1226790218552836167>コマンド実行中にエラーが発生しました。\n"
+                    "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
                     f"**エラーID**: `{error_id}`\n"
                     f"**コマンド**: {interaction.command.qualified_name if interaction.command else 'N/A'}\n"
                     f"**ユーザー**: {interaction.user.mention}\n"
@@ -325,7 +328,7 @@ class MyBot(commands.AutoShardedBot):
             es = discord.Embed(
                 title="エラーが発生しました",
                 description=(
-                    "> <:error:1226790218552836167>コマンド実行中にエラーが発生しました。\n"
+                    "> <:error:1289674918169935934>コマンド実行中にエラーが発生しました。\n"
                     f"エラーID: `{error_id}`\n"
                     f"チャンネル: {channel_mention}\n"
                     f"サーバー: `{server_name}`\n\n"

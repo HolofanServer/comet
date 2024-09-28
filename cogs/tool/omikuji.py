@@ -102,17 +102,7 @@ class OmikujiCog(commands.Cog):
             "心を落ち着かせおみくじを開く",
         ]
 
-        streak = self.streak_data[user_id]['streak']
-        base_probability = 0.05
-        max_probability = 0.5
-        probability = min(base_probability + (streak * 0.01), max_probability)
-
-        fortune_choices = list(self.ids.values())
-        if random.random() < probability:
-            fortune = "iPhoneだけだよ！"
-        else:
-            fortune_choices.remove("iPhoneだけだよ！")
-            fortune = random.choice(fortune_choices)
+        fortune = random.choice(list(self.ids.keys()))
 
         embed = discord.Embed(title="おみくじ結果", color=0x34343c)
         embed.set_author(name="iPhoneだけだよ神社にて...")
