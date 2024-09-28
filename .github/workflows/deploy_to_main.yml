@@ -23,6 +23,7 @@ jobs:
             find . -type d -name "__pycache__" -exec rm -r {} +
             git fetch --all
             git reset --hard origin/main
+            source iphone3g/bin/activate
             pip install -r requirements.txt
             sudo systemctl stop iphone3g.service
             sleep 15
