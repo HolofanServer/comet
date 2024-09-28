@@ -12,7 +12,6 @@ import pytz
 from utils import presence
 from utils.logging import save_log
 from utils.startup import startup_send_webhook, startup_send_botinfo
-from discord.ui import View, Button, Modal, TextInput
 import traceback
 
 load_dotenv()
@@ -123,7 +122,7 @@ class MyBot(commands.AutoShardedBot):
     async def after_ready(self):
         await self.wait_until_ready()
         print("setup_hook is called")
-        await self.change_presence(activity=discord.Game(name="起動中.."))
+        await self.change_presence(activity=discord.Game(name="起動中..", status=discord.Status.idle))
         await self.load_cogs('cogs')
         await self.tree.sync()
         if not self.initialized:
@@ -132,7 +131,7 @@ class MyBot(commands.AutoShardedBot):
             print('------')
             print('All cogs have been loaded and bot is ready.')
             print('------')
-            self.loop.create_task(presence.update_presence(self))
+            asyncio.create_task(presence.update_presence(self))
 
     async def on_ready(self):
         print("on_ready is called")
@@ -264,36 +263,42 @@ class MyBot(commands.AutoShardedBot):
         if isinstance(error, commands.CommandNotFound):
             await interaction.response.send_message("そのコマンドは存在しません。", ephemeral=True)
             interaction.handled = True
+            logging.error(f"CommandNotFound: {error}")
             return
         if isinstance(error, commands.MissingRequiredArgument):
             await interaction.response.send_message("引数が不足しています。", ephemeral=True)
             interaction.handled = True
+            logging.error(f"MissingRequiredArgument: {error}")
             return
         if isinstance(error, commands.BadArgument):
             await interaction.response.send_message("引数が不正です。", ephemeral=True)
             interaction.handled = True
+            logging.error(f"BadArgument: {error}")
             return
         if isinstance(error, commands.MissingPermissions):
             await interaction.response.send_message("あなたはのコマンドを実行する権限がありません。", ephemeral=True)
             interaction.handled = True
+            logging.error(f"MissingPermissions: {error}")
             return
         if isinstance(error, commands.BotMissingPermissions):
             await interaction.response.send_message("BOTがこのコマンドを実行する権限がありません。", ephemeral=True)
             interaction.handled = True
+            logging.error(f"BotMissingPermissions: {error}")
             return
         if isinstance(error, commands.CommandOnCooldown):
             await interaction.response.send_message(f"このコマンドは{error.retry_after:.2f}秒後に再実行できます。", ephemeral=True)
             interaction.handled = True
+            logging.error(f"CommandOnCooldown: {error}")
             return
 
         if not interaction.handled:
             error_id = uuid.uuid4()
-            print(error)
+            
+            logging.error(f"UnknownError: {error}")
 
             channel_id = interaction.channel_id
             server_id = interaction.guild_id if interaction.guild else 'DM'
             server_name = interaction.guild.name if interaction.guild else 'DM'
-            command_name = interaction.command.qualified_name if interaction.command else "N/A"
             channel_mention = f"<#{channel_id}>"
             now = datetime.now(pytz.timezone('Asia/Tokyo'))
 

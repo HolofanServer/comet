@@ -1,5 +1,4 @@
 import discord
-import random
 import asyncio
 from dotenv import load_dotenv
 import os
@@ -25,7 +24,7 @@ async def update_presence(bot):
         if index != 0:
             if presence["type"] == "Playing":
                 activity_type = getattr(discord.ActivityType, presence["type"].lower(), discord.ActivityType.playing)
-                activity = discord.Activity(type=activity_type, name=presence["name"], state=presence.get("state", None))
+                activity = discord.Activity(type=activity_type, name=presence["name"], state=presence.get("state", None), status=discord.Status.online)
 
             await bot.change_presence(activity=activity)
         
