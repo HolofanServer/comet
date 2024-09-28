@@ -265,26 +265,31 @@ class MyBot(commands.AutoShardedBot):
             interaction.handled = True
             logging.error(f"CommandNotFound: {error}")
             return
+        
         if isinstance(error, commands.MissingRequiredArgument):
             await interaction.response.send_message("引数が不足しています。", ephemeral=True)
             interaction.handled = True
             logging.error(f"MissingRequiredArgument: {error}")
             return
+        
         if isinstance(error, commands.BadArgument):
             await interaction.response.send_message("引数が不正です。", ephemeral=True)
             interaction.handled = True
             logging.error(f"BadArgument: {error}")
             return
+        
         if isinstance(error, commands.MissingPermissions):
             await interaction.response.send_message("あなたはのコマンドを実行する権限がありません。", ephemeral=True)
             interaction.handled = True
             logging.error(f"MissingPermissions: {error}")
             return
+        
         if isinstance(error, commands.BotMissingPermissions):
             await interaction.response.send_message("BOTがこのコマンドを実行する権限がありません。", ephemeral=True)
             interaction.handled = True
             logging.error(f"BotMissingPermissions: {error}")
             return
+        
         if isinstance(error, commands.CommandOnCooldown):
             await interaction.response.send_message(f"このコマンドは{error.retry_after:.2f}秒後に再実行できます。", ephemeral=True)
             interaction.handled = True
