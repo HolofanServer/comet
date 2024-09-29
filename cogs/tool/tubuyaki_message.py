@@ -19,7 +19,7 @@ def load_data(filename=filename):
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         return {}
 
-target_channel_id = 1212206562056085585
+target_channel_id = 1156414531292106752
 
 async def tubuyakirule_announce(message, client):
     if message.channel.id != target_channel_id:
