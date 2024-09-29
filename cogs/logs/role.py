@@ -3,7 +3,6 @@ from discord.ext import commands
 import json
 import os
 from datetime import datetime, timedelta, timezone
-import pytz
 
 class RoleLoggingCog(commands.Cog):
     def __init__(self, bot):
@@ -50,7 +49,7 @@ class RoleLoggingCog(commands.Cog):
             log_channel = logs_form
             print("Logging to thread.")
         elif not log_channel:
-            print("Log channel is not set and no form thread is available.")
+            print("Role Log channel is not set and no form thread is available.")
             return 
 
         await log_channel.send(embed=embed)

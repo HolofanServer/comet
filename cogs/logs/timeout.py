@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 import os
 import json
-import datetime
 
 class TimeoutLoggingCog(commands.Cog):
     def __init__(self, bot):
@@ -51,7 +50,7 @@ class TimeoutLoggingCog(commands.Cog):
                 log_channel = logs_form
                 print("Logging to thread.")
             elif not log_channel:
-                print("Log channel is not set and no form thread is available.")
+                print("Timeout Log channel is not set and no form thread is available.")
                 return 
 
             reason = None

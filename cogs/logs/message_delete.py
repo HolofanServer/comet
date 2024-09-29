@@ -1,12 +1,11 @@
 import discord
 from discord.ext import commands
 import aiohttp
-from PIL import Image, ImageOps
+from PIL import Image
 import io
 import json
 import os
 from datetime import datetime, timedelta, timezone
-import math
 
 async def fetch_image(session, url):
     async with session.get(url) as response:
@@ -137,7 +136,7 @@ class MessageDeleteLoggingCog(commands.Cog):
             log_channel = logs_form
             print("Logging to thread.")
         elif not log_channel:
-            print("Log channel is not set and no form thread is available.")
+            print("MessageDelete Log channel is not set and no form thread is available.")
             return 
         
         deleter = None
@@ -159,8 +158,7 @@ class MessageDeleteLoggingCog(commands.Cog):
 
         await log_channel.send(embed=embed)
         print(log_channel)
-
-        attachment_urls = []
+        
         image_urls = []
         other_files_info = []
 
