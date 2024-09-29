@@ -35,7 +35,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 TOKEN = os.getenv('BOT_TOKEN')
-command_prefix = ['gz/']
+command_prefix = ['gz/', ':', 'ギズ']
 main_guild_id = int(os.getenv('DEV_GUILD_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
 main_dev_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
@@ -105,7 +105,7 @@ class BugReportView(discord.ui.View):
                 item.disabled = True
         await interaction.edit_original_response(view=self)
 
-    @discord.ui.button(label="バグを報告する", style=discord.ButtonStyle.red, custom_id="report_bug_button", emoji="<:Bughunter:1289674918169935934>hunter:1289674918169935934>")
+    @discord.ui.button(label="バグを報告する", style=discord.ButtonStyle.red, custom_id="report_bug_button", emoji="<:Bughunter:1289674918169935934>")
     async def report_bug_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         modal = BugReportModal(self.bot, self.error_id, self.channel_id, self.server_id, self.command_name, self.server_name)
         await interaction.response.send_modal(modal)
