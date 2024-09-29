@@ -49,7 +49,7 @@ class ChannelLoggingCog(commands.Cog):
             log_channel = logs_form
             print("Logging to thread.")
         elif not log_channel:
-            print("Log channel is not set and no form thread is available.")
+            print("Channel Log channel is not set and no form thread is available.")
             return 
 
         embed = discord.Embed(title="チャンネル作成", description=channel.mention, color=discord.Color.green())

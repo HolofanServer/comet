@@ -48,7 +48,7 @@ class BanLoggingCog(commands.Cog):
             log_channel = logs_form
             print("Logging to thread.")
         elif not log_channel:
-            print("Log channel is not set and no form thread is available.")
+            print("Ban Log channel is not set and no form thread is available.")
             return 
 
         # 監査ログからBANイベントの実行者を取得

@@ -45,7 +45,7 @@ class KickLoggingCog(commands.Cog):
             log_channel = logs_form
             print("Logging to thread.")
         elif not log_channel:
-            print("Log channel is not set and no form thread is available.")
+            print("Kick Log channel is not set and no form thread is available.")
             return 
 
         JST = timezone(timedelta(hours=+9))
