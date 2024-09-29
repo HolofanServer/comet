@@ -166,5 +166,21 @@ class OmikujiCog(commands.Cog):
         else:
             await ctx.send(f"{fortune}はおみくじに存在しません。")
 
+    @omikuji_group.command(name="list_fortune")
+    async def list_fortune(self, ctx):
+        """おみくじのリストを表示するコマンドです。"""
+        await ctx.defer()
+        if self.ids:
+            e = discord.Embed(
+                title="おみくじのリスト",
+                description="",
+                color=discord.Color.blurple()
+            )
+            for fortune in self.ids:
+                e.description += f"{fortune}\n"
+            await ctx.send(embed=e)
+        else:
+            await ctx.send("おみくじのリストは空です。")
+
 async def setup(bot):
     await bot.add_cog(OmikujiCog(bot))
