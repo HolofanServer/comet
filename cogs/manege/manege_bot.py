@@ -3,7 +3,6 @@ from discord.ext import commands
 import sys
 import subprocess
 import platform
-import asyncio
 import time
 import os
 from dotenv import load_dotenv
