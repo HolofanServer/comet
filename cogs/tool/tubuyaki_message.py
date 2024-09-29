@@ -30,7 +30,7 @@ async def tubuyakirule_announce(message, client):
     message_count = channel_data['message_count'] + 1
     last_message_id = channel_data['last_message_id']
 
-    if message_count % 5 == 0:
+    if message_count % 10 == 0:
         if last_message_id:
             try:
                 msg_to_delete = await message.channel.fetch_message(last_message_id)

@@ -90,7 +90,7 @@ class SudoCog(commands.Cog):
             if new_id not in self.sessions:
                 return new_id
 
-    @commands.hybrid_command(name="sudo", description="特定の権限を付与します。")
+    @commands.command(name="sudo", description="特定の権限を付与します。")
     async def sudo(self, ctx: commands.Context, user: discord.Member, reason: str, permission: Per):
 
         if isinstance(ctx, discord.Interaction):
