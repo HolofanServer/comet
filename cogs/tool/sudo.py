@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands
 import json
-from pathlib import Path
 import random
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 import pytz
 
@@ -59,12 +58,12 @@ class SudoCog(commands.Cog):
                 jst = pytz.timezone('Asia/Tokyo')
                 now = datetime.now(jst)
                 embed = discord.Embed(
-                    title=f"sudoコマンドログ",
+                    title="sudoコマンドログ",
                     description=f"{user.mention}から{role.mention}を剥奪しました",
                     color=discord.Color.red(),
                     timestamp=now
                 )
-                embed.set_author(name=f"ID：{session_id}")
+                embed.set_author(name=f"ID : {session_id}")
                 try:
                     if isinstance(ctx, discord.Interaction):
                         await ctx.followup.send(embed=embed)
@@ -177,8 +176,8 @@ class SudoCog(commands.Cog):
                     if interaction.data.get('custom_id') == "eee":
                         if current_session.get('remaining_time', 0) == 0:
                             embed = discord.Embed(
-                                title=f"sudoコマンドログ",
-                                description=f"このsudoは終了しています。\nその為延長することはできません。",
+                                title="sudoコマンドログ",
+                                description="このsudoは終了しています。\nその為延長することはできません。",
                                 color=discord.Color.yellow(),
                             )
                             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -189,11 +188,9 @@ class SudoCog(commands.Cog):
                             self.sessions[session_id] = current_session
                             self.save_sessions_to_json()
 
-                            jst = pytz.timezone('Asia/Tokyo')
-                            now = datetime.now(jst)
                             embed = discord.Embed(
-                                title=f"sudoコマンドログ",
-                                description=f"時間を5分延長しました（最大30分まで）",
+                                title="sudoコマンドログ",
+                                description="時間を5分延長しました（最大30分まで）",
                                 color=discord.Color.yellow(),
                             )
                             await interaction.response.send_message(embed=embed)

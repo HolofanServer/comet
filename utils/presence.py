@@ -5,7 +5,7 @@ import os
 
 load_dotenv()
 
-main_guild_id = int(os.getenv("DEV_GUILD_ID"))
+main_guild_id = int(os.getenv("MAIN_GUILD_ID"))
 
 presences = [
     {"type": "Playing", "name": "サーバー人数を更新中..."},
