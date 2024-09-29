@@ -9,7 +9,7 @@ class SendFirstMessageToFaqCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_thread_create(self, thread):
-        if isinstance(thread.parent, discord.ForumChannel) and thread.parent.id == 1230368803746218034:
+        if isinstance(thread.parent, discord.ForumChannel) and thread.parent.id == 1034090635852001310:
             await asyncio.sleep(5)
             auther_mention = thread.owner.mention
             embed = discord.Embed(
