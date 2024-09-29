@@ -3,6 +3,8 @@ from discord.ext import commands
 from discord import app_commands
 import pytz
 from datetime import datetime
+import json
+import os
 
 class ReportUserReasonView(discord.ui.View):
     def __init__(self):
@@ -45,17 +47,33 @@ class ReportUserReasonSelect(discord.ui.Select):
 class ReportUserCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.config_path = 'data/report/config.json'
+
+    def load_config(self, guild_id):
+        """通報チャンネルの設定を読み込む"""
+        if os.path.exists(self.config_path):
+            with open(self.config_path, 'r') as f:
+                config = json.load(f)
+            return config.get(str(guild_id), {}).get("report_channel")
+        return None
 
 async def setup(bot):
     cog = ReportUserCog(bot)
     await bot.add_cog(cog)
 
     async def report_user(interaction: discord.Interaction, user: discord.User):
-        role_name = "Staff"
-        mod_channel = interaction.guild.get_channel(1220578233875959918)
+        role_name = "moderator"
+        mod_channel_id = cog.load_config(interaction.guild.id)
+
+        if mod_channel_id is None:
+            await interaction.response.send_message("通報チャンネルが設定されていません。", ephemeral=True)
+            return
+
+        mod_channel = interaction.guild.get_channel(mod_channel_id)
         if mod_channel is None:
             await interaction.response.send_message("モデレーションチャンネルが見つかりません", ephemeral=True)
             return
+
         mod_role = discord.utils.get(interaction.guild.roles, name=role_name)
         if mod_role is None:
             await interaction.response.send_message("モデレーターロールが見つかりません", ephemeral=True)
