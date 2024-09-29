@@ -6,7 +6,6 @@ import pytz
 from datetime import datetime
 import json
 import os
-from pathlib import Path
 
 class OtherReasonModal(Modal):
     def __init__(self, message: discord.Message, mod_channel: discord.TextChannel, *args, **kwargs):
@@ -122,7 +121,7 @@ async def setup(bot):
         color=0xFF0000,
         timestamp=now
     )
-        embed.set_author(name=f"通報者：{interaction.user.display_name} | {interaction.user.id}\n通報されたユーザー：{message.author.display_name} | {message.author.id}")
+        embed.set_author(name=f"通報者：{interaction.user.display_name} | {interaction.user.id}\n通報されたユーザー : {message.author.display_name} | {message.author.id}")
 
         embed.add_field(name="通報理由", value=view.value, inline=False)
 
