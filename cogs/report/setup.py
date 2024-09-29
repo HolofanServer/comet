@@ -10,6 +10,12 @@ class Setup(commands.Cog):
 
     def save_config(self, guild_id, channel_id):
         """通報チャンネルの設定を保存する"""
+
+        dir_path = os.path.dirname(self.config_path)
+        
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+
         if os.path.exists(self.config_path):
             with open(self.config_path, 'r') as f:
                 config = json.load(f)
