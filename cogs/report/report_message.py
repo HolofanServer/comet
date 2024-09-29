@@ -52,6 +52,7 @@ class ReportReasonSelect(discord.ui.Select):
             discord.SelectOption(label="誤情報", value="誤情報"),
             discord.SelectOption(label="違法な行為", value="違法な行為"),
             discord.SelectOption(label="自傷/他傷行為", value="自傷/他傷行為"),
+            discord.SelectOption(label="生成AIコンテンツ", value="生成AIコンテンツ"),
             discord.SelectOption(label="差別的発言", value="差別的発言"),
             discord.SelectOption(label="プライバシー侵害", value="プライバシー侵害"),
             discord.SelectOption(label="荒らし行為", value="荒らし行為"),
@@ -70,14 +71,27 @@ class ReportReasonSelect(discord.ui.Select):
 class ReportMessageCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.config_path = 'data/report/config.json'
+
+    def load_config(self, guild_id):
+        """通報チャンネルの設定を読み込む"""
+        if os.path.exists(self.config_path):
+            with open(self.config_path, 'r') as f:
+                config = json.load(f)
+            return config.get(str(guild_id), {}).get("report_channel")
+        return None
 
 async def setup(bot):
     cog = ReportMessageCog(bot)
     await bot.add_cog(cog)
 
     async def report_message(interaction: discord.Interaction, message: discord.Message):
-        mod_channel_id = 1220578233875959918
-        role_name = "Staff"
+        role_name = "moderator"
+        mod_channel_id = cog.load_config(interaction.guild.id)
+
+        if mod_channel_id is None:
+            await interaction.response.send_message("通報チャンネルが設定されていません。", ephemeral=True)
+            return
 
         mod_channel = interaction.guild.get_channel(mod_channel_id)
         if mod_channel is None:
