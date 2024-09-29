@@ -39,8 +39,8 @@ async def tubuyakirule_announce(message, client):
                 print(f"Error deleting last message: {e}")
 
         embed = discord.Embed(
-            title="https://discord.com/channels/1043759677831393291/1212206562056085585/1212207706417532958 のルール",
-            description="つぶやきチャンネルでは、他の人のメッセージに対してリアクションをつける行為、メッセージに対して反応を示す行為を禁止しています。\n\n自分の言いたいことを言うだけのチャンネルです。ルールに従いご利用ください。",
+            title="https://discord.com/channels/753903663298117694/1156414531292106752/1156416165661384775 のルール",
+            description="つぶやきチャンネルでは、他の人のメッセージに対してリアクションをつける行為、メッセージに対して反応を示す行為を禁止しています。\n\n自分の言いたいことを言うだけのチャンネルです。ルールに従いご利用ください。\n詳しくは[こちら](https://discord.com/channels/753903663298117694/1156414531292106752/1156416165661384775) のメッセージをご覧ください。",
             color=0x00ff00
         )
         text_content = "【定期連絡】"
