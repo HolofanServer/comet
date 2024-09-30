@@ -204,5 +204,13 @@ class OmikujiCog(commands.Cog):
         else:
             await ctx.send("おみくじのリストは空です。")
 
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author.bot == self.bot.user:
+            return
+        if message.content.startswith("ギズみくじ"):
+            ctx = await self.bot.get_context(message)
+            await self.omikuji(ctx)
+
 async def setup(bot):
     await bot.add_cog(OmikujiCog(bot))

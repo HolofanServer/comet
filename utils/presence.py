@@ -9,7 +9,6 @@ load_dotenv()
 main_guild_id = int(os.getenv("MAIN_GUILD_ID"))
 
 presences = [
-    {"type": "Playing", "name": "サーバー人数を更新中..."},
     {"type": "Playing", "name": "/omikuji", "state": "1日一回運試し！"},
 ]
 
@@ -19,16 +18,16 @@ async def update_presence(bot):
         member_count = sum(1 for _ in bot.get_guild(main_guild_id).members)
         
         custom_presence = {"type": "Playing", "name": f"{member_count}人が参加中...", "state": "iPhoneだけだよ！"}
-        presences[-1] = custom_presence
+        presences.insert(0, custom_presence)  # custom_presenceをリストの最初に追加
         
         presence = presences[index]
-        if index != 0:
-            if presence["type"] == "Playing":
-                activity_type = getattr(discord.ActivityType, presence["type"].lower(), discord.ActivityType.playing)
-                activity = discord.Activity(type=activity_type, name=presence["name"], state=presence.get("state", None), status=discord.Status.online)
+        if presence["type"] == "Playing":
+            activity_type = getattr(discord.ActivityType, presence["type"].lower(), discord.ActivityType.playing)
+            activity = discord.Activity(type=activity_type, name=presence["name"], state=presence.get("state", None), status=discord.Status.online)
 
-            await bot.change_presence(activity=activity)
+        await bot.change_presence(activity=activity)
         
         await asyncio.sleep(60)
 
         index = (index + 1) % len(presences)
+        presences.pop(0)  # custom_presenceをリストから削除

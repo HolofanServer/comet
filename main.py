@@ -38,8 +38,8 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 TOKEN = os.getenv('BOT_TOKEN')
-command_prefix = ['gz/', ':', 'ギズ']
-main_guild_id = int(os.getenv('DEV_GUILD_ID'))
+command_prefix = ['gz/', ':']
+main_guild_id = int(os.getenv('MAIN_GUILD_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
 main_dev_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
 bug_report_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
@@ -128,10 +128,12 @@ class MyBot(commands.AutoShardedBot):
     async def after_ready(self):
         await self.wait_until_ready()
         print("setup_hook is called")
-        await update_status(self, "起動中..")
+        await update_status(self, "Bot Startup...")
+        logger.info("status: Bot Startup...")
         await self.load_cogs('cogs')
         await self.tree.sync()
         await update_status(self, "現在の処理: tree sync")
+        logger.info("status: 現在の処理: tree sync")
         if not self.initialized:
             print("Initializing...")
             self.initialized = True
@@ -165,13 +167,11 @@ class MyBot(commands.AutoShardedBot):
                 continue
             try:
                 cog_path = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
-                await update_status(self, f"現在の処理: {cog_path}をロード中")
                 await self.load_extension(cog_path)
                 print(f'{cog_path} loaded successfully.')
             except commands.ExtensionFailed as e:
                 traceback.print_exc()
                 print(f'Failed to load extension {p.stem}: {e}\nFull error: {e.__cause__}')
-                await update_status(self, f"現在の処理: {cog_path}のロードに失敗")
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
