@@ -122,7 +122,7 @@ class OmikujiCog(commands.Cog):
         embed.description += f"\n\nおみくじには**{fortune}**と書かれていた"
         embed.set_footer(text=f"おみくじを引いてくれてありがとう！また明日引いてみてね！\n連続ログイン: {self.streak_data[user_id]['streak']}日目")
         await fm.edit(embed=embed)
-        if fortune == "iPhoneだけだよ！!":
+        if fortune == "iPhone��けだよ!!":
             await asyncio.sleep(1)
             embed.description += "\n\niPhoneだけじゃなかったのかよ..."
             await fm.edit(embed=embed)
@@ -141,6 +141,56 @@ class OmikujiCog(commands.Cog):
         """おみくじを引くコマンドです。"""
         if ctx.invoked_subcommand is None:
             await ctx.send("おみくじを引くコマンドです。")
+
+    @omikuji_group.command(name="debug")
+    async def debug(self, ctx): 
+        """デバッグコマンドです。"""
+        if not any(role.name == "moderator" for role in ctx.author.roles):
+            mes = await ctx.channel.send("このコマンドは現在利用できません。")
+            await asyncio.sleep(3)
+            await mes.delete()
+            await ctx.message.delete()
+            return
+        
+        steps = [
+            "iPhoneだけだよ神社に来た",
+            "Lightningケーブルがぶら下がってる中おみくじを選ぶ",
+            "**Lightningおじさん**がこちらをニコニコしながら眺めている",
+            "心を落ち着かせおみくじを開く",
+        ]
+
+        fortune = "iPhoneだけだよ!!"
+
+        embed = discord.Embed(title="おみくじ結果", color=0x34343c)
+        embed.set_author(name="iPhoneだけだよ神社にて...")
+        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1121700273254055936/1147277206381416599/c7b0850d740fa8bb9272b4d3289ef37c.png")
+
+        fm = await ctx.send(content=f"{ctx.author.mention}\nおみくじを引きに行く...", embed=None)
+
+        description_with_steps = ""
+        for step in steps:
+            await asyncio.sleep(2)
+            description_with_steps += f"\n\n{step}"
+            embed.description = description_with_steps
+            await fm.edit(embed=embed)
+
+        await asyncio.sleep(1)
+        embed.description += f"\n\nおみくじには**{fortune}**と書かれていた"
+        embed.set_footer(text="おみくじを引いてくれてありがとう！また明日引いてみてね！\n連続ログイン: N/A")
+        await fm.edit(embed=embed)
+        if fortune == "iPhoneだけだよ!!":
+            await asyncio.sleep(1)
+            embed.description += "\n\niPhoneだけじゃなかったのかよ..."
+            await fm.edit(embed=embed)
+            iphonedakedayo_emoji1 = "<:omkj_iphone_dakedayo_1:1290367507575869582>"
+            iphonedakedayo_emoji2 = "<:omkj_iphone_dakedayo_2:1290367485937451038>"
+            iphonedakedayo_emoji3 = "<:omkj_iphone_dakedayo_3:1290367469998833727>"
+            iphonedakedayo_emoji4 = "<a:omkj_iphone_dakedayo_4:1290367451061686363>"
+            iphonedakedayo_emoji5 = "<:giz_server_icon:1264027561856471062>"
+
+            emoji_list = [iphonedakedayo_emoji1, iphonedakedayo_emoji2, iphonedakedayo_emoji3, iphonedakedayo_emoji4, iphonedakedayo_emoji5]
+            for emoji in emoji_list:
+                await fm.add_reaction(emoji)
 
     @omikuji_group.command(name="add_fortune")
     async def add_fortune(self, ctx, fortune: str):
