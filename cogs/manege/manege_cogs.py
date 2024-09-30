@@ -1,13 +1,8 @@
 from discord.ext import commands
 import discord
-import subprocess
-import difflib
-from pathlib import Path
-import pathlib
-from utils import startup
-import asyncio
-import re
 from discord import app_commands
+
+import pathlib
 
 class ManagementCog(commands.Cog):
     def __init__(self, bot):

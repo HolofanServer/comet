@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+
 import aiohttp
 from PIL import Image
 import io
@@ -158,7 +159,7 @@ class MessageDeleteLoggingCog(commands.Cog):
 
         await log_channel.send(embed=embed)
         print(log_channel)
-        
+
         image_urls = []
         other_files_info = []
 
