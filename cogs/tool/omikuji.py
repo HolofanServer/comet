@@ -122,18 +122,17 @@ class OmikujiCog(commands.Cog):
         embed.description += f"\n\nおみくじには**{fortune}**と書かれていた"
         embed.set_footer(text=f"おみくじを引いてくれてありがとう！また明日引いてみてね！\n連続ログイン: {self.streak_data[user_id]['streak']}日目")
         await fm.edit(embed=embed)
-        if fortune == "iPhoneだけだよ！":
+        if fortune == "iPhoneだけだよ！!":
             await asyncio.sleep(1)
             embed.description += "\n\niPhoneだけじゃなかったのかよ..."
             await fm.edit(embed=embed)
-            iphonedakedayo_emoji1 = "<a:gizGif_dakedayo:1052474489037914172>"
-            iphonedakedayo_emoji2 = "<:1giz_amitodakedayoFace:760497129671884900>"
-            iphonedakedayo_emoji3 = "<:1giz_amitomugon:760497186478882866>"
-            iphonedakedayo_emoji4 = "<:terminal_LightningC:760770112311001139>"
-            iphonedakedayo_emoji5 = "<:terminal_LightningW:760770240337936416>"
-            iphonedakedayo_emoji6 = "<:moji_p_iPhone_dake_dayo:1096852346992087050>"
+            iphonedakedayo_emoji1 = "<:omkj_iphone_dakedayo_1:1290367507575869582>"
+            iphonedakedayo_emoji2 = "<:omkj_iphone_dakedayo_2:1290367485937451038>"
+            iphonedakedayo_emoji3 = "<:omkj_iphone_dakedayo_3:1290367469998833727>"
+            iphonedakedayo_emoji4 = "<a:omkj_iphone_dakedayo_4:1290367451061686363>"
+            iphonedakedayo_emoji5 = "<:giz_server_icon:1264027561856471062>"
 
-            emoji_list = [iphonedakedayo_emoji1, iphonedakedayo_emoji2, iphonedakedayo_emoji3, iphonedakedayo_emoji4, iphonedakedayo_emoji5, iphonedakedayo_emoji6]
+            emoji_list = [iphonedakedayo_emoji1, iphonedakedayo_emoji2, iphonedakedayo_emoji3, iphonedakedayo_emoji4, iphonedakedayo_emoji5]
             for emoji in emoji_list:
                 await fm.add_reaction(emoji)
 
