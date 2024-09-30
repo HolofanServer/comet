@@ -50,7 +50,7 @@ class DalleImageGenerator(commands.Cog):
                     data = await response.json()
                     image_url = data['data'][0]['url']
 
-            await first_message.edit(content="生成された画像はこちらです", embed=discord.Embed().set_image(url=image_url))
+            await first_message.edit(content=f"生成された画像はこちらです\nこの画像は'{prompt}'を元に生成されました", embed=discord.Embed().set_image(url=image_url))
 
         except Exception as e:
             await first_message.edit(content=f"エラーが発生しました: {str(e)}")
