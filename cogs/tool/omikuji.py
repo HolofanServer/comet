@@ -146,6 +146,13 @@ class OmikujiCog(commands.Cog):
     @omikuji_group.command(name="add_fortune")
     async def add_fortune(self, ctx, fortune: str):
         """おみくじに追加するコマンドです。"""
+        if not any(role.name == "Server Booster" for role in ctx.author.roles):
+            mes = await ctx.channel.send("このコマンドは現在利用できません。")
+            await asyncio.sleep(3)
+            await mes.delete()
+            await ctx.message.delete()
+            return
+        
         await ctx.defer()
         if fortune in self.ids:
             await ctx.send(f"{fortune}はすでにおみくじに存在します。")
@@ -158,6 +165,13 @@ class OmikujiCog(commands.Cog):
     @omikuji_group.command(name="remove_fortune")
     async def remove_fortune(self, ctx, fortune: str):
         """おみくじから削除するコマンドです。"""
+        if not any(role.name == "Server Booster" for role in ctx.author.roles):
+            mes = await ctx.channel.send("このコマンドは現在利用できません。")
+            await asyncio.sleep(3)
+            await mes.delete()
+            await ctx.message.delete()
+            return
+        
         await ctx.defer()
         if fortune in self.ids:
             del self.ids[fortune]
@@ -170,6 +184,13 @@ class OmikujiCog(commands.Cog):
     @omikuji_group.command(name="list_fortune")
     async def list_fortune(self, ctx):
         """おみくじのリストを表示するコマンドです。"""
+        if not any(role.name == "Server Booster" for role in ctx.author.roles):
+            mes = await ctx.channel.send("このコマンドは現在利用できません。")
+            await asyncio.sleep(3)
+            await mes.delete()
+            await ctx.message.delete()
+            return
+        
         await ctx.defer()
         if self.ids:
             e = discord.Embed(

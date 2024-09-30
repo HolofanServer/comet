@@ -5,7 +5,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import aiohttp
-
+import asyncio
 load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
@@ -19,6 +19,13 @@ class DalleImageGenerator(commands.Cog):
     @commands.hybrid_command(name="generate_image")
     async def generate_image(self, ctx, *, prompt: str):
         """DALL·E APIを使って画像を生成します"""
+        if not any(role.name == "Server Booster" for role in ctx.author.roles):
+            mes = await ctx.channel.send("このコマンドは現在利用できません。")
+            await asyncio.sleep(3)
+            await mes.delete()
+            await ctx.message.delete()
+            return
+        
         try:
             await ctx.defer()
             first_message = await ctx.send(f"生成中: '{prompt}' に基づいた画像を作成しています。お待ちください...")
