@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+
 from dotenv import load_dotenv
 import os
 import re
@@ -9,10 +10,11 @@ from datetime import datetime
 import logging
 import asyncio
 import pytz
+import traceback
+
 from utils import presence
 from utils.logging import save_log
 from utils.startup import startup_send_webhook, startup_send_botinfo
-import traceback
 
 load_dotenv()
 
