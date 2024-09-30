@@ -15,6 +15,7 @@ import traceback
 from utils import presence
 from utils.logging import save_log
 from utils.startup import startup_send_webhook, startup_send_botinfo
+from utils.startup_status import update_status
 
 load_dotenv()
 
@@ -127,9 +128,10 @@ class MyBot(commands.AutoShardedBot):
     async def after_ready(self):
         await self.wait_until_ready()
         print("setup_hook is called")
-        await self.change_presence(activity=discord.Game(name="起動中..", status=discord.Status.idle))
+        await update_status(self, "起動中..")
         await self.load_cogs('cogs')
         await self.tree.sync()
+        await update_status(self, "現在の処理: tree sync")
         if not self.initialized:
             print("Initializing...")
             self.initialized = True
@@ -163,11 +165,13 @@ class MyBot(commands.AutoShardedBot):
                 continue
             try:
                 cog_path = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
+                await update_status(self, f"現在の処理: {cog_path}をロード中")
                 await self.load_extension(cog_path)
                 print(f'{cog_path} loaded successfully.')
             except commands.ExtensionFailed as e:
                 traceback.print_exc()
                 print(f'Failed to load extension {p.stem}: {e}\nFull error: {e.__cause__}')
+                await update_status(self, f"現在の処理: {cog_path}のロードに失敗")
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
