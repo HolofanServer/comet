@@ -16,6 +16,9 @@
 - 👨‍💻このコードはGizmodo Woodsのモデレーターのみ閲覧可能です。 **共有等はお控えください。**
 - ⚡ Lightning **iPhoneだけだよ！**
 
+- Main Bot: iPhone3G #6472
+- Dev Bot: iPhone3G Dev #9786
+
 <div> <a href="https://github.com/FreeWiFi7749" target="_blank"><img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" target="_blank"></a>
 </div><h3 align="left">Gizmodo Woods:</h3>
 <p align="left">
