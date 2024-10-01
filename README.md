@@ -1,3 +1,4 @@
+[![wakatime](https://wakatime.com/badge/user/426e61d3-f6b7-4324-bdf6-c87be0cdc667/project/b6a3690b-0456-413d-b78c-5cbb8eb8846a.svg)](https://wakatime.com/badge/user/426e61d3-f6b7-4324-bdf6-c87be0cdc667/project/b6a3690b-0456-413d-b78c-5cbb8eb8846a)
 <h1 align="center">iPhone3G Developed by FreeWiFi7749</h1>
 <h3 align="center">全てのログ、おみくじコマンド、sudo(一時的権限付与)コマンドを備えたGizmodo woods専属BOTv2</h3>
 
