@@ -46,6 +46,8 @@ def get_cpu_model_name():
                     return line.split(':')[1].strip()
     except subprocess.CalledProcessError:
         return "取得に失敗しました"
+    except FileNotFoundError:
+        return "lscpuコマンドが見つかりません"
 
 async def startup_send_webhook(bot, guild_id):
     guild = bot.get_guild(guild_id)
@@ -125,6 +127,7 @@ async def startup_send_botinfo(bot):
     if channel is None:
         print("指定されたチャンネルが見つかりません。")
         return
+    
     discord_py_version = discord.__version__
     os_info = f"{platform.system()} {platform.release()} ({platform.version()})"
     cpu_info = get_cpu_model_name()

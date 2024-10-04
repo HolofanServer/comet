@@ -131,6 +131,7 @@ class MyBot(commands.AutoShardedBot):
         await update_status(self, "Bot Startup...")
         logger.info("status: Bot Startup...")
         await self.load_cogs('cogs')
+        await self.load_extension('jishaku')
         await self.tree.sync()
         await update_status(self, "現在の処理: tree sync")
         logger.info("status: 現在の処理: tree sync")
@@ -163,7 +164,7 @@ class MyBot(commands.AutoShardedBot):
     async def load_cogs(self, folder_name: str):
         cur = pathlib.Path('.')
         for p in cur.glob(f"{folder_name}/**/*.py"):
-            if p.stem == "__init__" or "backup" in p.parts:
+            if p.stem == "__init__":
                 continue
             try:
                 cog_path = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')

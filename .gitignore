@@ -7,13 +7,18 @@
 # 開発ツールの設定
 .vscode/
 
-# 開発用ディレクトリ
-dev/
-
 # データディレクトリ
 data/
+
+# Devディレクトリ
+Dev/
+
 # Pythonのバイトコード
 __pycache__/
 
 # 仮想環境
 iphone3g/
+
+# Config ファイル
+bot.json
+spam_blocker.json
