@@ -1,0 +1,6 @@
+{
+    "spam_limit": 5,
+    "cooldown_period": 12.0,
+    "auto_blacklist_limit": 5,
+    "blacklist_path": "data/mod/blacklist.json"
+}
