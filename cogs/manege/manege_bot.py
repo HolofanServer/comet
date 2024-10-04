@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 
 from utils import api
+from utils.spam_blocker import SpamBlocker
 
 load_dotenv()
 SERVICE_NAME = os.getenv("SERVICE_NAME")
@@ -16,6 +17,7 @@ SERVICE_NAME = os.getenv("SERVICE_NAME")
 class ManagementBotCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.spam_blocker = SpamBlocker(bot=bot)
 
     async def rstart_bot(self):
         try:
@@ -33,6 +35,7 @@ class ManagementBotCog(commands.Cog):
     @commands.hybrid_command(name='ping', hidden=True)
     async def ping(self, ctx):
         """BotのPingを表示します"""
+        self.spam_blocker.is_not_blacklisted()
         start_time = time.monotonic()
         api_ping = await api.measure_api_ping()
 
