@@ -79,15 +79,19 @@ class RMForm(commands.Cog):
                 created_at = datetime.datetime.fromisoformat(post_data['created_at']).replace(tzinfo=timezone.utc)
                 if (now - created_at).days >= 7:
                     thread_id = int(filename.split('.')[0])
-                    thread = await self.bot.fetch_channel(thread_id)
-                    author = await self.bot.fetch_user(post_data['author_id'])
-                    e = discord.Embed(title="リマインダー", description="このメッセージは自動メッセージです。\n\nこのスレッドが作成されてから一週間経過しました。まだこのスレッドを使用していますか？", color=0x00ff00)
-                    e.set_author(name=f"{author.name}さん", icon_url=author.avatar.url)
-                    e.add_field(name="スレッド名", value=thread.name, inline=False)
-                    e.add_field(name="スレッド作成日時", value=created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=False)
-                    await thread.send(embed=e)
-                    self.move_to_inactive(thread_id)
-                    logger.info(f"スレッドを非アクティブに移動しました: {thread_id}")
+                    try:
+                        thread = await self.bot.fetch_channel(thread_id)
+                        author = await self.bot.fetch_user(post_data['author_id'])
+                        e = discord.Embed(title="リマインダー", description="このメッセージは自動メッセージです。\n\nこのスレッドが作成されてから一週間経過しました。まだこのスレッドを使用していますか？", color=0x00ff00)
+                        e.set_author(name=f"{author.name}さん", icon_url=author.avatar.url)
+                        e.add_field(name="スレッド名", value=thread.name, inline=False)
+                        e.add_field(name="スレッド作成日時", value=created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=False)
+                        await thread.send(embed=e)
+                        self.move_to_inactive(thread_id)
+                        logger.info(f"スレッドを非アクティブに移動しました: {thread_id}")
+                    except discord.errors.NotFound:
+                        logger.warning(f"スレッドが見つかりませんでした: {thread_id}")
+                        self.move_to_inactive(thread_id)
     
     def move_to_inactive(self, thread_id):
         active_path = f"data/rm_form/active/{thread_id}.json"
