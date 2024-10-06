@@ -4,9 +4,14 @@ from discord.ui import Modal, TextInput
 from discord import app_commands
 
 import pytz
-from datetime import datetime
 import json
 import os
+
+from datetime import datetime
+
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 class OtherReasonModal(Modal):
     def __init__(self, message: discord.Message, mod_channel: discord.TextChannel, *args, **kwargs):
@@ -19,7 +24,7 @@ class OtherReasonModal(Modal):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("通報理由が送信されました。", ephemeral=True)
         self.guild = interaction.guild
-        mod_role = discord.utils.get(self.guild.roles, name="Staff")
+        mod_role = discord.utils.get(self.guild.roles, name="moderator")
         embed = discord.Embed(
             title="メッセージ通報",
             description=f"{interaction.user.mention} が {self.message.jump_url} ({self.message.author.mention}) を **その他の理由** で通報しました。\n直ちに事実確認を行い適切な対応をしてください。",

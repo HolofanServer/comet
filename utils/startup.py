@@ -1,24 +1,26 @@
 import discord
 from discord.ext import commands
 
-from datetime import datetime
 import pytz
 import platform
 import psutil
 import os
-from pathlib import Path
 import subprocess
-from dotenv import load_dotenv
 import json
 
-from utils.startup_create import create_usage_bar
+from pathlib import Path
+from datetime import datetime
+from dotenv import load_dotenv
 
+from utils.startup_create import create_usage_bar
+from utils.logging import setup_logging
+
+logger = setup_logging()
 load_dotenv()
 
 bot_owner_id = int(os.getenv('BOT_OWNER_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
 startup_guild_id = int(os.getenv('DEV_GUILD_ID'))
-print(f"{startup_channel_id}, {startup_guild_id}")
 
 async def load_cogs(bot, directory='./cogs'):
     failed_cogs = {}
@@ -52,12 +54,12 @@ def get_cpu_model_name():
 async def startup_send_webhook(bot, guild_id):
     guild = bot.get_guild(guild_id)
     if guild is None:
-        print("ギルドが見つかりません。")
+        logger.warning("ギルドが見つかりません。")
         return
 
     channel = guild.get_channel(startup_channel_id)
     if channel is None:
-        print("指定されたチャンネルが見つかりません。")
+        logger.warning("指定されたチャンネルが見つかりません。")
         return
 
     jst_time = datetime.now(pytz.timezone('Asia/Tokyo')).strftime('%Y-%m-%d_%H-%M-%S')
@@ -79,9 +81,9 @@ async def startup_send_webhook(bot, guild_id):
                 log_data = json.load(log_file)
                 return log_data.get('session_id')
         except FileNotFoundError:
-            print(f"ログファイルが見つかりません: {log_file_path}")
+            logger.warning(f"ログファイルが見つかりません: {log_file_path}")
         except json.JSONDecodeError:
-            print(f"ログファイルの形式が正しくありません: {log_file_path}")
+            logger.warning(f"ログファイルの形式が正しくありません: {log_file_path}")
         return None
 
     latest_log_file = find_latest_log_file()
@@ -89,11 +91,11 @@ async def startup_send_webhook(bot, guild_id):
     if latest_log_file:
         session_id = find_session_id_from_json(latest_log_file)
         if session_id:
-            print(f"Found Session ID: {session_id}")
+            logger.info(f"Found Session ID: {session_id}")
         else:
-            print("Session ID not found.")
+            logger.warning("Session ID not found.")
     else:
-        print("ログファイルが見つかりませんでした。")
+        logger.warning("ログファイルが見つかりませんでした。")
 
     failed_cogs = await load_cogs(bot)
 
@@ -120,12 +122,12 @@ async def startup_send_botinfo(bot):
     guild = bot.get_guild(startup_guild_id)
     bo = bot.get_user(bot_owner_id)
     if guild is None:
-        print("ギルドが見つかりません。")
+        logger.warning("ギルドが見つかりません。")
         return
 
     channel = guild.get_channel(startup_channel_id)
     if channel is None:
-        print("指定されたチャンネルが見つかりません。")
+        logger.warning("指定されたチャンネルが見つかりません。")
         return
     
     discord_py_version = discord.__version__

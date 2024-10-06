@@ -5,6 +5,9 @@ import json
 import os
 
 from utils.spam_blocker import SpamBlocker
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 class SpamBlockerCog(commands.Cog):
     def __init__(self, bot: commands.Bot):

@@ -1,8 +1,10 @@
 import json
 import os
-from datetime import datetime
 import shutil
 import uuid
+import logging
+
+from datetime import datetime
 
 def save_log(log_data):
     date_str = datetime.now().strftime('%Y-%m-%d')
@@ -26,3 +28,9 @@ def save_log(log_data):
         json.dump(log_data, file, ensure_ascii=False, indent=4)
 
     print(f'Log saved to {file_path}')
+
+def setup_logging():
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    return logger
+

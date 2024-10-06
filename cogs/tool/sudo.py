@@ -4,9 +4,14 @@ from discord.ext import commands
 import json
 import random
 import asyncio
+
 from datetime import datetime
 from enum import Enum
 import pytz
+
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 class SudoCog(commands.Cog):
     def __init__(self, bot):

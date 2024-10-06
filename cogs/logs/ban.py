@@ -3,7 +3,12 @@ from discord.ext import commands
 
 import json
 import os
+
 from datetime import datetime, timezone, timedelta
+
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 class BanLoggingCog(commands.Cog):
     def __init__(self, bot):

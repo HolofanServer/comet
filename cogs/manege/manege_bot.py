@@ -6,10 +6,15 @@ import subprocess
 import platform
 import time
 import os
+import asyncio
+
 from dotenv import load_dotenv
 
 from utils import api
 from utils.spam_blocker import SpamBlocker
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 load_dotenv()
 SERVICE_NAME = os.getenv("SERVICE_NAME")
@@ -22,15 +27,17 @@ class ManagementBotCog(commands.Cog):
     async def rstart_bot(self):
         try:
             if platform.system() == "Linux":
-                subprocess.Popen(["sudo", "systemctl", "restart", f"{SERVICE_NAME}.service"])
+                subprocess.Popen(["sudo", "systemctl", "stop", f"{SERVICE_NAME}.service"])
+                await asyncio.sleep(5)
+                subprocess.Popen(["sudo", "systemctl", "start", f"{SERVICE_NAME}.service"])
             elif platform.system() == "Darwin":
                 subprocess.Popen(["/bin/sh", "-c", "sleep 1; exec python3 " + " ".join(sys.argv)])
             else:
-                print("このOSはサポートされていません。")
+                logger.error("このOSはサポートされていません。")
                 return
             await self.bot.close()
         except Exception as e:
-            print(f"再起動中にエラーが発生しました: {e}")
+            logger.error(f"再起動中にエラーが発生しました: {e}")
 
     @commands.hybrid_command(name='ping', hidden=True)
     async def ping(self, ctx):
