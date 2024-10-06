@@ -10,6 +10,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from openai import OpenAI
 from collections import deque
+from pytz import timezone as pytz_timezone
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -33,8 +34,7 @@ class ReminderCog(commands.Cog):
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": f"次の入力から時間、メッセージ、リピート情報を抽出してください: {input_string}"},
-                {"role": "user", "content": "タイムゾーンが含まれている場合はそれも抽出してください 例: JST, UTC, GMT"},
-                {"role": "user", "content": "タイムゾーンが指定されていない場合は指定なしと返してください"},
+                {"role": "user", "content": "タイムゾーンが含まれている場合はそれも抽出してください。タイムゾーンが指定されていない場合は指定なしと返してください。また台北時間やロンドン時間などの都市名はタイムゾーンとして変換してください 例: JST, UTC, GMT"},
                 {"role": "system", "content": "以下の形式でリマインダーを設定できます。特定の日時にリマインド: `リマインド 2024年10月1日午前9時にミーティング開始と送信して`"},
                 {"role": "system", "content": "結果を以下のJSON形式で返してください: {\"time\": \"ISO8601形式の時間\", \"message\": \"メッセージ\", \"repeat_type\": \"リピート情報\", \"timezone\": \"タイムゾーン\"}"}
             ]
@@ -53,6 +53,7 @@ class ReminderCog(commands.Cog):
 
             if timezone is None or timezone == "指定なし":
                 timezone = "Asia/Tokyo"
+            timezone_obj = pytz_timezone(timezone)
 
             remind_time = dateparser.parse(
                 time_str,
@@ -66,6 +67,12 @@ class ReminderCog(commands.Cog):
 
             if remind_time is None:
                 logger.error(f"Failed to parse remind_time from {time_str}")
+
+            now_str = datetime.now(timezone_obj)
+            
+            if time_str < now_str and repeat_type is None:
+                await message.channel.send("指定された時間は既に過ぎています。未来の時間を指定してください。")
+                return
             else:
                 logger.debug(f"parse_time_and_message: remind_time={remind_time}, message={message}, repeat_type={repeat_type}, timezone={timezone}")
             return remind_time, message, repeat_type
@@ -138,7 +145,6 @@ class ReminderCog(commands.Cog):
         
         if re.search(r'リマインド[ 　]', message.content):
             remind_time, remind_message, repeat_type = await self.parse_time_and_message(message.content)
-            logger.debug(f"on_message: remind_time={remind_time}, remind_message={remind_message}, repeat_type={repeat_type}")
 
             if remind_time is None:
                 await message.channel.send("時間とメッセージを理解できませんでした。正しい形式で入力してください。")
@@ -146,6 +152,12 @@ class ReminderCog(commands.Cog):
 
             if remind_time < datetime.now(timezone.utc) and repeat_type is None:
                 await message.channel.send("指定された時間は既に過ぎています。未来の時間を指定してください。")
+                return
+
+            logger.debug(f"on_message: remind_time={remind_time}, remind_message={remind_message}, repeat_type={repeat_type}")
+
+            if remind_time is None:
+                await message.channel.send("時間とメッセージを理解できませんでした。正しい形式で入力してください。")
                 return
 
             self.save_data(message.author.id, remind_time, remind_message, repeat_type)
@@ -219,7 +231,7 @@ class ReminderCog(commands.Cog):
         )
 
         embed.add_field(
-            name="特定の曜日と時間のリマ���ンド",
+            name="特定の曜日と時間のリマンド",
             value="`マインド 毎週水曜日の午後7時にジムに行くと送信して`",
             inline=False
         )
