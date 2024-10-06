@@ -3,9 +3,14 @@ from discord.ext import commands
 from discord import app_commands
 
 import pytz
-from datetime import datetime
 import json
 import os
+
+from datetime import datetime
+
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 class ReportUserReasonView(discord.ui.View):
     def __init__(self):
@@ -44,6 +49,29 @@ class ReportUserReasonSelect(discord.ui.Select):
         self.view.value = self.values[0]
         await interaction.response.send_message(f"通報理由を {self.view.value} に設定しました。", ephemeral=True)
         self.view.stop()
+
+class OtherReasonModal(discord.ui.Modal):
+    def __init__(self, user: discord.User, mod_channel: discord.TextChannel, *args, **kwargs):
+        super().__init__(title="通報理由の詳細", *args, **kwargs)
+        self.user = user
+        self.mod_channel = mod_channel
+        self.reason = discord.ui.TextInput(label="詳細な通報理由", style=discord.TextStyle.long, placeholder="ここに詳細な通報理由を記入してください...", required=True)
+        self.add_item(self.reason)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message("通報理由が送信されました。", ephemeral=True)
+        mod_role = discord.utils.get(interaction.guild.roles, name="moderator")
+        embed = discord.Embed(
+            title="ユーザー通報",
+            description=f"{interaction.user.mention} が {self.user.mention} を **その他の理由** で通報しました。\n直ちに事実確認を行い適切な対応をしてください。",
+            color=0xFF0000,
+            timestamp=datetime.now().astimezone(pytz.timezone('Asia/Tokyo'))
+        )
+        embed.add_field(name="通報理由", value=self.reason.value, inline=False)
+        embed.set_author(name=f"通報者：{interaction.user.display_name} | {interaction.user.id}\n通報されたユーザー：{self.user.display_name} | {self.user.id}")
+        await self.mod_channel.send(embed=embed, content=f"{mod_role.mention}")
+        await interaction.followup.send("ユーザーが運営に通報されました。", ephemeral=True)
+        self.stop()
 
 class ReportUserCog(commands.Cog):
     def __init__(self, bot):
@@ -85,6 +113,11 @@ async def setup(bot):
         await view.wait()
 
         if view.value is None:
+            return
+
+        if view.value == "その他":
+            modal = OtherReasonModal(user=user, mod_channel=mod_channel)
+            await interaction.response.send_modal(modal)
             return
 
         jst = pytz.timezone('Asia/Tokyo')

@@ -9,11 +9,14 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
+from utils.logging import setup_logging
+
+logger = setup_logging()
+
 load_dotenv()
 
 help_channel_id_env = os.getenv("HELP_CHANNEL_ID", "0")
 help_command_id_env = os.getenv("HELP_COMMAND_ID", "0")
-print("HELP_COMMAND_ID:", help_command_id_env)
 
 jst = pytz.timezone('Asia/Tokyo')
 now = datetime.now(jst)

@@ -3,7 +3,12 @@ from discord.ext import commands
 
 import json
 import os
+
 from datetime import datetime, timezone, timedelta
+
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 def shorten_text(text, max_length=1024):
     return (text[:max_length-3] + '...') if len(text) > max_length else text
