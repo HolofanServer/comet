@@ -3,7 +3,12 @@ from discord.ext import commands
 
 import json
 import os
+
 from datetime import datetime, timedelta, timezone
+
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 class RoleLoggingCog(commands.Cog):
     def __init__(self, bot):

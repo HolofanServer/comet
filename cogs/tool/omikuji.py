@@ -2,10 +2,15 @@ import discord
 from discord.ext import commands
 
 import json
-from datetime import datetime, timedelta
 import asyncio
 import random
 import os
+
+from datetime import datetime, timedelta
+
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 class OmikujiCog(commands.Cog):
     def __init__(self, bot):

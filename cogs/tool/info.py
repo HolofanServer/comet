@@ -3,6 +3,10 @@ from discord.ext import commands
 
 from typing import Optional
 
+from utils.logging import setup_logging
+
+logger = setup_logging()
+
 class ServerInfoCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot

@@ -2,11 +2,16 @@ import discord
 from discord.ext import commands
 
 import aiohttp
-from PIL import Image
 import io
 import json
 import os
+
+from PIL import Image
 from datetime import datetime, timedelta, timezone
+
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 async def fetch_image(session, url):
     async with session.get(url) as response:

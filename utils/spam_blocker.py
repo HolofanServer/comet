@@ -1,16 +1,18 @@
 import discord
 from discord.ext import commands
 
-import logging
 import json
 import os
+
 from collections import Counter, defaultdict
 from typing import Optional, Iterable, AsyncIterator
 from dotenv import load_dotenv
 
+from utils.logging import setup_logging
+
 load_dotenv()
 
-log = logging.getLogger(__name__)
+log = setup_logging()
 
 class SpamBlocker:
     def __init__(self, bot: commands.Bot):
