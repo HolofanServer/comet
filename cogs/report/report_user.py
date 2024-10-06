@@ -13,9 +13,11 @@ from utils.logging import setup_logging
 logger = setup_logging()
 
 class ReportUserReasonView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, user: discord.User, mod_channel: discord.TextChannel):
         super().__init__()
         self.value = None
+        self.user = user
+        self.mod_channel = mod_channel
         self.add_item(ReportUserReasonSelect())
 
 class ReportUserReasonSelect(discord.ui.Select):
@@ -47,8 +49,12 @@ class ReportUserReasonSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         self.view.value = self.values[0]
-        await interaction.response.send_message(f"通報理由を {self.view.value} に設定しました。", ephemeral=True)
-        self.view.stop()
+        if self.view.value == "その他":
+            modal = OtherReasonModal(user=self.view.user, mod_channel=self.view.mod_channel)
+            await interaction.response.send_modal(modal)
+        else:
+            await interaction.response.send_message(f"通報理由を {self.view.value} に設定しました。", ephemeral=True)
+            self.view.stop()
 
 class OtherReasonModal(discord.ui.Modal):
     def __init__(self, user: discord.User, mod_channel: discord.TextChannel, *args, **kwargs):
@@ -108,23 +114,22 @@ async def setup(bot):
             await interaction.response.send_message("モデレーターロールが見つかりません", ephemeral=True)
             return
 
-        view = ReportUserReasonView()
+        view = ReportUserReasonView(user=user, mod_channel=mod_channel)
         await interaction.response.send_message("通報理由を選択してください：", view=view, ephemeral=True)
         await view.wait()
 
         if view.value is None:
+            await interaction.followup.send("通報がキャンセルされました。", ephemeral=True)
             return
 
         if view.value == "その他":
-            modal = OtherReasonModal(user=user, mod_channel=mod_channel)
-            await interaction.response.send_modal(modal)
-            return
+            return 
 
         jst = pytz.timezone('Asia/Tokyo')
         now = datetime.now(jst)
         e = discord.Embed(
             title="ユーザー通報",
-            description=f"{interaction.user.mention}が {user.mention} を **{view.value}** で通報しました。\n直ちに事実確認を行い適切な対応をしてください。",
+            description=f"{interaction.user.mention} {user.mention} を **{view.value}** で通報しました。\n直ちに事実確認を行い適切な対応をしてください。",
             color=0xFF0000,
             timestamp=now
         )
