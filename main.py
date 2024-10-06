@@ -164,7 +164,7 @@ class MyBot(commands.AutoShardedBot):
     async def load_cogs(self, folder_name: str):
         cur = pathlib.Path('.')
         for p in cur.glob(f"{folder_name}/**/*.py"):
-            if p.stem == "__init__":
+            if p.stem in ["__init__", "forword_check"]:
                 continue
             try:
                 cog_path = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
