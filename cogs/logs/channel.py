@@ -4,6 +4,11 @@ from discord.ext import commands
 import json
 import os
 
+from utils.logging import setup_logging
+
+logger = setup_logging()
+
+
 class ChannelLoggingCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot

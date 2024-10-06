@@ -4,11 +4,12 @@ from discord.ext import commands, tasks
 import os
 import json
 import datetime
-import logging
+
 from datetime import timezone
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 class RMForm(commands.Cog):
     def __init__(self, bot):

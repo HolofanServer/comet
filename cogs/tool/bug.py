@@ -1,10 +1,11 @@
 import discord
 from discord.ext import commands
 
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 main_dev_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
 main_dev_server_id = int(os.getenv('MAIN_GUILD_ID'))

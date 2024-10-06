@@ -6,14 +6,15 @@ import re
 import asyncio
 import os
 import json
-import logging
+
 from datetime import datetime, timedelta, timezone
 from openai import OpenAI
 from collections import deque
 from pytz import timezone as pytz_timezone
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 api_key = os.getenv("OPENAI_API_KEY")
 client_ai = OpenAI(api_key=api_key)

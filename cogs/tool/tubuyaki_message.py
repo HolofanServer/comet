@@ -4,6 +4,10 @@ from discord.ext import commands
 import json
 import os
 
+from utils.logging import setup_logging
+
+logger = setup_logging()
+
 filename = 'data/tubuyaki/ta_message.json'
 
 def save_data(data, filename=filename):

@@ -2,8 +2,13 @@ import discord
 from discord.ext import commands
 
 import aiohttp
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
+
+from utils.logging import setup_logging
+
+logger = setup_logging()
 
 load_dotenv()
 

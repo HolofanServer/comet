@@ -3,6 +3,10 @@ from discord.ext import commands
 
 import asyncio
 
+from utils.logging import setup_logging
+
+logger = setup_logging()
+
 class SendFirstMessageToFaqCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot

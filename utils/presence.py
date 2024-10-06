@@ -1,10 +1,15 @@
 import discord
 
 import asyncio
-from dotenv import load_dotenv
 import os
 
+from dotenv import load_dotenv
+
+from utils.logging import setup_logging
+
 load_dotenv()
+
+logger = setup_logging()
 
 main_guild_id = int(os.getenv("MAIN_GUILD_ID"))
 
