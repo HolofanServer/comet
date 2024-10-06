@@ -40,6 +40,7 @@ logger.setLevel(logging.INFO)
 TOKEN = os.getenv('BOT_TOKEN')
 command_prefix = ['gz/', ':']
 main_guild_id = int(os.getenv('MAIN_GUILD_ID'))
+dev_guild_id = int(os.getenv('DEV_GUILD_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
 main_dev_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
 bug_report_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
@@ -154,7 +155,7 @@ class MyBot(commands.AutoShardedBot):
         save_log(log_data)
         if not self.initialized:
             try:
-                await startup_send_webhook(self, guild_id=main_guild_id)
+                await startup_send_webhook(self, guild_id=dev_guild_id)
                 await startup_send_botinfo(self)
             except Exception as e:
                 print(f"Error during startup: {e}")
