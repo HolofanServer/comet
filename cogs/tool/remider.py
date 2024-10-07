@@ -35,7 +35,7 @@ class ReminderCog(commands.Cog):
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": f"次の入力から時間、メッセージ、リピート情報を抽出してください: {input_string}"},
-                {"role": "user", "content": "タイムゾーンが含まれている場合はそれも抽出してください。タイムゾーンが指定されていない場合は指定なしと返してください。また台北時間やロンドン時間などの都市名はタイムゾーンとして変換してください 例: JST, UTC, GMT"},
+                {"role": "user", "content": "タイムゾーンが含まれている場合はそれも抽出してください。タイムゾーンが指定されていない場合は指定なしと返してください。また台北時間やロンドン時間などの都市名はタイムゾーンとして変換してください 例: Asia/Tokyo, Asia/Taipei, Europe/London。JST, UTC, GMTはロケーションタイプのタイムゾーンとして変換してください"},
                 {"role": "system", "content": "以下の形式でリマインダーを設定できます。特定の日時にリマインド: `リマインド 2024年10月1日午前9時にミーティング開始と送信して`"},
                 {"role": "system", "content": "結果を以下のJSON形式で返してください: {\"time\": \"ISO8601形式の時間\", \"message\": \"メッセージ\", \"repeat_type\": \"リピート情報\", \"timezone\": \"タイムゾーン\"}"}
             ]
@@ -71,7 +71,7 @@ class ReminderCog(commands.Cog):
 
             now_str = datetime.now(timezone_obj)
             
-            if time_str < now_str and repeat_type is None:
+            if remind_time < now_str and repeat_type is None:
                 await message.channel.send("指定された時間は既に過ぎています。未来の時間を指定してください。")
                 return
             else:
@@ -144,6 +144,10 @@ class ReminderCog(commands.Cog):
         if not re.search(r'リマインド', message.content):
             return
         
+        if re.match(r'リマインド[ 　]ヘルプ', message.content):
+            await self.send_help_embed(message.channel)
+            return
+
         if re.search(r'リマインド[ 　]', message.content):
             remind_time, remind_message, repeat_type = await self.parse_time_and_message(message.content)
 
