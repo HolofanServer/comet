@@ -9,6 +9,7 @@ import os
 from datetime import datetime, timedelta
 
 from utils.logging import setup_logging
+from utils.commands_help import is_guild, is_owner, is_moderator
 
 logger = setup_logging()
 
@@ -74,6 +75,7 @@ class OmikujiCog(commands.Cog):
             self.save_last_omikuji(self.last_omikuji)
 
     @commands.hybrid_command(name="omikuji", aliases=["おみくじ"])
+    @is_guild()
     async def omikuji(self, ctx):
         """1日1回だけおみくじを引くことができます。"""
         user_id = str(ctx.author.id)
@@ -127,7 +129,7 @@ class OmikujiCog(commands.Cog):
         embed.description += f"\n\nおみくじには**{fortune}**と書かれていた"
         embed.set_footer(text=f"おみくじを引いてくれてありがとう！また明日引いてみてね！\n連続ログイン: {self.streak_data[user_id]['streak']}日目")
         await fm.edit(embed=embed)
-        if fortune == "iPhone��けだよ!!":
+        if fortune == "iPhoneだけだよ!!":
             await asyncio.sleep(1)
             embed.description += "\n\niPhoneだけじゃなかったのかよ..."
             await fm.edit(embed=embed)
@@ -142,15 +144,18 @@ class OmikujiCog(commands.Cog):
                 await fm.add_reaction(emoji)
 
     @commands.hybrid_group(name="omkj")
+    @is_guild()
     async def omikuji_group(self, ctx):
         """おみくじを引くコマンドです。"""
         if ctx.invoked_subcommand is None:
             await ctx.send("おみくじを引くコマンドです。")
 
     @omikuji_group.command(name="debug")
+    @is_owner()
+    @is_guild()
     async def debug(self, ctx): 
         """デバッグコマンドです。"""
-        if not any(role.name == "moderator" for role in ctx.author.roles):
+        if not is_moderator()(ctx):
             mes = await ctx.channel.send("このコマンドは現在利用できません。")
             await asyncio.sleep(3)
             await mes.delete()
@@ -198,6 +203,7 @@ class OmikujiCog(commands.Cog):
                 await fm.add_reaction(emoji)
 
     @omikuji_group.command(name="add_fortune")
+    @is_guild()
     async def add_fortune(self, ctx, fortune: str):
         """おみくじに追加するコマンドです。"""
         if not any(role.name == "Server Booster" for role in ctx.author.roles):
@@ -217,6 +223,7 @@ class OmikujiCog(commands.Cog):
         await ctx.send(f"{fortune}をおみくじに追加しました。")
 
     @omikuji_group.command(name="remove_fortune")
+    @is_guild()
     async def remove_fortune(self, ctx, fortune: str):
         """おみくじから削除するコマンドです。"""
         if not any(role.name == "Server Booster" for role in ctx.author.roles):
@@ -236,6 +243,7 @@ class OmikujiCog(commands.Cog):
             await ctx.send(f"{fortune}はおみくじに存在しません。")
 
     @omikuji_group.command(name="list_fortune")
+    @is_guild()
     async def list_fortune(self, ctx):
         """おみくじのリストを表示するコマンドです。"""
         if not any(role.name == "Server Booster" for role in ctx.author.roles):
@@ -263,6 +271,9 @@ class OmikujiCog(commands.Cog):
         if message.author.bot == self.bot.user:
             return
         if message.content.startswith("ギズみくじ"):
+            if message.guild is None:
+                await message.channel.send("このコマンドはサーバーでのみ利用できます。")
+                return
             ctx = await self.bot.get_context(message)
             await self.omikuji(ctx)
 

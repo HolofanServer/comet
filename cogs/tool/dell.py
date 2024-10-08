@@ -9,6 +9,7 @@ import pytz
 from dotenv import load_dotenv
 from datetime import datetime
 
+from utils.commands_help import is_guild
 from utils.logging import setup_logging
 
 logger = setup_logging()
@@ -45,6 +46,7 @@ class DalleImageGenerator(commands.Cog):
         return image_path
 
     @commands.hybrid_command(name="generate_image")
+    @is_guild()
     async def generate_image(self, ctx: commands.Context, *, prompt: str):
         """DALL·E APIを使って画像を生成します"""
         await ctx.defer()

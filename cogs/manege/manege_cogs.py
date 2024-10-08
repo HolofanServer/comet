@@ -4,6 +4,7 @@ from discord import app_commands
 
 import pathlib
 
+from utils.commands_help import is_guild_app, is_owner_app, is_owner
 from utils.logging import setup_logging
 
 logger = setup_logging()
@@ -37,15 +38,6 @@ class ManagementCog(commands.Cog):
             app_commands.Choice(name=cog, value=cog) for cog in filtered_cogs[:25]
         ]
 
-    async def is_owner_interaction_check(interaction: discord.Interaction):
-        return await interaction.client.is_owner(interaction.user)
-
-    def is_owner_check():
-        async def predicate(interaction: discord.Interaction):
-            return await ManagementCog.is_owner_interaction_check(interaction)
-        return app_commands.check(predicate)
-    
-
     def _get_available_dev_cogs(self):
         folder_name = 'cogs_dev'
         cur = pathlib.Path('.')
@@ -74,7 +66,7 @@ class ManagementCog(commands.Cog):
     @app_commands.command(name="load", description="指定したcogを読み込みます")
     @app_commands.describe(cog="読み込むcogの名前")
     @app_commands.autocomplete(cog=dev_cog_autocomplete)
-    @is_owner_check()
+    @is_owner_app()
     async def load_dev_cog(self, interaction: discord.Interaction, cog: str):
         available_dev_cogs = self._get_available_dev_cogs()
 
@@ -100,7 +92,7 @@ class ManagementCog(commands.Cog):
     @app_commands.command(name="unload", description="指定したcogをアンロードします")
     @app_commands.describe(cog="アンロードするcogの名前")
     @app_commands.autocomplete(cog=cog_autocomplete)
-    @is_owner_check()
+    @is_owner_app()
     async def unload_cog(self, interaction: discord.Interaction, cog: str):
         available_dev_cogs = self._get_available_dev_cogs()
 
@@ -130,7 +122,7 @@ class ManagementCog(commands.Cog):
     @app_commands.command(name="reload", description="指定したcogを再読み込みします")
     @app_commands.describe(cog="再読み込みするcogの名前")
     @app_commands.autocomplete(cog=cog_autocomplete)
-    @is_owner_check()
+    @is_owner_app()
     async def reload_cog(self, interaction: discord.Interaction, cog: str):
         available_cogs = self._get_available_cogs()
 
@@ -159,7 +151,7 @@ class ManagementCog(commands.Cog):
             logger.error(f"'{cog}' の再読み込み中にエラーが発生しました。\n{type(e).__name__}: {e}")
             
     @commands.hybrid_command(name='list_cogs', with_app_command=True)
-    @commands.is_owner()
+    @is_owner()
     async def list_cogs(self, ctx):
         """現在ロードされているCogsをディレクトリごとにリスト表示します"""
         embed = discord.Embed(title="ロードされているCogs", color=discord.Color.blue())
