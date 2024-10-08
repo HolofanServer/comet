@@ -26,6 +26,7 @@ class RMForm(commands.Cog):
             logger.debug("ディレクトリ 'data/rm_form/inactive' を作成しました。")
 
     @commands.hybrid_group(name='rm_form', description='RMFormの設定を行うコマンド')
+    @commands.guild_only()
     async def rm_form(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send('サブコマンドを指定してください。')

@@ -4,10 +4,8 @@ from discord.ext import commands
 import os
 import re
 import pathlib
-import uuid
 import logging
 import asyncio
-import pytz
 import traceback
 
 from datetime import datetime
@@ -40,7 +38,7 @@ logger_session.setLevel(logging.INFO)
 logger_session.addHandler(SessionIDHandler())
 
 TOKEN = os.getenv('BOT_TOKEN')
-command_prefix = ['gz/', ':']
+command_prefix = ['gz/']
 main_guild_id = int(os.getenv('MAIN_GUILD_ID'))
 dev_guild_id = int(os.getenv('DEV_GUILD_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
@@ -92,7 +90,6 @@ class MyBot(commands.AutoShardedBot):
                 print(f"Error during startup: {e}")
             self.initialized = True
 
-
     async def load_cogs(self, folder_name: str):
         cur = pathlib.Path('.')
         for p in cur.glob(f"{folder_name}/**/*.py"):
@@ -106,10 +103,10 @@ class MyBot(commands.AutoShardedBot):
             try:
                 cog_path = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
                 await self.load_extension(cog_path)
-                print(f'{cog_path} loaded successfully.')
+                logger.info(f'Cog loaded successfully: {cog_path}')
             except commands.ExtensionFailed as e:
                 traceback.print_exc()
-                print(f'Failed to load extension {p.stem}: {e}\nFull error: {e.__cause__}')
+                logger.error(f'Failed to load extension {p.stem}: {e}\nFull error: {e.__cause__}')
 
 
     @commands.Cog.listener()
