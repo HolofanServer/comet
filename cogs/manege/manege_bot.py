@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from utils import api
 from utils.spam_blocker import SpamBlocker
 from utils.logging import setup_logging
+from utils.commands_help import is_owner
 
 logger = setup_logging()
 
@@ -63,6 +64,7 @@ class ManagementBotCog(commands.Cog):
         await sent_message.edit(embed=e)
 
     @commands.command(name='restart')
+    @is_owner()
     async def restart(self, ctx):
         """Botを再起動します"""
         await ctx.send("Botを再起動します...")
