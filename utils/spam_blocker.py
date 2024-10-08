@@ -18,8 +18,7 @@ class SpamBlocker:
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.config_file = 'config/spam_blocker.json'
-        self.config = self.load_config()  # ここでload_configを使用
-        # self.bot_config = self.load_bot_config()  # この行を削除
+        self.config = self.load_config()
 
         self.spam_control = commands.CooldownMapping.from_cooldown(
             self.config['spam_limit'], 
@@ -30,7 +29,7 @@ class SpamBlocker:
         self.blacklist = defaultdict(bool)
         self.blacklist_file = self.config['blacklist_path']
         self.load_blacklist()
-        self.webhook = None  # Webhookを初期化
+        self.webhook = None
 
     def load_config(self):
         """スパムブロッカーの設定をファイルから読み込み"""
@@ -114,21 +113,17 @@ class SpamBlocker:
         discord.Message と discord.Interaction に対応
         """
         if isinstance(obj, discord.Message):
-            # メッセージの場合
             user_id = obj.author.id
             created_at = obj.created_at.timestamp()
         elif isinstance(obj, discord.Interaction):
-            # インタラクションの場合
             user_id = obj.user.id
-            created_at = discord.utils.utcnow().timestamp()  # Interactionにはcreated_atがないので、現在のタイムスタンプを使う
+            created_at = discord.utils.utcnow().timestamp()
         else:
             return False
 
-        # メッセージのときのみクールダウンマッピングを使用する
         if isinstance(obj, discord.Message):
             bucket = self.spam_control.get_bucket(obj)
         else:
-            # Interactionの場合は別のスパム管理方法を設定する（たとえば、手動でカウントを増やす）
             bucket = None
         
         if bucket is not None:
@@ -136,11 +131,9 @@ class SpamBlocker:
         else:
             retry_after = None
 
-        # スパム判定
         if retry_after and user_id != self.bot.owner_id:
             self._auto_spam_count[user_id] += 1
             if self._auto_spam_count[user_id] >= self.config['auto_blacklist_limit']:
-                # ブラックリストに追加
                 await self.add_to_blacklist(user_id)
                 del self._auto_spam_count[user_id]
                 await self.log_spammer(ctx, obj, retry_after, autoblock=True)
@@ -149,7 +142,6 @@ class SpamBlocker:
                 await self.log_spammer(ctx, obj, retry_after)
             return True
         else:
-            # スパムでなければカウントをリセット
             self._auto_spam_count.pop(user_id, None)
         return False
 
@@ -180,7 +172,6 @@ class SpamBlocker:
             log.error(f"Channel with ID {spam_notice_channel_id} not found.")
             return
 
-        # Webhookの作成を一度だけ行う
         if self.webhook is None:
             self.webhook = await channel.create_webhook(name="Spam Alert Webhook")
 

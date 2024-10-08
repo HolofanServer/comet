@@ -11,36 +11,34 @@ class ModerationCog(commands.Cog):
         self.bot = bot
         self.spam_blocker = SpamBlocker(bot)
 
+    '''
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot or message.guild is None:
             return
 
         ctx = await self.bot.get_context(message)
-        
-        if await self.spam_blocker.check_blacklist(ctx):
-            return
 
-        is_spam = await self.spam_blocker.process_spam(ctx, message)
-        
-        if not is_spam:
-            await self.bot.process_commands(message)
-        else:
-            return
+        if ctx.valid:
+            is_spam = await self.spam_blocker.process_spam(ctx, message)
+            if is_spam:
+                logger.warning(f"Spam detected: {message.content}")
+                await message.channel.send("コマンドを頻繁に送信しすぎています。")
+                return
+
+        if ctx.valid:
+            await self.bot.invoke(ctx)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
         ctx = await self.bot.get_context(interaction)
 
-        # スパムチェック
         is_spam = await self.spam_blocker.process_spam(ctx, interaction)
 
         if is_spam:
-            # スパムの場合は警告メッセージを返す
             await interaction.response.send_message("コマンドを頻繁に送信しすぎています。", ephemeral=True)
             return
-
-        # スパムでない場合、スラッシュコマンドは自動的に処理されるので、特に何もする必要がありません
+    '''
 
     @commands.group(name="moderation", aliases=["mod"])
     @commands.is_owner()

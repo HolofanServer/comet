@@ -5,6 +5,7 @@ import json
 import os
 
 from utils.logging import setup_logging
+from utils.commands_help import is_moderator, is_guild
 
 logger = setup_logging()
 
@@ -52,89 +53,102 @@ class LogSetupCog(commands.Cog):
         await ctx.send(f"{log_type.replace('_', ' ')}のログは{status}になりました。ログは{channel_info}に送信されます。")
 
     @commands.hybrid_group(name="logs")
+    @is_moderator()
     async def logs_group(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send("ログの設定を行います。")
 
     @logs_group.command(name='role')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_role(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """ロールログの設定を行います。"""
         await self.toggle_logging(ctx, 'role', setting, channel=channel, form=form)
 
     @logs_group.command(name='message_edit')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_message_edit(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """メッセージログの設定を行います。"""
         await self.toggle_logging(ctx, 'message_edit', setting, channel=channel, form=form)
 
     @logs_group.command(name='message_delete')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_message_delete(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """メッセージ削除ログの設定を行います。"""
         await self.toggle_logging(ctx, 'message_delete', setting, channel=channel, form=form)
 
     @logs_group.command(name='join_remove')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_join_remove(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """参加・退出ログの設定を行います。"""
         await self.toggle_logging(ctx, 'join_remove', setting, channel=channel, form=form)
 
     @logs_group.command(name='voice')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_voice(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """ボイスチャンネルログの設定を行います。"""
         await self.toggle_logging(ctx, 'voice', setting, channel=channel, form=form)
 
     @logs_group.command(name='kick')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_kick(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """キックログの設定を行います。"""
         await self.toggle_logging(ctx, 'kick', setting, channel=channel, form=form)
 
     @logs_group.command(name='ban')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_ban(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """Banログの設定を行います。"""
         await self.toggle_logging(ctx, 'ban', setting, channel=channel, form=form)
 
     @logs_group.command(name='timeout')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_timeout(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """タイムアウトログの設定を行います。"""
         await self.toggle_logging(ctx, 'timeout', setting, channel=channel, form=form)
 
     @logs_group.command(name='nickname')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_nickname(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """ニックネームログの設定を行います。"""
         await self.toggle_logging(ctx, 'nickname', setting, channel=channel, form=form)
 
     @logs_group.command(name='channel')
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_channel(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """チャンネルログの設定を行います。"""
         await self.toggle_logging(ctx, 'channellog', setting, channel=channel, form=form)
 
     @logs_group.command(name="automod")
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     @discord.app_commands.describe(setting="有効か無効か", channel="チャンネルに送信する場合はこれを使用", form="フォーラムに送信する場合はこれを使用")
     async def logs_automod(self, ctx, setting: bool, channel: discord.TextChannel = None, form: discord.Thread = None):
         """オートモデレーションログの設定を行います。"""
         await self.toggle_logging(ctx, 'automod', setting, channel=channel, form=form)
 
     @logs_group.command(name="whitelist")
-    @commands.guild_only()
+    @is_moderator()
+    @is_guild()
     async def logs_whitelist(self, ctx, setting: bool, member1: discord.Member, member2: discord.Member = None, member3: discord.Member = None, member4: discord.Member = None, member5: discord.Member = None):
         """ホワイトリストログの設定を行います。"""
         await self.toggle_logging(ctx, 'whitelist', setting, members=[member1, member2, member3, member4, member5])

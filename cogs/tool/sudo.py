@@ -9,6 +9,7 @@ from datetime import datetime
 from enum import Enum
 import pytz
 
+from utils.commands_help import is_guild, is_moderator
 from utils.logging import setup_logging
 
 logger = setup_logging()
@@ -96,6 +97,8 @@ class SudoCog(commands.Cog):
                 return new_id
 
     @commands.command(name="sudo", description="特定の権限を付与します。")
+    @is_moderator()
+    @is_guild()
     async def sudo(self, ctx: commands.Context, user: discord.Member, reason: str, permission: Per):
 
         if isinstance(ctx, discord.Interaction):
