@@ -7,6 +7,7 @@ import psutil
 import os
 import subprocess
 import json
+import pyfiglet
 
 from pathlib import Path
 from datetime import datetime
@@ -21,6 +22,9 @@ load_dotenv()
 bot_owner_id = int(os.getenv('BOT_OWNER_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
 startup_guild_id = int(os.getenv('DEV_GUILD_ID'))
+
+with open('config.json', 'r') as f:
+    bot_config = json.load(f)
 
 async def load_cogs(bot, directory='./cogs'):
     failed_cogs = {}
@@ -157,3 +161,15 @@ async def startup_send_botinfo(bot):
     await webhook.send(embed=embed)
 
     await webhook.delete()
+
+def startup_message():
+    b_v = pyfiglet.figlet_format("Bot Version: " + bot_config['version'])
+    b_n = pyfiglet.figlet_format("Bot Name: " + bot_config['name'])
+    yokobou = "\n----------------------------------------\n"
+
+    startup_message = "\n" + yokobou + "\n" + b_v + "\n" + b_n + "\n" + yokobou + "\n"
+    return startup_message
+
+def yokobou():
+    yokobou = "\n----------------------------------------\n"
+    return yokobou

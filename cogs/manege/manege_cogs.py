@@ -4,7 +4,7 @@ from discord import app_commands
 
 import pathlib
 
-from utils.commands_help import is_guild_app, is_owner_app, is_owner
+from utils.commands_help import is_owner_app, is_owner
 from utils.logging import setup_logging
 
 logger = setup_logging()

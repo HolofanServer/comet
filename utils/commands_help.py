@@ -3,15 +3,21 @@ from discord.ext import commands
 from discord import app_commands
 
 import os
+import pytz
+import json
 
+from datetime import datetime
 from typing import Callable
 
 from utils.logging import setup_logging
 
 owner_id = [int(os.environ["BOT_OWNER_ID"])]
 moderator_role_name = os.environ.get("MODERATOR_ROLE_NAME", "moderator")
+dev_guild_id = os.environ.get("DEV_GUILD_ID")
 log_commnads_channel_id = os.environ.get("COMANNDS_LOG_CHANNEL_ID")
 
+with open("config/bot.json", "r", encoding="utf-8") as f:
+    bot_config = json.load(f)
 
 logger = setup_logging()
 
@@ -44,16 +50,37 @@ def is_moderator():
 
 def log_commnads():
     async def predicate(ctx: commands.Context):
+        jst_time = datetime.now(pytz.timezone('Asia/Tokyo'))
+        guild = ctx.bot.get_guild(int(dev_guild_id))
+        if guild is None:
+            logger.warning(f"開発用サーバーが見つかりません: {dev_guild_id}")
+            return True
+        
+        channel = guild.get_channel(int(log_commnads_channel_id))
+        if channel is None:
+            logger.warning(f"ログチャンネルが見つかりません: {log_commnads_channel_id}")
+            return True
+        
         e = discord.Embed(
-            title=ctx.author.display_name,
+            title="コマンド実行通知",
             description="",
-            color=discord.Color.blurple()
+            color=discord.Color.blurple(),
+            timestamp=jst_time
         )
-        e.add_field(name="使用コマンド", value=f"{ctx.bot.commnad.name}")
-        for command in ctx.bot.commands:
-            e.description += f"{command.name}\n"
-        await ctx.send(embed=e)
-        return False
+        if ctx.interaction:
+            e.add_field(name="使用コマンド", value=f"/{ctx.command.name}")
+        else:
+            e.add_field(name="使用コマンド", value=f"{bot_config['prefix']}{ctx.command.name}")
+            if ctx.args:
+                e.add_field(name="コマンド引数", value=f"{ctx.args}")
+            else:
+                e.add_field(name="コマンド引数", value="なし")
+        e.add_field(name="使用者", value=f"{ctx.author.display_name}/{ctx.author.id}")
+        e.add_field(name="サーバー名", value=f"{ctx.guild.name}/{ctx.guild.id}")
+        e.add_field(name="チャンネル名", value=f"{ctx.channel.name}/{ctx.channel.id}")
+        e.set_footer(text=f"Bot Version: {bot_config['version']}")
+        await channel.send(embed=e)
+        return True
     return commands.check(predicate)
 
 def is_guild_app():
@@ -95,7 +122,7 @@ def user_install():
         return wrapper
     return decorator
 
-def user_install_context_menu(name: str, type: app_commands.ContextMenu):
+def context_menu(name: str, type: app_commands.ContextMenu):
     def decorator(func: Callable):
         context_menu = app_commands.ContextMenu(
             name=name,
