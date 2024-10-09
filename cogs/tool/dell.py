@@ -3,13 +3,12 @@ from discord.ext import commands
 
 import os
 import aiohttp
-import asyncio
 import pytz
 
 from dotenv import load_dotenv
 from datetime import datetime
 
-from utils.commands_help import is_guild
+from utils.commands_help import is_guild, log_commnads
 from utils.logging import setup_logging
 
 logger = setup_logging()
@@ -47,6 +46,7 @@ class DalleImageGenerator(commands.Cog):
 
     @commands.hybrid_command(name="generate_image")
     @is_guild()
+    @log_commnads()
     async def generate_image(self, ctx: commands.Context, *, prompt: str):
         """DALL·E APIを使って画像を生成します"""
         await ctx.defer()

@@ -7,18 +7,22 @@ import platform
 import time
 import os
 import asyncio
+import json
 
 from dotenv import load_dotenv
 
 from utils import api
 from utils.spam_blocker import SpamBlocker
 from utils.logging import setup_logging
-from utils.commands_help import is_owner
+from utils.commands_help import is_owner, log_commnads
 
 logger = setup_logging()
 
 load_dotenv()
 SERVICE_NAME = os.getenv("SERVICE_NAME")
+
+with open('config/bot.json', 'r') as f:
+    bot_config = json.load(f)
 
 class ManagementBotCog(commands.Cog):
     def __init__(self, bot):
@@ -41,6 +45,7 @@ class ManagementBotCog(commands.Cog):
             logger.error(f"再起動中にエラーが発生しました: {e}")
 
     @commands.hybrid_command(name='ping', hidden=True)
+    @log_commnads()
     async def ping(self, ctx):
         """BotのPingを表示します"""
         self.spam_blocker.is_not_blacklisted()
@@ -55,6 +60,7 @@ class ManagementBotCog(commands.Cog):
         e = discord.Embed(title="Pong!", color=color)
         e.add_field(name="API Ping", value=f"{round(api_ping)}ms" if api_ping else "測定失敗", inline=True)
         e.add_field(name="WebSocket Ping", value=f"{round(self.bot.latency * 1000)}ms", inline=True)
+        e.set_footer(text=f"Bot Version: {bot_config['version']}")
         sent_message = await ctx.send(embed=e)
         end_time = time.monotonic()
 

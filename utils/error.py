@@ -64,7 +64,7 @@ class BugReportModal(discord.ui.Modal, title="バグ報告"):
             await interaction.response.send_message("バグを報告しました。ありがとうございます！", ephemeral=True)
         else:
             logger.error("バグ報告チャンネルが見つかりませんでした。")
-            e = discord.Embed(title="エラー", description="> 予期せぬエラーです\n\n<@707320830387814531>にDMを送信するか、[サポートサーバー](https://hfspro.co/asb-discord)にてお問い合わせください", color=discord.Color.red())
+            e = discord.Embed(title="エラー", description="> 予期せぬエラーです\n\n<@707320830387814531>にDMにてお問い合わせください", color=discord.Color.red())
             await interaction.response.send_message(embed=e)
 
 class BugReportView(discord.ui.View):
