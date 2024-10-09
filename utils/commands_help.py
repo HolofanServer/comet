@@ -95,7 +95,7 @@ def user_install():
         return wrapper
     return decorator
 
-def user_install_context_menu(name: str, type: app_commands.ContextMenu):
+def context_menu(name: str, type: app_commands.ContextMenu):
     def decorator(func: Callable):
         context_menu = app_commands.ContextMenu(
             name=name,

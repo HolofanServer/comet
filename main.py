@@ -7,6 +7,7 @@ import pathlib
 import logging
 import asyncio
 import traceback
+import json
 
 from datetime import datetime
 from dotenv import load_dotenv
@@ -21,6 +22,9 @@ from utils.error import handle_command_error, handle_application_command_error
 logger = setup_logging()
 
 load_dotenv()
+
+with open('config/bot.json', 'r') as f:
+    bot_config = json.load(f)
 
 session_id = None
 
@@ -38,7 +42,7 @@ logger_session.setLevel(logging.INFO)
 logger_session.addHandler(SessionIDHandler())
 
 TOKEN = os.getenv('BOT_TOKEN')
-command_prefix = ['gz/']
+command_prefix = [bot_config['prefix']]
 main_guild_id = int(os.getenv('MAIN_GUILD_ID'))
 dev_guild_id = int(os.getenv('DEV_GUILD_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))

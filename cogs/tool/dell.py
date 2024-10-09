@@ -3,7 +3,6 @@ from discord.ext import commands
 
 import os
 import aiohttp
-import asyncio
 import pytz
 
 from dotenv import load_dotenv
