@@ -117,7 +117,7 @@ async def setup(bot):
             return
 
         if view.value == "その他":
-            return      
+            return
             
         jst = pytz.timezone('Asia/Tokyo')
         now = datetime.now(jst)
