@@ -1,8 +1,6 @@
-import discord
 from discord.ext import commands
 
 import json
-import os
 
 from utils.spam_blocker import SpamBlocker
 from utils.logging import setup_logging
@@ -13,7 +11,6 @@ class SpamBlockerCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.spam_blocker = SpamBlocker(bot)
-
 
     @commands.command(name="set_spam_limit", aliases=["ssl"])
     @commands.is_owner()

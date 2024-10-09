@@ -5,8 +5,8 @@ import json
 import os
 
 from collections import Counter, defaultdict
-from typing import Optional, Iterable, AsyncIterator
 from dotenv import load_dotenv
+from typing import Union
 
 from utils.logging import setup_logging
 
@@ -74,7 +74,7 @@ class SpamBlocker:
             self.save_blacklist()
 
     async def check_blacklist(self, ctx: commands.Context) -> bool:
-        """ブラックリストに登録されているユーザーやサーバーかどうかを確認"""
+        """ブラックリストに登録されているユーザーやサーバ���かどうかを確認"""
         if ctx.author.id in self.blacklist:
             return True
         if ctx.guild is not None and ctx.guild.id in self.blacklist:
@@ -108,7 +108,7 @@ class SpamBlocker:
         return self.blacklist
 
     async def process_spam(self, ctx: commands.Context, obj):
-        """スパム行為のチェックと処理
+        """スパム行��のチェックと処理
         
         discord.Message と discord.Interaction に対応
         """
@@ -146,7 +146,7 @@ class SpamBlocker:
         return False
 
 
-    async def log_spammer(self, ctx: commands.Context, obj: discord.Message or discord.Interaction, retry_after: float, autoblock: bool = False):
+    async def log_spammer(self, ctx: commands.Context, obj: Union[discord.Message, discord.Interaction], retry_after: float, autoblock: bool = False):
         """スパム行為のログ記録"""
         if isinstance(obj, discord.Message):
             user = obj.author
@@ -160,7 +160,7 @@ class SpamBlocker:
         if autoblock:
             log.info(f"Auto-blocked {user.id}.")
 
-    async def send_webhook_notification(self, ctx: commands.Context, obj: discord.Message or discord.Interaction, retry_after: float):
+    async def send_webhook_notification(self, ctx: commands.Context, obj: Union[discord.Message, discord.Interaction], retry_after: float):
         """スパムが発生した場合にWebHook通知を送信"""
         spam_notice_channel_id = os.getenv('SPAM_NOTICE_CHANNEL_ID')
         if spam_notice_channel_id is None:

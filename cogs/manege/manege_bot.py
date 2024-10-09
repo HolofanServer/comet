@@ -7,6 +7,7 @@ import platform
 import time
 import os
 import asyncio
+import json
 
 from dotenv import load_dotenv
 
@@ -19,6 +20,9 @@ logger = setup_logging()
 
 load_dotenv()
 SERVICE_NAME = os.getenv("SERVICE_NAME")
+
+with open('config/bot.json', 'r') as f:
+    bot_config = json.load(f)
 
 class ManagementBotCog(commands.Cog):
     def __init__(self, bot):
@@ -55,6 +59,7 @@ class ManagementBotCog(commands.Cog):
         e = discord.Embed(title="Pong!", color=color)
         e.add_field(name="API Ping", value=f"{round(api_ping)}ms" if api_ping else "測定失敗", inline=True)
         e.add_field(name="WebSocket Ping", value=f"{round(self.bot.latency * 1000)}ms", inline=True)
+        e.set_footer(text=f"Bot Version: {bot_config['version']}")
         sent_message = await ctx.send(embed=e)
         end_time = time.monotonic()
 
