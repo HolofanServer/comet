@@ -23,7 +23,7 @@ bot_owner_id = int(os.getenv('BOT_OWNER_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
 startup_guild_id = int(os.getenv('DEV_GUILD_ID'))
 
-with open('config.json', 'r') as f:
+with open('config/bot.json', 'r') as f:
     bot_config = json.load(f)
 
 async def load_cogs(bot, directory='./cogs'):
