@@ -76,5 +76,20 @@ class ManagementBotCog(commands.Cog):
         await ctx.send("Botを再起動します...")
         await self.bot.close()
 
+    @commands.hybrid_group(name='debug')
+    async def debug(self, ctx):
+        """Botの管理コマンド"""
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @debug.command(name='tree')
+    @is_owner()
+    async def tree(self, ctx):
+        """Botのディレクトリ構成を表示します"""
+        tree = subprocess.check_output('tree --prune -I "iphone3g" -I "config" -I "data" -I "logs" -I "__pycache__" -I ".DS_Store"', shell=True)
+        tree = tree.decode('utf-8')
+        tree = f"```sh\n{tree}```"
+        await ctx.send(tree)
+
 async def setup(bot):
     await bot.add_cog(ManagementBotCog(bot))

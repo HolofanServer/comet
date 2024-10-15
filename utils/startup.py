@@ -8,6 +8,7 @@ import os
 import subprocess
 import json
 import pyfiglet
+import pkg_resources
 
 from pathlib import Path
 from datetime import datetime
@@ -23,7 +24,7 @@ bot_owner_id = int(os.getenv('BOT_OWNER_ID'))
 startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
 startup_guild_id = int(os.getenv('DEV_GUILD_ID'))
 
-with open('config.json', 'r') as f:
+with open('config/bot.json', 'r') as f:
     bot_config = json.load(f)
 
 async def load_cogs(bot, directory='./cogs'):
@@ -45,15 +46,30 @@ async def load_cogs(bot, directory='./cogs'):
 def get_cpu_model_name():
     """CPUモデル名を取得する"""
     try:
-        result = subprocess.run(["lscpu"], capture_output=True, text=True, check=True)
-        if result.stdout:
-            for line in result.stdout.split('\n'):
-                if "Model name" in line:
-                    return line.split(':')[1].strip()
+        if platform.system() == "Darwin":
+            result = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True, check=True)
+            return result.stdout.strip()
+        if platform.system() == "Windows":
+            result = subprocess.run(["wmic", "cpu", "get", "name"], capture_output=True, text=True, check=True)
+            return result.stdout.strip().split('\n')[1]
+        else:
+            result = subprocess.run(["lscpu"], capture_output=True, text=True, check=True)
+            if result.stdout:
+                for line in result.stdout.split('\n'):
+                    if "Model name" in line:
+                        return line.split(':')[1].strip()
     except subprocess.CalledProcessError:
         return "取得に失敗しました"
     except FileNotFoundError:
-        return "lscpuコマンドが見つかりません"
+        return "コマンドが見つかりません"
+
+def get_detailed_discord_version():
+    """詳細なdiscord.pyのバージョンを取得する"""
+    try:
+        version = pkg_resources.get_distribution("discord.py").version
+        return version
+    except pkg_resources.DistributionNotFound:
+        return "バージョン情報が見つかりません"
 
 async def startup_send_webhook(bot, guild_id):
     guild = bot.get_guild(guild_id)
@@ -134,10 +150,12 @@ async def startup_send_botinfo(bot):
         logger.warning("指定されたチャンネルが見つかりません。")
         return
     
-    discord_py_version = discord.__version__
+    discord_py_hash = get_detailed_discord_version().split(discord.__version__)[1]
     os_info = f"{platform.system()} {platform.release()} ({platform.version()})"
     cpu_info = get_cpu_model_name()
-    cpu_cores = f"論理コア: {psutil.cpu_count(logical=True)}, 物理コア: {psutil.cpu_count(logical=False)}"
+    cpu_cores = f"{psutil.cpu_count(logical=True)} / {psutil.cpu_count(logical=False)}"
+    if psutil.cpu_count(logical=True) == psutil.cpu_count(logical=False):
+        cpu_cores = f"{psutil.cpu_count(logical=True)}"
 
     cpu_usage = psutil.cpu_percent()
     memory = psutil.virtual_memory()
@@ -150,7 +168,7 @@ async def startup_send_botinfo(bot):
 
     embed = discord.Embed(title="BOT情報", color=0x00ff00)
     embed.add_field(name="BOT", value=f"開発者: <@{bo.id}>", inline=False)
-    embed.add_field(name="開発言語", value=f"discord.py {discord_py_version}", inline=False)
+    embed.add_field(name="開発言語", value=f"discord.py {discord.__version__}[{discord_py_hash}](https://github.com/Rapptz/discord.py/commit/master)", inline=False)
     embed.add_field(name="OS", value=os_info, inline=False)
     embed.add_field(name="CPU", value=cpu_info, inline=False)
     embed.add_field(name="CPU コア", value=cpu_cores, inline=False)
@@ -163,13 +181,28 @@ async def startup_send_botinfo(bot):
     await webhook.delete()
 
 def startup_message():
-    b_v = pyfiglet.figlet_format("Bot Version: " + bot_config['version'])
-    b_n = pyfiglet.figlet_format("Bot Name: " + bot_config['name'])
-    yokobou = "\n----------------------------------------\n"
+    b_v = rainbow_text(pyfiglet.figlet_format("Bot Version: " + bot_config['version']))
+    b_n = rainbow_text(pyfiglet.figlet_format("Bot Name: " + bot_config['name']))
+    yokobou = rainbow_text("----------------------------------------")
 
     startup_message = "\n" + yokobou + "\n" + b_v + "\n" + b_n + "\n" + yokobou + "\n"
     return startup_message
 
 def yokobou():
-    yokobou = "\n----------------------------------------\n"
-    return yokobou
+    return rainbow_text("----------------------------------------")
+
+def rainbow_text(text):
+    """文字列を虹色にする"""
+    colors = [
+        "\033[1;31m",
+        "\033[1;33m",
+        "\033[1;32m",
+        "\033[1;36m",
+        "\033[1;34m",
+        "\033[1;35m",
+    ]
+    reset = "\033[0m"
+    colored_text = ""
+    for i, char in enumerate(text):
+        colored_text += colors[i % len(colors)] + char
+    return colored_text + reset
