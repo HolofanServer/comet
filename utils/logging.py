@@ -2,11 +2,22 @@ import json
 import os
 import shutil
 import uuid
-import logging
+
+from logging import getLogger, StreamHandler, Formatter, INFO, DEBUG, WARNING, ERROR, CRITICAL
+from typing import Optional
 
 from datetime import datetime
 
+logger = getLogger(__name__)
+handler = StreamHandler()
+handler.setLevel(DEBUG)
+logger.setLevel(DEBUG)
+logger.addHandler(handler)
+logger.propagate = False
+
 def save_log(log_data):
+    logger.info('Saving log data...')
+    
     date_str = datetime.now().strftime('%Y-%m-%d')
     time_str = datetime.now().strftime('%H-%M-%S')
     base_dir_path = 'data/logging'
@@ -17,6 +28,7 @@ def save_log(log_data):
         oldest_folder = sorted(date_folders)[0]
         archive_path = os.path.join(base_dir_path, 'archive', oldest_folder)
         shutil.move(os.path.join(base_dir_path, oldest_folder), archive_path)
+        logger.debug(f'Archived oldest folder: {oldest_folder}')
 
     os.makedirs(dir_path, exist_ok=True)
 
@@ -27,10 +39,34 @@ def save_log(log_data):
     with open(file_path, 'w', encoding='utf-8') as file:
         json.dump(log_data, file, ensure_ascii=False, indent=4)
 
-    print(f'Log saved to {file_path}')
+    logger.info(f'Log saved to {file_path}')
 
-def setup_logging():
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+def setup_logging(mode: Optional[str] = None):
+    
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    level = INFO
+
+    if mode == "debug" or mode == "D":
+        level = DEBUG
+    elif mode == "info" or mode == "I":
+        level = INFO
+    elif mode == "warning" or mode == "W":
+        level = WARNING
+    elif mode == "error" or mode == "E":
+        level = ERROR
+    elif mode == "critical" or mode == "C":
+        level = CRITICAL
+    else:
+        level = INFO
+
+    logger.setLevel(level)
+
+    handler = StreamHandler()
+    handler.setLevel(level)
+    formatter = Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
     return logger
-
