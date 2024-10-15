@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from utils.logging import setup_logging
 
-logger = setup_logging()
+logger = setup_logging("E")
 
 load_dotenv()
 
