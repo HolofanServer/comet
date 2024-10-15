@@ -10,6 +10,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from utils.logging import setup_logging
+from utils.github_issue import create_github_issue
 
 logger = setup_logging("E")
 
@@ -91,6 +92,21 @@ class BugReportView(discord.ui.View):
         asyncio.create_task(self.disable_button(interaction))
 
 async def handle_command_error(ctx, error, error_log_channel_id):
+
+    error_id = uuid.uuid4()
+    error_message = str(error)
+    issue_title = f"エラー発生: {ctx.command.qualified_name if ctx.command else 'N/A'}"
+    issue_body = (
+        f"**サーバー**: {ctx.guild.name if ctx.guild else 'DM'}\n"
+        f"**BOT**: {ctx.bot.user.display_name}\n"
+        f"**チャンネル**: <#{ctx.channel.name}>\n"
+        f"**コマンド**: /{ctx.command.qualified_name if ctx.command else 'N/A'}\n"
+        f"**エラーID**: `{error_id}`\n"
+        f"**ユーザー**: {ctx.author.display_name}\n"
+        f"**エラーメッセージ**: {error_message}\n"
+    )
+    await create_github_issue(issue_title, issue_body)
+
     if isinstance(error, commands.CommandNotFound):
         logger.warning(f"コマンドが見つかりません: {ctx.command}")
         await ctx.send("そのコマンドは存在しません。")
@@ -116,7 +132,6 @@ async def handle_command_error(ctx, error, error_log_channel_id):
         await ctx.send(f"このコマンドは{error.retry_after:.2f}秒後に再実行できます。")
         return True
 
-    error_id = uuid.uuid4()
     logger.error(f"UnknownError: {error}")
 
     channel_id = ctx.channel.id
