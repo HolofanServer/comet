@@ -19,7 +19,7 @@ log_commnads_channel_id = os.environ.get("COMANNDS_LOG_CHANNEL_ID")
 with open("config/bot.json", "r", encoding="utf-8") as f:
     bot_config = json.load(f)
 
-logger = setup_logging()
+logger = setup_logging("D")
 
 def is_guild():
     async def predicate(ctx: commands.Context):
