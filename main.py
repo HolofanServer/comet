@@ -63,15 +63,15 @@ class MyBot(commands.AutoShardedBot):
     async def after_ready(self):
         await self.wait_until_ready()
         logger.info("setup_hook is called")
-        logger.info(startup_message)
+        logger.info(startup_message())
         await update_status(self, "Bot Startup...")
         logger.info("status: Bot Startup...")
-        logger.error(yokobou)
+        logger.error(yokobou())
         await self.load_cogs('cogs')
         await self.load_extension('jishaku')
         await self.tree.sync()
         await update_status(self, "現在の処理: tree sync")
-        logger.error(yokobou)
+        logger.error(yokobou())
         logger.info("status: 現在の処理: tree sync")
         if not self.initialized:
             logger.info("Initializing...")
@@ -82,7 +82,7 @@ class MyBot(commands.AutoShardedBot):
             asyncio.create_task(presence.update_presence(self))
 
     async def on_ready(self):
-        logger.error(yokobou)
+        logger.error(yokobou())
         logger.info("on_ready is called")
         log_data = {
             "event": "BotReady",
