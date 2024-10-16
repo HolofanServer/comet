@@ -7,7 +7,7 @@ logger = setup_logging("D")
 
 def get_second_last_commit_message():
     logger.debug("Fetching the second last commit message.")
-    result = subprocess.run(["git", "log", "-2", "--pretty=%B"], capture_output=True, text=True)
+    result = subprocess.run(["git", "log", "-1", "--pretty=%B"], capture_output=True, text=True)
     messages = result.stdout.strip().split("\n\n")
     logger.debug(f"Commit messages fetched: {messages}")
     return messages[-1]
