@@ -18,6 +18,7 @@ status_url = os.getenv("STATUS_URL")
 class UptimeKumaStatus(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.push_status.start()
         
     @commands.hybrid_group(name="status", description="ステータス感れのコマンドです。")
     async def status(self, ctx: commands.Context):
@@ -34,6 +35,7 @@ class UptimeKumaStatus(commands.Cog):
     @tasks.loop(seconds=60)
     async def push_status(self):
         url = f"{puth_url}"
+        logger.info(f"Pushing status to {url}")
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url)

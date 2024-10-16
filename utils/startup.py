@@ -124,7 +124,29 @@ async def startup_send_webhook(bot, guild_id):
     embed = discord.Embed(title="起動通知", description="Botが起動しました。", color=discord.Color.green() if not failed_cogs else discord.Color.red())
     embed.add_field(name="Bot名", value=bot.user.name, inline=True)
     embed.add_field(name="Bot ID", value=bot.user.id, inline=True)
-    embed.add_field(name="CogsList", value=", ".join(bot.cogs.keys()), inline=False)
+        
+    cogs_by_directory = {}
+    for cog in bot.extensions.keys():
+        parts = cog.split('.')
+        if len(parts) > 2:
+            directory = parts[1]
+        elif len(parts) > 1:
+            directory = parts[0]
+        else:
+            directory = 'その他'
+
+        if directory not in cogs_by_directory:
+            cogs_by_directory[directory] = []
+        cogs_by_directory[directory].append(cog)
+    
+    cogs_description = ""
+    for directory, cogs in cogs_by_directory.items():
+        cogs_description += f"> **{directory.capitalize()}**\n" + '\n'.join(cogs) + "\n\n"
+
+    if not cogs_by_directory:
+        cogs_description = "ロードされているCogはありません。"
+
+    embed.add_field(name="Cogs", value=cogs_description, inline=False)
     embed.set_footer(text="Botは正常に起動しました。" if not failed_cogs else "Botは正常に起動していません。")
     embed.set_author(name=session_id)
 
