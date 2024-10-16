@@ -106,27 +106,39 @@ async def handle_command_error(ctx, error, error_log_channel_id):
         f"**エラーメッセージ**: {error_message}\n"
     )
     await create_github_issue(issue_title, issue_body)
+    
+    error_message = str(error)
 
+    if error_message == "You must own this bot to use Jishaku.":
+        logger.warning(f"someone try to use jishaku commands: {ctx.author.name}")
+        await ctx.send("このコマンドはBOTオーナーのみ使用可能です。", ephemeral=True)
+        return True
+        
     if isinstance(error, commands.CommandNotFound):
         logger.warning(f"コマンドが見つかりません: {ctx.command}")
         await ctx.send("そのコマンドは存在しません。")
         return True
+        
     if isinstance(error, commands.MissingRequiredArgument):
         logger.warning(f"引数が不足しています: {ctx.command}")
         await ctx.send("引数が不足しています。")
         return True
+        
     if isinstance(error, commands.BadArgument):
         logger.warning(f"引数が不正です: {ctx.command}")
         await ctx.send("引数が不正です。")
         return True
+        
     if isinstance(error, commands.MissingPermissions):
         logger.warning(f"権限が不足しています: {ctx.command}")
         await ctx.send("あなたはのコマンドを実行する権限がありません。")
         return True
+        
     if isinstance(error, commands.BotMissingPermissions):
         logger.warning(f"BOTの権限が不足しています: {ctx.command}")
         await ctx.send("BOTがこのコマンドを実行する権限がありません。")
         return True
+        
     if isinstance(error, commands.CommandOnCooldown):
         logger.warning(f"コマンドがクールダウン中です: {ctx.command}")
         await ctx.send(f"このコマンドは{error.retry_after:.2f}秒後に再実行できます。")
