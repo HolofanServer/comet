@@ -168,7 +168,10 @@ async def startup_send_botinfo(bot):
 
     embed = discord.Embed(title="BOT情報", color=0x00ff00)
     embed.add_field(name="BOT", value=f"開発者: <@{bo.id}>", inline=False)
-    embed.add_field(name="開発言語", value=f"discord.py {discord.__version__}[{discord_py_hash}](https://github.com/Rapptz/discord.py/commit/master)", inline=False)
+    if discord_py_hash != "":
+        embed.add_field(name="開発言語", value=f"discord.py {discord.__version__}[{discord_py_hash}](https://github.com/Rapptz/discord.py/commit/master)", inline=False)
+    else:
+        embed.add_field(name="開発言語", value=f"discord.py {discord.__version__}", inline=False)
     embed.add_field(name="OS", value=os_info, inline=False)
     embed.add_field(name="CPU", value=cpu_info, inline=False)
     embed.add_field(name="CPU コア", value=cpu_cores, inline=False)
