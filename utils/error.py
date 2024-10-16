@@ -107,8 +107,6 @@ async def handle_command_error(ctx, error, error_log_channel_id):
     )
     await create_github_issue(issue_title, issue_body)
     
-    error_message = str(error)
-
     if error_message == "You must own this bot to use Jishaku.":
         logger.warning(f"someone try to use jishaku commands: {ctx.author.name}")
         await ctx.send("このコマンドはBOTオーナーのみ使用可能です。", ephemeral=True)
