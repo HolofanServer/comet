@@ -22,12 +22,11 @@ jobs:
             cd ${{ secrets.SERVER_DEPLOY_DIR }}
             find . -type f -name "*.pyc" -delete
             find . -type d -name "__pycache__" -exec rm -r {} +
-            git fetch --all
-            git reset --hard origin/main
             git pull
             bash -c "source iphone3g/bin/activate && pip install -r requirements.txt"
             pip install -r requirements.txt
             python3 setup.py
+            git pull
             sudo systemctl stop iphone3g.service
             sleep 10
             sudo systemctl start iphone3g.service
