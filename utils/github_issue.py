@@ -12,9 +12,11 @@ GITHUB_REPO = os.getenv("GITHUB_REPO")
 
 with open('config/bot.json', 'r') as f:
     bot_config = json.load(f)
+with open('config/version.json', 'r') as f:
+    version_config = json.load(f)
 
 bot_name = bot_config['name']
-bot_version = bot_config['version']
+bot_version = version_config['version']
 
 async def create_github_issue(issue_title, issue_body):
     url = f"https://api.github.com/repos/{GITHUB_AUTHOR}/{GITHUB_REPO}/issues"

@@ -26,6 +26,8 @@ startup_guild_id = int(os.getenv('DEV_GUILD_ID'))
 
 with open('config/bot.json', 'r') as f:
     bot_config = json.load(f)
+with open('config/version.json', 'r') as f:
+    version_config = json.load(f)
 
 async def load_cogs(bot, directory='./cogs'):
     failed_cogs = {}
@@ -184,7 +186,7 @@ async def startup_send_botinfo(bot):
     await webhook.delete()
 
 def startup_message():
-    b_v = rainbow_text(pyfiglet.figlet_format("Bot Version: " + bot_config['version']))
+    b_v = rainbow_text(pyfiglet.figlet_format("Bot Version: " + version_config['version']))
     b_n = rainbow_text(pyfiglet.figlet_format("Bot Name: " + bot_config['name']))
     yokobou = rainbow_text("----------------------------------------")
 

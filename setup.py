@@ -14,7 +14,7 @@ def get_second_last_commit_message():
 
 def update_version(major_change=False):
     logger.debug("Updating version in config/bot.json.")
-    with open("config/bot.json", "r") as file:
+    with open("config/version.json", "r") as file:
         data = json.load(file)
         logger.debug(f"Current version: {data['version']}")
 
@@ -30,9 +30,9 @@ def update_version(major_change=False):
     data["version"] = ".".join(version_parts)
     logger.debug(f"New version: {data['version']}")
 
-    with open("config/bot.json", "w") as file:
+    with open("config/version.json", "w") as file:
         json.dump(data, file, indent=4)
-        logger.debug("Version updated in config/bot.json.")
+        logger.debug("Version updated in config/version.json.")
 
 commit_message = get_second_last_commit_message()
 logger.debug(f"Second last commit message: {commit_message}")
