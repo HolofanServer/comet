@@ -18,6 +18,8 @@ log_commnads_channel_id = os.environ.get("COMANNDS_LOG_CHANNEL_ID")
 
 with open("config/bot.json", "r", encoding="utf-8") as f:
     bot_config = json.load(f)
+with open("config/version.json", "r", encoding="utf-8") as f:
+    version_config = json.load(f)
 
 logger = setup_logging("D")
 
@@ -78,7 +80,7 @@ def log_commnads():
         e.add_field(name="使用者", value=f"{ctx.author.display_name}/{ctx.author.id}")
         e.add_field(name="サーバー名", value=f"{ctx.guild.name}/{ctx.guild.id}")
         e.add_field(name="チャンネル名", value=f"{ctx.channel.name}/{ctx.channel.id}")
-        e.set_footer(text=f"Bot Version: {bot_config['version']}")
+        e.set_footer(text=f"Bot Version: {version_config['version']}")
         await channel.send(embed=e)
         return True
     return commands.check(predicate)
