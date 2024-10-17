@@ -34,6 +34,8 @@ class NicknameLoggingCog(commands.Cog):
         config = self.load_config(guild_id)
         if not config.get("log_nickname"):
             return
+        if not before.nick or not after.nick:
+            return
 
         log_channel_id = config.get("log_channel")
         log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
@@ -55,7 +57,7 @@ class NicknameLoggingCog(commands.Cog):
             print("Logging to thread.")
         elif not log_channel:
             print("Nickname Log channel is not set and no form thread is available.")
-            return 
+            return
         
         async for entry in before.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_update):
             if entry.target.id == before.id:
