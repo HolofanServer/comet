@@ -55,7 +55,7 @@ class MyBot(commands.AutoShardedBot):
         self.initialized = False
         self.cog_classes = {}
         self.ERROR_LOG_CHANNEL_ID = int(os.getenv('ERROR_LOG_CHANNEL_ID'))
-        self.gagame_sessions = {} 
+        self.gagame_sessions = {}
 
     async def setup_hook(self):
         self.loop.create_task(self.after_ready())
