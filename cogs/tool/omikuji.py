@@ -36,7 +36,7 @@ class OmikujiCog(commands.Cog):
         with open(self.omikujifile, "w") as f:
             if not os.path.exists(os.path.dirname(self.omikujifile)):
                 os.makedirs(os.path.dirname(self.omikujifile), exist_ok=True)
-            json.dump(data, f)
+            json.dump(data, f, indent=4, ensure_ascii=False)
 
     def load_streak_data(self):
         try:
@@ -51,7 +51,7 @@ class OmikujiCog(commands.Cog):
         with open(self.streakfile, "w") as f:
             if not os.path.exists(os.path.dirname(self.streakfile)):
                 os.makedirs(os.path.dirname(self.streakfile), exist_ok=True)
-            json.dump(data, f)
+            json.dump(data, f, indent=4, ensure_ascii=False)
 
     def load_ids(self):
         try:
