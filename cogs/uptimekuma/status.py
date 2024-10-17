@@ -1,4 +1,3 @@
-import discord
 from discord.ext import commands, tasks
 
 import httpx
@@ -35,16 +34,16 @@ class UptimeKumaStatus(commands.Cog):
     @tasks.loop(seconds=60)
     async def push_status(self):
         url = f"{puth_url}"
-        logger.info(f"Pushing status to {url}")
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url)
                 if response.status_code == 200:
-                    logger.info("Status pushed successfully.")
+                    pass
                 else:
-                    logger.error(f"Failed to push status: {response.status_code}")
+                    pass
             except Exception as e:
                 logger.error(f"Error pushing status: {e}")
+                pass
 
 async def setup(bot):
     await bot.add_cog(UptimeKumaStatus(bot))
