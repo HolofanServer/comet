@@ -58,6 +58,27 @@ class SudoCog(commands.Cog):
                 json.dump({"sessions": {}}, f, ensure_ascii=False, indent=4)
             return {}
 
+    def save_config_to_json(self):
+        with open('config/sudo.json', "w", encoding='utf-8') as f:
+            if not os.path.exists('config/sudo.json'):
+                os.makedirs(os.path.dirname('config/sudo.json'), exist_ok=True)
+                json.dump(self.sessions, f, ensure_ascii=False, indent=4)
+            else:
+                data = self.load_config_from_json()
+                data['roles'] = self.sessions
+                json.dump(data, f, ensure_ascii=False, indent=4)
+
+    def load_config_from_json(self):
+        try:
+            with open('config/sudo.json', "r", encoding='utf-8') as f:
+                data = json.load(f)
+                return data
+        except (FileNotFoundError, json.JSONDecodeError):  # JSONDecodeErrorを追加
+            os.makedirs(os.path.dirname('config/sudo.json'), exist_ok=True)
+            with open('config/sudo.json', "w", encoding='utf-8') as f:
+                json.dump({"roles": {}}, f, ensure_ascii=False, indent=4)
+            return {"roles": {}}
+
     async def remove_role_after_delay(self, user, role, session_id, ctx):
         if ctx.bot.user.id != self.bot.user.id:
             return
@@ -109,39 +130,44 @@ class SudoCog(commands.Cog):
             if new_id not in self.sessions:
                 return new_id
 
+    def load_sudo_roles(self):
+        data = self.load_config_from_json()
+        roles = data.get('roles', {})
+        role1_id = roles.get('role1', None)
+        role2_id = roles.get('role2', None)
+        role3_id = roles.get('role3', None)
+        return role1_id, role2_id, role3_id
+
     @commands.hybrid_command(name="sudo", description="特定の権限を付与します。")
     @is_moderator()
     @is_guild()
     @app_commands.choices(permission=[
-        app_commands.Choice(name="チャンネル編集権限", value="チャンネル編集権限"),
-        app_commands.Choice(name="Modカテゴリー編集権限", value="Modカテゴリー編集権限"),
-        app_commands.Choice(name="管理者権限", value="管理者権限")
+        app_commands.Choice(name="権限レベル1", value="権限レベル1"),
+        app_commands.Choice(name="権限レベル2", value="権限レベル2"),
+        app_commands.Choice(name="権限レベル3", value="権限レベル3")
     ])
     async def sudo(self, ctx: commands.Context, user: discord.Member, reason: str, permission: app_commands.Choice[str]):
         executor = ctx.author
 
-        role_name = "moderator"
-        has_role = any(role.name == role_name for role in user.roles)
+        role_ids = self.load_sudo_roles()
+        role_id_map = {
+            "権限レベル1": role_ids[0],
+            "権限レベル2": role_ids[1],
+            "権限レベル3": role_ids[2]
+        }
+        role_id = role_id_map.get(permission.name)
 
-        if not has_role:
-            await ctx.send("指定したユーザーはこのコマンドを使用する権限がありません。", ephemeral=True)
+        if role_id is None:
+            await ctx.send("指定された権限レベルに対応するロールが設定されていません。", ephemeral=True)
             return
-
-        session_id = self.generate_unique_session_id()
-        if user.id in self.user_timers:
-            return
-
-        role_id = {
-            "チャンネル編集権限": 1274033302935699527,
-            "Modカテゴリー編集権限": 1274033302935699527,
-            "管理者権限": 1147273889186058391
-        }.get(permission.name)
 
         role = discord.utils.get(ctx.guild.roles, id=role_id)
 
         if role is None:
             await ctx.send("指定されたロールが見つかりませんでした", ephemeral=True)
             return
+
+        session_id = self.generate_unique_session_id()
 
         jst = pytz.timezone('Asia/Tokyo')
         now = datetime.now(jst)
@@ -155,7 +181,7 @@ class SudoCog(commands.Cog):
         )
         e.set_footer(text="🟢延長ボタンを押すことで最大30分まで時間を延長できません。")
         e.set_author(name=f"ID：{session_id}")
-        
+
         await ctx.author.add_roles(role)
         message = await ctx.send(embed=e)
 
@@ -167,7 +193,7 @@ class SudoCog(commands.Cog):
             'role': role.name,
             'role_id': role.id,
             'reason': reason,
-            'remaining_time': 10,
+            'remaining_time': 600,
             'message_id': message.id
         }
         self.save_sessions_to_json()
@@ -184,6 +210,30 @@ class SudoCog(commands.Cog):
             'task': timer_task,
             'session_id': session_id
         }
+
+    @commands.hybrid_group(name="sd", description="sudoコマンドのグループです。")
+    async def sd(self, ctx: commands.Context):
+        pass
+
+    @sd.group(name="add", description="")
+    async def add(self, ctx: commands.Context):
+        pass
+
+    @add.command(name="role", description="sudoで付与するロールを追加します。")
+    @is_moderator()
+    @is_guild()
+    @app_commands.rename(role1="権限レベル1", role2="権限レベル2", role3="権限レベル3")
+    async def role(self, ctx: commands.Context, role1: discord.Role, role2: discord.Role, role3: discord.Role):
+        self.sessions['role1'] = role1.id
+        self.sessions['role2'] = role2.id
+        self.sessions['role3'] = role3.id
+        self.save_config_to_json()
+        e = discord.Embed(
+            title="sudoコマンドログ",
+            description=f"ロールを追加しました。\n\n{role1.mention}\n{role2.mention}\n{role3.mention}",
+            color=discord.Color.green(),
+        )
+        await ctx.send(embed=e, ephemeral=True)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
