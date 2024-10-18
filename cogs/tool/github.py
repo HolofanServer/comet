@@ -9,8 +9,10 @@ class GitHubCog(commands.Cog):
     async def on_message(self, message):
         if message.author.bot:
             return
-        if "?github" or "?g" in message.content:
+        if "?github" == message.content or "?g" == message.content:
             await message.channel.send(self.github_repo)
+        else:
+            return
 
 async def setup(bot):
     await bot.add_cog(GitHubCog(bot))
