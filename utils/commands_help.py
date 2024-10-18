@@ -50,6 +50,15 @@ def is_moderator():
         return True
     return commands.check(predicate)
 
+def is_booster():
+    async def predicate(ctx: commands.Context):
+        if not any(role.name == "Server Booster" for role in ctx.author.roles):
+            logger.warning(f"サーバーブースター以外のユーザーがコマンドを実行しようとしました: {ctx.author}")
+            await ctx.send("このコマンドはサーバーブースターのみが利用できます。")
+            return False
+        return True
+    return commands.check(predicate)
+
 def log_commnads():
     async def predicate(ctx: commands.Context):
         jst_time = datetime.now(pytz.timezone('Asia/Tokyo'))
