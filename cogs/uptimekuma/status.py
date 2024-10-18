@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands, tasks
 
 import httpx
@@ -28,9 +29,20 @@ class UptimeKumaStatus(commands.Cog):
     @is_guild()
     async def link(self, ctx: commands.Context):
         await ctx.defer()
-        await ctx.send(f"ステータスは[こちら]({status_url})を確認してください")
         
-
+        file = discord.File("resource/images/status_pages.png", filename="status_pages.png")
+        e = discord.Embed(
+            title="Gizmodo Woods Status",
+            description="-# gizmodo woodsで運用しているサービスのステータスを確認できます。\n-# もしサービスが正常に動作していないときはステータスが黄色か赤色になっているので、その場合はメンテナンスを行っているか、サーバーが正常に動作していない可能性があります。\n\n-# 🟢正常に動作中\n-# 🟡メンテナンス中\n-# 🔴正常に動作していない",
+            color=discord.Color.green(),
+            url="https://status.frwi.net/status/gw"
+        )
+        e.set_image(url="attachment://status_pages.png")
+        e.set_footer(text="Powerd by Uptime Kuma")
+        e.set_author(name="https://status.frwi.net/status/gw")
+        massage = "ステータスページは[こちら](https://status.frwi.net/status/gw)で確認できます。"
+        await ctx.send(embed=e, content=massage, file=file)
+        
     @tasks.loop(seconds=60)
     async def push_status(self):
         url = f"{puth_url}"
