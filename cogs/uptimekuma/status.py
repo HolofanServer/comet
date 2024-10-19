@@ -45,7 +45,8 @@ class UptimeKumaStatus(commands.Cog):
         
     @tasks.loop(seconds=60)
     async def push_status(self):
-        url = f"{push_url}"
+        url = f"{push_url}{round(self.bot.latency * 1000)}ms"
+        logger.info(url)
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url)
