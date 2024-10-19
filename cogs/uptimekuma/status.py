@@ -12,7 +12,7 @@ logger = setup_logging()
 
 load_dotenv()
 
-puth_url = os.getenv("PUTH_URL")
+puth_url = os.getenv("PUSH_URL")
 status_url = os.getenv("STATUS_URL")
 
 class UptimeKumaStatus(commands.Cog):
@@ -45,7 +45,7 @@ class UptimeKumaStatus(commands.Cog):
         
     @tasks.loop(seconds=60)
     async def push_status(self):
-        url = f"{puth_url}"
+        url = f"{push_url}"
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url)
