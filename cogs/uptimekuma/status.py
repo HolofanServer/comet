@@ -12,7 +12,7 @@ logger = setup_logging()
 
 load_dotenv()
 
-puth_url = os.getenv("PUSH_URL")
+push_url = os.getenv("PUSH_URL")
 status_url = os.getenv("STATUS_URL")
 
 class UptimeKumaStatus(commands.Cog):
