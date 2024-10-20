@@ -27,7 +27,6 @@ class ServerInfoCog(commands.Cog):
         "manage_server": "サーバー管理",
         "manage_emojis": "絵文字管理",
         "manage_stickers": "スタンプ管理"
-        
     }
 
     @commands.hybrid_group(name='info', invoke_without_command=True)

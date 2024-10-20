@@ -29,7 +29,8 @@ def is_guild():
             logger.warning(f"DMでコマンドが実行されました: {ctx.author}")
             await ctx.send("このコマンドはDMでは利用できません。")
             return False
-        return True
+        else:
+            return True
     return commands.check(predicate)
 
 def is_owner():
@@ -38,7 +39,8 @@ def is_owner():
             logger.warning(f"オーナー以外のユーザーがコマンドを実行しようとしました: {ctx.author}")
             await ctx.send("このコマンドはBotのオーナーのみが利用できます。")
             return False
-        return True
+        else:
+            return True
     return commands.check(predicate)
 
 def is_moderator():
@@ -47,7 +49,8 @@ def is_moderator():
             logger.warning(f"モデレーター以外のユーザーがコマンドを実行しようとしました: {ctx.author}")
             await ctx.send("このコマンドは運営のみが利用できます。")
             return False
-        return True
+        else:
+            return True
     return commands.check(predicate)
 
 def is_booster():
@@ -56,7 +59,8 @@ def is_booster():
             logger.warning(f"サーバーブースター以外のユーザーがコマンドを実行しようとしました: {ctx.author}")
             await ctx.send("このコマンドはサーバーブースターのみが利用できます。")
             return False
-        return True
+        else:
+            return True
     return commands.check(predicate)
 
 def log_commnads():
@@ -100,7 +104,8 @@ def is_guild_app():
             logger.warning(f"DMでアプリコマンドが実行されました: {interaction.user}")
             await interaction.response.send_message("このコマンドはDMでは利用できません。")
             return False
-        return True
+        else:
+            return True
     return app_commands.check(predicate)
 
 def is_owner_app():
@@ -109,7 +114,8 @@ def is_owner_app():
             logger.warning(f"オーナー以外のユーザーがアプリコマンドを実行しようとしました: {interaction.user}")
             await interaction.response.send_message("このコマンドはBotのオーナーのみが利用できます。", ephemeral=True)
             return False
-        return True
+        else:
+            return True
     return app_commands.check(predicate)
 
 def is_moderator_app():
@@ -118,7 +124,8 @@ def is_moderator_app():
             logger.warning(f"モデレーター以外のユーザーがアプリコマンドを実行しようとしました: {interaction.user}")
             await interaction.response.send_message("このコマンドは運営のみが利用できます。")
             return False
-        return True
+        else:
+            return True
     return app_commands.check(predicate)
 
 def user_install():

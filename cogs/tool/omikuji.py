@@ -153,15 +153,8 @@ class OmikujiCog(commands.Cog):
     @omikuji_group.command(name="debug")
     @is_owner()
     @is_guild()
-    async def debug(self, ctx): 
+    async def debug(self, ctx):
         """デバッグコマンドです。"""
-        if not is_moderator()(ctx):
-            mes = await ctx.channel.send("このコマンドは現在利用できません。")
-            await asyncio.sleep(3)
-            await mes.delete()
-            await ctx.message.delete()
-            return
-        
         steps = [
             "iPhoneだけだよ神社に来た",
             "Lightningケーブルがぶら下がってる中おみくじを選ぶ",
