@@ -8,7 +8,7 @@ import pytz
 from dotenv import load_dotenv
 from datetime import datetime
 
-from utils.commands_help import is_guild, log_commnads
+from utils.commands_help import is_guild, is_booster
 from utils.logging import setup_logging
 
 logger = setup_logging()
@@ -16,6 +16,7 @@ logger = setup_logging()
 load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
+fastapi_url = os.getenv("FASTAPI_URL")
 
 class DalleImageGenerator(commands.Cog):
     def __init__(self, bot):
@@ -31,36 +32,51 @@ class DalleImageGenerator(commands.Cog):
         formatted_time = now.strftime("%Y%m%d%H%M%S")
         author_id = ctx.author.id
         server_id = ctx.guild.id
-        image_path = os.path.join(self.image_dir, f"generated_image_{formatted_time}_{author_id}_{server_id}.png")
+        file_name = f"generated_image_{formatted_time}_{author_id}_{server_id}.png"
+        image_path = os.path.join(self.image_dir, file_name)
 
         async with aiohttp.ClientSession() as session:
             async with session.get(image_url) as response:
                 if response.status != 200:
-                    raise Exception(f"画像の取得に失敗しました: {response.status}")
-                image_data = await response.read()
+                    raise Exception(f"画像の取得に失敗しました: {response.status_code}")
+                image_data = await response.content.read()
 
-                with open(image_path, "wb") as f:
-                    f.write(image_data)
+            with open(image_path, "wb") as f:
+                f.write(image_data)
 
-        return image_path
+        logger.info(f"画像を保存しました: {image_path}")
+        return image_path, file_name
+    
+    async def upload_to_fastapi(self, image_path):
+        logger.info(f"upload_to_fastapiが呼び出されました: {image_path}")
+        async with aiohttp.ClientSession() as session:
+            with open(image_path, 'rb') as f:
+                form = aiohttp.FormData()
+                form.add_field('file', f, filename=os.path.basename(image_path), content_type='image/png')
+                headers = {}
+                
+                try:
+                    async with session.post(fastapi_url, data=form, headers=headers) as response:
+                        if response.status != 200:
+                            error_text = await response.text()
+                            logger.error(f"FastAPIへのアップロードに失敗しました: {response.status}, レスポンス: {error_text}")
+                            raise Exception(f"FastAPIへのアップロードに失敗しました: {response.status}")
+                        data = await response.json()
+                        logger.info(f"FastAPIにアップロードされたファイルURL: {data['file_url']}")
+                        return data['file_url']
+                except Exception as e:
+                    logger.error(f"FastAPIへのアップロード中にエラーが発生しました: {str(e)}", exc_info=True)
+                    raise
 
     @commands.hybrid_command(name="generate_image")
     @is_guild()
-    @log_commnads()
+    @is_booster()
     async def generate_image(self, ctx: commands.Context, *, prompt: str):
         """DALL·E APIを使って画像を生成します"""
         await ctx.defer()
-        if not hasattr(ctx.author, 'roles') or not isinstance(ctx.author.roles, list):
-            await ctx.send("役割情報を取得できませんでした。", delete_after=3)
-            return
-
-        if not any(role.name == "Server Booster" for role in ctx.author.roles):
-            await ctx.channel.send("このコマンドは現在利用できません。", delete_after=3)
-            return
-        
-        
         try:
             fm = await ctx.send(f"生成中: '{prompt}' に基づいた画像を作成しています。お待ちください...")
+            logger.info(f"画像生成プロンプト: {prompt}")
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -78,17 +94,31 @@ class DalleImageGenerator(commands.Cog):
                     }
                 ) as response:
                     if response.status != 200:
+                        logger.error(f"APIリクエストに失敗しました: {response.status}, レスポンス: {response.text}")
                         raise Exception(f"APIリクエストに失敗しました: {response.status}")
                     data = await response.json()
                     image_url = data['data'][0]['url']
-                    image_path = await self.save_image(image_url, ctx)
+                    logger.info(f"生成された画像URL: {image_url}")
+                    image_path, file_name = await self.save_image(image_url, ctx)
 
-            await fm.edit(content=f"生成された画像はこちらです\nこの画像は'{prompt}'を元に生成されました")
-            file = discord.File(image_path)
-            file.spoiler = True
-            await ctx.send(file=file)
+            file_url = await self.upload_to_fastapi(image_path)
+            jst = pytz.timezone('Asia/Tokyo')
+            now = datetime.now(jst)
+
+            await fm.edit(content=f"生成された画像はこちらです。\nこの画像は`{prompt}`を元に生成されました")
+            e = discord.Embed(
+                title="",
+                description="",
+                color=discord.Color.blue(),
+                timestamp=now
+            )
+            e.set_image(url=file_url)
+            logger.info(f"送信された画像パス: {image_path}")
+            logger.info(f"送信されたファイル名: {file_name}")
+            await ctx.send(embed=e)
 
         except Exception as e:
+            logger.error(f"エラーが発生しました: {str(e)}")
             await fm.edit(content=f"エラーが発生しました: {str(e)}")
 
 async def setup(bot):
