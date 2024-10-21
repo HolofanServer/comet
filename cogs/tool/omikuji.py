@@ -9,7 +9,7 @@ import os
 from datetime import datetime, timedelta
 
 from utils.logging import setup_logging
-from utils.commands_help import is_guild, is_owner, is_moderator, is_booster
+from utils.commands_help import is_guild, is_owner, is_booster
 
 logger = setup_logging()
 
