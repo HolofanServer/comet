@@ -11,7 +11,7 @@ from datetime import datetime
 from utils.commands_help import is_guild, is_booster
 from utils.logging import setup_logging
 
-logger = setup_logging()
+logger = setup_logging("D")
 
 load_dotenv()
 
@@ -44,11 +44,11 @@ class DalleImageGenerator(commands.Cog):
             with open(image_path, "wb") as f:
                 f.write(image_data)
 
-        logger.info(f"画像を保存しました: {image_path}")
+        logger.debug(f"画像を保存しました: {image_path}")
         return image_path, file_name
     
     async def upload_to_fastapi(self, image_path):
-        logger.info(f"upload_to_fastapiが呼び出されました: {image_path}")
+        logger.debug(f"upload_to_fastapiが呼び出されました: {image_path}")
         async with aiohttp.ClientSession() as session:
             with open(image_path, 'rb') as f:
                 form = aiohttp.FormData()
@@ -62,7 +62,7 @@ class DalleImageGenerator(commands.Cog):
                             logger.error(f"FastAPIへのアップロードに失敗しました: {response.status}, レスポンス: {error_text}")
                             raise Exception(f"FastAPIへのアップロードに失敗しました: {response.status}")
                         data = await response.json()
-                        logger.info(f"FastAPIにアップロードされたファイルURL: {data['file_url']}")
+                        logger.debug(f"FastAPIにアップロードされたファイルURL: {data['file_url']}")
                         return data['file_url']
                 except Exception as e:
                     logger.error(f"FastAPIへのアップロード中にエラーが発生しました: {str(e)}", exc_info=True)
@@ -76,7 +76,7 @@ class DalleImageGenerator(commands.Cog):
         await ctx.defer()
         try:
             fm = await ctx.send(f"生成中: '{prompt}' に基づいた画像を作成しています。お待ちください...")
-            logger.info(f"画像生成プロンプト: {prompt}")
+            logger.debug(f"画像生成プロンプト: {prompt}")
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -98,7 +98,7 @@ class DalleImageGenerator(commands.Cog):
                         raise Exception(f"APIリクエストに失敗しました: {response.status}")
                     data = await response.json()
                     image_url = data['data'][0]['url']
-                    logger.info(f"生成された画像URL: {image_url}")
+                    logger.debug(f"生成された画像URL: {image_url}")
                     image_path, file_name = await self.save_image(image_url, ctx)
 
             file_url = await self.upload_to_fastapi(image_path)
@@ -113,8 +113,8 @@ class DalleImageGenerator(commands.Cog):
                 timestamp=now
             )
             e.set_image(url=file_url)
-            logger.info(f"送信された画像パス: {image_path}")
-            logger.info(f"送信されたファイル名: {file_name}")
+            logger.debug(f"送信された画像パス: {image_path}")
+            logger.debug(f"送信されたファイル名: {file_name}")
             await ctx.send(embed=e)
 
         except Exception as e:
