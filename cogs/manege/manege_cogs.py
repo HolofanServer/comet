@@ -24,7 +24,6 @@ class ManagementCog(commands.Cog):
             module_path = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
             if module_path.startswith('cogs.'):
                 available_cogs.append(module_path)
-        print(available_cogs)
         return available_cogs
 
     async def cog_autocomplete(
@@ -49,7 +48,6 @@ class ManagementCog(commands.Cog):
             module_path = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
             if module_path.startswith('cogs_dev.'):
                 available_dev_cogs.append(module_path)
-        print(available_dev_cogs)
         return available_dev_cogs
 
     async def dev_cog_autocomplete(
