@@ -23,7 +23,13 @@ async def update_presence(bot):
     index = 0
     while not bot.is_closed():
         try:
-            member_count = sum(1 for _ in bot.get_guild(main_guild_id).members)
+            guild = bot.get_guild(main_guild_id)
+            if guild is None:
+                logger.error("Guild not found")
+                await asyncio.sleep(5)
+                continue
+
+            member_count = sum(1 for _ in guild.members)
             
             custom_presence = {"type": "Playing", "name": f"{member_count}人が参加中...", "state": "iPhoneだけだよ！"}
             presences.insert(0, custom_presence)
