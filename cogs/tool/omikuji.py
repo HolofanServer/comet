@@ -56,10 +56,18 @@ class OmikujiCog(commands.Cog):
     def load_ids(self):
         try:
             with open(self.idfile, "r") as f:
-                return json.load(f)
+                content = f.read().strip()
+                if not content:
+                    return {}
+                logger.info(f"読み込み中: {self.idfile}")
+                logger.info(f"読み込み内容: {json.loads(content)}")
+                return json.loads(content)
         except FileNotFoundError:
             if not os.path.exists(os.path.dirname(self.idfile)):
                 os.makedirs(os.path.dirname(self.idfile), exist_ok=True)
+            return {}
+        except json.JSONDecodeError:
+            logger.error(f"JSONDecodeError: {self.idfile}の内容が無効です。")
             return {}
 
     async def reset_at_midnight(self):
@@ -195,12 +203,34 @@ class OmikujiCog(commands.Cog):
             for emoji in emoji_list:
                 await fm.add_reaction(emoji)
 
+    @omikuji_group.command(name="ranking")
+    @is_guild()
+    async def ranking(self, ctx):
+        """おみくじのランキングを表示するコマンドです。"""
+        await ctx.defer()
+        self.streak_data = self.load_streak_data()
+        e = discord.Embed(title="おみくじ連続ログインランキング", color=0x34343c)
+
+        top_users = sorted(self.streak_data.items(), key=lambda x: x[1]['streak'], reverse=True)[:5]
+
+        for rank, (user_id, data) in enumerate(top_users, start=1):
+            member = ctx.guild.get_member(int(user_id))
+            if member:
+                e.add_field(
+                    name=f"{rank}位: {member.display_name}",
+                    value=f"{data['streak']}日連続",
+                    inline=False
+                )
+
+        await ctx.send(embed=e)
+
     @omikuji_group.command(name="add_fortune")
     @is_guild()
     @is_booster()
     async def add_fortune(self, ctx, fortune: str):
         """おみくじに追加するコマンドです。"""
         await ctx.defer()
+        self.ids = self.load_ids()
         if fortune in self.ids:
             await ctx.send(f"{fortune}はすでにおみくじに存在します。")
             return
@@ -215,6 +245,7 @@ class OmikujiCog(commands.Cog):
     async def remove_fortune(self, ctx, fortune: str):
         """おみくじから削除するコマンドです。"""
         await ctx.defer()
+        self.ids = self.load_ids()
         if fortune in self.ids:
             del self.ids[fortune]
             with open(self.idfile, "w", encoding="utf-8") as f:
@@ -229,6 +260,8 @@ class OmikujiCog(commands.Cog):
     async def list_fortune(self, ctx):
         """おみくじのリストを表示するコマンドです。"""
         await ctx.defer()
+        self.ids = self.load_ids()
+        logger.info(f"おみくじのリスト: {self.ids}")
         if self.ids:
             e = discord.Embed(
                 title="おみくじのリスト",

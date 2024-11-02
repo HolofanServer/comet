@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-
 import os
 import re
 import pathlib
@@ -9,7 +8,6 @@ import asyncio
 import traceback
 import json
 import pytz
-
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -19,72 +17,71 @@ from utils.startup import startup_send_webhook, startup_send_botinfo, startup_me
 from utils.startup_status import update_status
 from utils.logging import setup_logging
 from utils.error import handle_command_error, handle_application_command_error
+from utils.auth import verify_auth, load_auth, get_auth
 
-logger = setup_logging()
-
+logger: logging.Logger = setup_logging()
 load_dotenv()
 
 with open('config/bot.json', 'r') as f:
-    bot_config = json.load(f)
+    bot_config: dict[str, str] = json.load(f)
 
-session_id = None
+session_id: str = None
 
 class SessionIDHandler(logging.Handler):
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         global session_id
-        message = record.getMessage()
+        message: str = record.getMessage()
         match = re.search(r'Session ID: ([a-f0-9]+)', message)
         if match:
             session_id = match.group(1)
             print(f"セッションIDを検出しました: {session_id}")
 
-logger_session = logging.getLogger('discord.gateway')
+logger_session: logging.Logger = logging.getLogger('discord.gateway')
 logger_session.setLevel(logging.INFO)
 logger_session.addHandler(SessionIDHandler())
 
-TOKEN = os.getenv('BOT_TOKEN')
-command_prefix = [bot_config['prefix']]
-main_guild_id = int(os.getenv('MAIN_GUILD_ID'))
-dev_guild_id = int(os.getenv('DEV_GUILD_ID'))
-startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
-main_dev_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
+TOKEN: str = os.getenv('BOT_TOKEN')
+command_prefix: list[str] = [bot_config['prefix']]
+main_guild_id: int = int(os.getenv('MAIN_GUILD_ID'))
+dev_guild_id: int = int(os.getenv('DEV_GUILD_ID'))
+startup_channel_id: int = int(os.getenv('STARTUP_CHANNEL_ID'))
+main_dev_channel_id: int = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
 
 class MyBot(commands.AutoShardedBot):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.initialized = False
-        self.cog_classes = {}
-        self.ERROR_LOG_CHANNEL_ID = int(os.getenv('ERROR_LOG_CHANNEL_ID'))
-        self.gagame_sessions = {}
+        self.initialized: bool = False
+        self.cog_classes: dict = {}
+        self.ERROR_LOG_CHANNEL_ID: int = int(os.getenv('ERROR_LOG_CHANNEL_ID'))
+        self.gagame_sessions: dict = {}
 
-    async def setup_hook(self):
+    async def setup_hook(self) -> None:
+        try:
+            await self.auth()
+            logger.info("認証に成功しました。Cogのロードを開始します。")
+            await self.load_cogs('cogs')
+            await self.load_extension('jishaku')
+        except Exception as e:
+            logger.error(f"認証に失敗しました。Cogのロードをスキップします。: {e}")
+            return
         self.loop.create_task(self.after_ready())
 
-    async def after_ready(self):
+    async def after_ready(self) -> None:
         await self.wait_until_ready()
         logger.info("setup_hook is called")
         logger.info(startup_message())
         await update_status(self, "Bot Startup...")
-        logger.info("status: Bot Startup...")
-        logger.error(yokobou())
-        await self.load_cogs('cogs')
-        await self.load_extension('jishaku')
         await self.tree.sync()
+        logger.info(yokobou())
         await update_status(self, "現在の処理: tree sync")
-        logger.error(yokobou())
-        logger.info("status: 現在の処理: tree sync")
         if not self.initialized:
-            logger.info("Initializing...")
             self.initialized = True
-            logger.info('------')
-            logger.info('All cogs have been loaded and bot is ready.')
-            logger.info('------')
             asyncio.create_task(presence.update_presence(self))
 
-    async def on_ready(self):
-        logger.error(yokobou())
+    async def on_ready(self) -> None:
+        logger.info(yokobou())
         logger.info("on_ready is called")
-        log_data = {
+        log_data: dict = {
             "event": "BotReady",
             "description": f"{self.user} has successfully connected to Discord.",
             "timestamp": datetime.now(pytz.timezone('Asia/Tokyo')).strftime('%Y-%m-%d %H:%M:%S'),
@@ -99,42 +96,43 @@ class MyBot(commands.AutoShardedBot):
                 logger.error(f"Error during startup: {e}")
             self.initialized = True
 
-    async def load_cogs(self, folder_name: str):
-        cur = pathlib.Path('.')
+    async def load_cogs(self, folder_name: str) -> None:
+        cur: pathlib.Path = pathlib.Path('.')
         for p in cur.glob(f"{folder_name}/**/*.py"):
             if 'Dev' in p.parts:
-                logger.info(f"skip: {p}")
                 continue
 
-            if p.stem in ["__init__"]:
-                logger.info(f"skip: {p.stem}")
+            if p.stem == "__init__":
                 continue
             try:
-                cog_path = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
+                cog_path: str = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
                 await self.load_extension(cog_path)
-                logger.info(f'Cog loaded successfully: {cog_path}')
+                logger.info(f"Loaded extension: {cog_path}")
             except commands.ExtensionFailed as e:
                 traceback.print_exc()
-                logger.error(f'Failed to load extension {p.stem}: {e}\nFull error: {e.__cause__}')
+                logger.error(f"Failed to load extension: {cog_path} | {e}")
 
+    async def auth(self):
+        auth_data = load_auth()
+        response = await verify_auth(auth_data)
+        if not response:
+            raise Exception("認証に失敗しました。")
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
         if hasattr(ctx, 'handled') and ctx.handled:
             return
-
-        handled = await handle_command_error(ctx, error, self.ERROR_LOG_CHANNEL_ID)
+        handled: bool = await handle_command_error(ctx, error, self.ERROR_LOG_CHANNEL_ID)
         if handled:
             ctx.handled = True
 
     @commands.Cog.listener()
-    async def on_application_command_error(self, interaction: discord.Interaction, error):
+    async def on_application_command_error(self, interaction: discord.Interaction, error: commands.CommandError) -> None:
         if hasattr(interaction, 'handled') and interaction.handled:
             return
-
         await handle_application_command_error(interaction, error)
 
 intent: discord.Intents = discord.Intents.all()
-bot = MyBot(command_prefix=command_prefix, intents=intent, help_command=None)
+bot: MyBot = MyBot(command_prefix=command_prefix, intents=intent, help_command=None)
 
 bot.run(TOKEN)

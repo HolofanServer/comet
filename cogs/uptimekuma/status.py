@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands, tasks
+from discord import app_commands
 
 import httpx
 import os
@@ -21,12 +22,19 @@ class UptimeKumaStatus(commands.Cog):
         self.push_status.start()
         
     @commands.hybrid_group(name="status", description="ステータス感れのコマンドです。")
+    @is_guild()
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.user_install()
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def status(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
     @status.command(name="link", description="ステータスページのURLを送信します。")
     @is_guild()
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.user_install()
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def link(self, ctx: commands.Context):
         await ctx.defer()
         
@@ -50,7 +58,13 @@ class UptimeKumaStatus(commands.Cog):
     @tasks.loop(seconds=60)
     async def push_status(self):
         logger.info("push_statusが呼び出されました")
-        url = f"{push_url}{round(self.bot.latency * 1000)}ms"
+        ping = self.bot.latency
+        logger.info(f"ping: {ping}")
+        if ping is None or ping != ping:
+            ping = 0
+        else:
+            ping = round(ping * 1000)
+        url = f"{push_url}{ping}ms"
         logger.info(f"URL: {url}")
         async with httpx.AsyncClient() as client:
             try:
