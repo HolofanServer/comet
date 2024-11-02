@@ -73,7 +73,7 @@ class SudoCog(commands.Cog):
             with open('config/sudo.json', "r", encoding='utf-8') as f:
                 data = json.load(f)
                 return data
-        except (FileNotFoundError, json.JSONDecodeError):  # JSONDecodeErrorを追加
+        except (FileNotFoundError, json.JSONDecodeError):
             os.makedirs(os.path.dirname('config/sudo.json'), exist_ok=True)
             with open('config/sudo.json', "w", encoding='utf-8') as f:
                 json.dump({"roles": {}}, f, ensure_ascii=False, indent=4)
@@ -234,6 +234,77 @@ class SudoCog(commands.Cog):
             color=discord.Color.green(),
         )
         await ctx.send(embed=e, ephemeral=True)
+
+    @commands.hybrid_command(name="beta_sudo", description="sudo機能β版です。")
+    @is_moderator()
+    @is_guild()
+    @app_commands.rename(time="時間")
+    @app_commands.rename(user="付与するユーザー")
+    @app_commands.rename(reason="目的-or-理由")
+    @app_commands.describe(time="sudoの時間を指定します。")
+    @app_commands.describe(user="sudoを付与するユーザーを指定します。")
+    @app_commands.describe(reason="sudoを付与する目的-or-理由を指定します。")
+    @app_commands.choices(time=[
+        app_commands.Choice(name="5分", value=300),
+        app_commands.Choice(name="10分", value=600),
+        app_commands.Choice(name="30分", value=1800),
+        app_commands.Choice(name="1時間", value=3600),
+        app_commands.Choice(name="3時間", value=10800),
+    ])
+    async def beta_sudo(self, ctx: commands.Context, user: discord.Member, reason: str, time: int):
+        executor = ctx.author
+        
+        role_ids = self.load_sudo_roles()
+
+        role = discord.utils.get(ctx.guild.roles, id=role_ids[2])
+
+        if role is None:
+            await ctx.send("指定されたロールが見つかりませんでした", ephemeral=True)
+            return
+
+        session_id = self.generate_unique_session_id()
+
+        jst = pytz.timezone('Asia/Tokyo')
+        now = datetime.now(jst)
+        goodtime = now.timestamp() + time
+
+        e = discord.Embed(
+            title="sudoコマンドログ",
+            description=f"{user.mention}に{role.mention}を付与しました。\n\n理由：{reason}\n終了予定時間: <t:{int(goodtime)}> | <t:{int(goodtime)}:R>",
+            color=discord.Color.green(),
+            timestamp=now
+        )
+        e.set_footer(text="🟢延長ボタンを押すことで最大30分まで時間を延長できません。")
+        e.set_author(name=f"ID：{session_id}")
+
+        await ctx.author.add_roles(role)
+        message = await ctx.send(embed=e)
+
+        self.sessions[session_id] = {
+            'time': now.strftime('%Y-%m-%d %H:%M:%S'),
+            'executor': executor.display_name,
+            'executor_id': executor.id,
+            'affected_member': user.id,
+            'role': role.name,
+            'role_id': role.id,
+            'reason': reason,
+            'remaining_time': time,
+            'message_id': message.id
+        }
+        self.save_sessions_to_json()
+        try:
+            timer_task = asyncio.create_task(self.remove_role_after_delay(user, role, session_id, ctx))
+        except Exception as e:
+            logger.error(f"Error in remove_role_after_delay: {e}")
+            pass
+        old_timer = self.user_timers.get(user.id)
+        if old_timer:
+            old_timer.cancel()
+
+        self.user_timers[user.id] = {
+            'task': timer_task,
+            'session_id': session_id
+        }
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):

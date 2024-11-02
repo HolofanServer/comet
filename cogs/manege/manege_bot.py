@@ -88,7 +88,7 @@ class ManagementBotCog(commands.Cog):
     @is_owner()
     async def tree(self, ctx):
         """Botのディレクトリ構成を表示します"""
-        tree = subprocess.check_output('tree --prune -I "iphone3g" -I "config" -I "data" -I "logs" -I "__pycache__" -I ".DS_Store"', shell=True)
+        tree = subprocess.check_output('tree --prune -I "iphone3g" -I "config" -I "logs" -I "__pycache__" -I ".DS_Store"', shell=True)
         tree = tree.decode('utf-8')
         tree = f"```sh\n{tree}```"
         await ctx.send(tree)

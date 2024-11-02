@@ -45,6 +45,13 @@ async def load_cogs(bot, directory='./cogs'):
     bot.failed_cogs = failed_cogs
     return failed_cogs
 
+def get_github_branch():
+    try:
+        result = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return "取得に失敗しました"
+
 def get_cpu_model_name():
     """CPUモデル名を取得する"""
     try:
@@ -124,7 +131,8 @@ async def startup_send_webhook(bot, guild_id):
     embed = discord.Embed(title="起動通知", description="Botが起動しました。", color=discord.Color.green() if not failed_cogs else discord.Color.red())
     embed.add_field(name="Bot名", value=bot.user.name, inline=True)
     embed.add_field(name="Bot ID", value=bot.user.id, inline=True)
-        
+    embed.add_field(name="GitHub Branch", value=get_github_branch(), inline=True)
+    
     cogs_by_directory = {}
     for cog in bot.extensions.keys():
         parts = cog.split('.')
@@ -190,7 +198,7 @@ async def startup_send_botinfo(bot):
     cpu_bar = create_usage_bar(cpu_usage)
     memory_bar = create_usage_bar(memory_usage)
 
-    embed = discord.Embed(title="BOT情報", color=0x00ff00)
+    embed = discord.Embed(title="起動情報", color=0x00ff00)
     embed.add_field(name="BOT", value=f"開発者: <@{bo.id}>", inline=False)
     if discord_py_hash != "":
         embed.add_field(name="開発言語", value=f"discord.py {discord.__version__}[{discord_py_hash}](https://github.com/Rapptz/discord.py/commit/master)", inline=False)
@@ -202,7 +210,7 @@ async def startup_send_botinfo(bot):
     embed.add_field(name="CPU 使用率", value=cpu_bar, inline=False)
     embed.add_field(name="メモリ使用率", value=f"{memory_bar} / {total_memory_gb}GB", inline=False)
 
-    webhook = await channel.create_webhook(name="BOT情報")
+    webhook = await channel.create_webhook(name="起動情報")
     await webhook.send(embed=embed)
 
     await webhook.delete()
@@ -210,9 +218,10 @@ async def startup_send_botinfo(bot):
 def startup_message():
     b_v = rainbow_text(pyfiglet.figlet_format("Bot Version: " + version_config['version']))
     b_n = rainbow_text(pyfiglet.figlet_format("Bot Name: " + bot_config['name']))
+    branch = rainbow_text(pyfiglet.figlet_format("Branch: " + get_github_branch()))
     yokobou = rainbow_text("----------------------------------------")
 
-    startup_message = "\n" + yokobou + "\n" + b_v + "\n" + b_n + "\n" + yokobou + "\n"
+    startup_message = "\n" + yokobou + "\n" + b_v + "\n" + b_n + "\n" + branch + "\n" + yokobou + "\n"
     return startup_message
 
 def yokobou():

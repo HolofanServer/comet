@@ -15,6 +15,32 @@ logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
 
+class CustomFormatter(Formatter):
+    green = "\x1b[38;20m"
+    white = "\x1b[37;20m"
+    black = "\x1b[30;20m"
+    purple = "\x1b[35;20m"
+    blue = "\x1b[34;20m"
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+
+    FORMATS = {
+        DEBUG: blue + format + reset,
+        INFO: white + format + reset,
+        WARNING: yellow + format + reset,
+        ERROR: red + format + reset,
+        CRITICAL: bold_red + format + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = Formatter(log_fmt)
+        return formatter.format(record)
+
 def save_log(log_data):
     logger.info('Saving log data...')
     
@@ -65,8 +91,7 @@ def setup_logging(mode: Optional[str] = None):
 
     handler = StreamHandler()
     handler.setLevel(level)
-    formatter = Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-    handler.setFormatter(formatter)
+    handler.setFormatter(CustomFormatter())
     logger.addHandler(handler)
 
     return logger
