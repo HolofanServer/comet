@@ -151,6 +151,27 @@ class OmikujiCog(commands.Cog):
             for emoji in emoji_list:
                 await fm.add_reaction(emoji)
 
+    @commands.hybrid_command(name="ranking", aliases=["ランキング"])
+    @is_guild()
+    async def ranking(self, ctx):
+        """おみくじのランキングを表示するコマンドです。"""
+        await ctx.defer()
+        self.streak_data = self.load_streak_data()
+        e = discord.Embed(title="おみくじ連続ログインランキング", color=0x34343c)
+
+        top_users = sorted(self.streak_data.items(), key=lambda x: x[1]['streak'], reverse=True)[:5]
+
+        for rank, (user_id, data) in enumerate(top_users, start=1):
+            member = ctx.guild.get_member(int(user_id))
+            if member:
+                e.add_field(
+                    name=f"{rank}位: {member.display_name}",
+                    value=f"{data['streak']}日連続",
+                    inline=False
+                )
+
+        await ctx.send(embed=e)
+
     @commands.hybrid_group(name="omkj")
     @is_guild()
     async def omikuji_group(self, ctx):
@@ -202,27 +223,6 @@ class OmikujiCog(commands.Cog):
             emoji_list = [iphonedakedayo_emoji1, iphonedakedayo_emoji2, iphonedakedayo_emoji3, iphonedakedayo_emoji4, iphonedakedayo_emoji5]
             for emoji in emoji_list:
                 await fm.add_reaction(emoji)
-
-    @omikuji_group.command(name="ranking")
-    @is_guild()
-    async def ranking(self, ctx):
-        """おみくじのランキングを表示するコマンドです。"""
-        await ctx.defer()
-        self.streak_data = self.load_streak_data()
-        e = discord.Embed(title="おみくじ連続ログインランキング", color=0x34343c)
-
-        top_users = sorted(self.streak_data.items(), key=lambda x: x[1]['streak'], reverse=True)[:5]
-
-        for rank, (user_id, data) in enumerate(top_users, start=1):
-            member = ctx.guild.get_member(int(user_id))
-            if member:
-                e.add_field(
-                    name=f"{rank}位: {member.display_name}",
-                    value=f"{data['streak']}日連続",
-                    inline=False
-                )
-
-        await ctx.send(embed=e)
 
     @omikuji_group.command(name="add_fortune")
     @is_guild()
