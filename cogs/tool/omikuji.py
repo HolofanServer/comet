@@ -282,8 +282,9 @@ class OmikujiCog(commands.Cog):
             if message.guild is None:
                 await message.channel.send("このコマンドはサーバーでのみ利用できます。")
                 return
-            ctx = await self.bot.get_context(message)
-            await self.omikuji(ctx)
+            if message.channel.id == 889075104481423461:
+                ctx = await self.bot.get_context(message)
+                await self.omikuji(ctx)
 
 async def setup(bot):
     await bot.add_cog(OmikujiCog(bot))
