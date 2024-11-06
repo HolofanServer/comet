@@ -173,7 +173,7 @@ class OmikujiCog(commands.Cog):
         embed.description += f"\n\nおみくじには**{fortune}**と書かれていた"
         embed.set_footer(text=
                          "おみくじを引いてくれてありがとう！また明日引いてみてね！\n"
-                         f"連続ログイン: {self.streak_data[user_id]['streak']}日目 | 今日{self.today_stats['count']}回目のおみくじを引いたよ！"
+                         f"連続ログイン: {self.streak_data[user_id]['streak']}日目"
                          )
         await fm.edit(embed=embed)
         if fortune == "iPhoneだけだよ!!":
