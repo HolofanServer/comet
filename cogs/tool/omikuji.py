@@ -11,15 +11,17 @@ from datetime import datetime, timedelta
 from utils.logging import setup_logging
 from utils.commands_help import is_guild, is_owner, is_booster
 
-logger = setup_logging()
+logger = setup_logging("D")
 
 class OmikujiCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.omikujifile = 'data/omikuji/last_omikuji.json'
         self.streakfile = 'data/omikuji/streak_omikuji.json'
+        self.today_stats_file = 'data/omikuji/today_stats.json'
         self.last_omikuji = self.load_last_omikuji()
         self.streak_data = self.load_streak_data()
+        self.today_stats = self.load_today_stats()
         self.idfile = 'data/ids.json'
         self.ids = self.load_ids()
 
@@ -53,14 +55,30 @@ class OmikujiCog(commands.Cog):
                 os.makedirs(os.path.dirname(self.streakfile), exist_ok=True)
             json.dump(data, f, indent=4, ensure_ascii=False)
 
+    def load_today_stats(self):
+        try:
+            with open(self.today_stats_file, "r") as f:
+                data = json.load(f)
+                if 'count' not in data:
+                    data['count'] = 0
+                return data
+        except FileNotFoundError:
+            if not os.path.exists(os.path.dirname(self.today_stats_file)):
+                os.makedirs(os.path.dirname(self.today_stats_file), exist_ok=True)
+            return {'count': 0}
+
+    def save_today_stats(self, data):
+        with open(self.today_stats_file, "w") as f:
+            if not os.path.exists(os.path.dirname(self.today_stats_file)):
+                os.makedirs(os.path.dirname(self.today_stats_file), exist_ok=True)
+            json.dump(data, f, indent=4, ensure_ascii=False)
+
     def load_ids(self):
         try:
             with open(self.idfile, "r") as f:
                 content = f.read().strip()
                 if not content:
                     return {}
-                logger.info(f"読み込み中: {self.idfile}")
-                logger.info(f"読み込み内容: {json.loads(content)}")
                 return json.loads(content)
         except FileNotFoundError:
             if not os.path.exists(os.path.dirname(self.idfile)):
@@ -81,21 +99,27 @@ class OmikujiCog(commands.Cog):
 
             self.last_omikuji.clear()
             self.save_last_omikuji(self.last_omikuji)
+            self.today_stats["count"] = 0
+            self.save_today_stats(self.today_stats)
 
     @commands.hybrid_command(name="omikuji", aliases=["おみくじ"])
     @is_guild()
     async def omikuji(self, ctx):
         """1日1回だけおみくじを引くことができます。"""
+        logger.debug("Starting omikuji command")
         user_id = str(ctx.author.id)
 
         now_utc = datetime.utcnow()
         now_jst = now_utc + timedelta(hours=9)
         today_jst = now_jst.date()
 
+        logger.debug(f"User ID: {user_id}, Today JST: {today_jst}")
+
         if user_id in self.last_omikuji and self.last_omikuji[user_id] == today_jst.isoformat():
             await ctx.send("今日はもうおみくじを引いています！\n日本時間24時にリセットされます。")
             return
 
+        logger.debug("Checking streak data")
         if user_id in self.streak_data:
             last_date = datetime.fromisoformat(self.streak_data[user_id]['last_date']).date()
             if last_date == today_jst - timedelta(days=1):
@@ -108,8 +132,13 @@ class OmikujiCog(commands.Cog):
         self.streak_data[user_id]['last_date'] = today_jst.isoformat()
         self.save_streak_data(self.streak_data)
 
+        logger.debug("Updating last omikuji and today stats")
         self.last_omikuji[user_id] = today_jst.isoformat()
         self.save_last_omikuji(self.last_omikuji)
+
+        logger.debug(f"Current today_stats: {self.today_stats}")
+        self.today_stats["count"] += 1
+        self.save_today_stats(self.today_stats)
 
         steps = [
             "iPhoneだけだよ神社に来た",
@@ -118,11 +147,18 @@ class OmikujiCog(commands.Cog):
             "心を落ち着かせおみくじを開く",
         ]
 
-        fortune = random.choice(list(self.ids.keys()))
+        streak = self.streak_data[user_id]['streak']
+        base_fortunes = list(self.ids.keys())
+        weights = [1] * len(base_fortunes)
+
+        iphone_fortune_index = base_fortunes.index("iPhoneだけだよ!!")
+        weights[iphone_fortune_index] += streak
+
+        fortune = random.choices(base_fortunes, weights=weights, k=1)[0]
 
         embed = discord.Embed(title="おみくじ結果", color=0x34343c)
-        embed.set_author(name="iPhoneだけだよ神社にて...")
-        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1121700273254055936/1147277206381416599/c7b0850d740fa8bb9272b4d3289ef37c.png")
+        embed.set_author(name=f"大当たりが当たる確率が{streak}%アップ中だよ！\niPhoneだけだよ神社にて...")
+        embed.set_thumbnail(url="https://images.frwi.net/data/images/7b54adae-c988-47f1-a090-625a7838f1c1.png")
 
         fm = await ctx.send(content=f"{ctx.author.mention}\nおみくじを引きに行く...", embed=None)
 
@@ -135,7 +171,10 @@ class OmikujiCog(commands.Cog):
 
         await asyncio.sleep(1)
         embed.description += f"\n\nおみくじには**{fortune}**と書かれていた"
-        embed.set_footer(text=f"おみくじを引いてくれてありがとう！また明日引いてみてね！\n連続ログイン: {self.streak_data[user_id]['streak']}日目")
+        embed.set_footer(text=
+                         "おみくじを引いてくれてありがとう！また明日引いてみてね！\n"
+                         f"連続ログイン: {self.streak_data[user_id]['streak']}日目 | 今日{self.today_stats['count']}回目のおみくじを引いたよ！"
+                         )
         await fm.edit(embed=embed)
         if fortune == "iPhoneだけだよ!!":
             await asyncio.sleep(1)
@@ -194,8 +233,8 @@ class OmikujiCog(commands.Cog):
         fortune = "iPhoneだけだよ!!"
 
         embed = discord.Embed(title="おみくじ結果", color=0x34343c)
-        embed.set_author(name="iPhoneだけだよ神社にて...")
-        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1121700273254055936/1147277206381416599/c7b0850d740fa8bb9272b4d3289ef37c.png")
+        embed.set_author(name="大当たりが当たる確率がN/A%アップ中だよ！\niPhoneだけだよ神社にて...")
+        embed.set_thumbnail(url="https://images.frwi.net/data/images/7b54adae-c988-47f1-a090-625a7838f1c1.png")
 
         fm = await ctx.send(content=f"{ctx.author.mention}\nおみくじを引きに行く...", embed=None)
 
@@ -208,7 +247,7 @@ class OmikujiCog(commands.Cog):
 
         await asyncio.sleep(1)
         embed.description += f"\n\nおみくじには**{fortune}**と書かれていた"
-        embed.set_footer(text="おみくじを引いてくれてありがとう！また明日引いてみてね！\n連続ログイン: N/A")
+        embed.set_footer(text="おみくじを引いてくれてありがとう！また明日引いてみてね！\n連続ログイン: N/A | 今日N/A回目のおみくじを引いたよ！")
         await fm.edit(embed=embed)
         if fortune == "iPhoneだけだよ!!":
             await asyncio.sleep(1)
