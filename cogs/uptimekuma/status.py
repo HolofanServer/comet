@@ -57,24 +57,24 @@ class UptimeKumaStatus(commands.Cog):
 
     @tasks.loop(seconds=60)
     async def push_status(self):
-        logger.info("push_statusが呼び出されました")
+        #logger.info("push_statusが呼び出されました")
         ping = self.bot.latency
-        logger.info(f"ping: {ping}")
+        #logger.info(f"ping: {ping}")
         if ping is None or ping != ping:
             ping = 0
         else:
             ping = round(ping * 1000)
         url = f"{push_url}{ping}ms"
-        logger.info(f"URL: {url}")
+        #logger.info(f"URL: {url}")
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url)
-                logger.info(f"response: {response}")
+                #logger.info(f"response: {response}")
                 if response.status_code == 200:
-                    logger.info(f"response.status_code: {response.status_code}")
+                    #logger.info(f"response.status_code: {response.status_code}")
                     pass
                 else:
-                    logger.info(f"response.status_code: {response.status_code}")
+                    #logger.info(f"response.status_code: {response.status_code}")
                     pass
             except Exception as e:
                 logger.error(f"Error pushing status: {e}")

@@ -54,13 +54,11 @@ class SudoControlView(View):
         message = await interaction.channel.fetch_message(session["message_id"])
         embed = message.embeds[0]
         
-        # UTCのタイムスタンプを使用
         now_utc = datetime.utcnow()
         original_end_time = int(now_utc.timestamp() + remaining_time)
         logger.debug(f"original_end_time: {original_end_time}")
         logger.debug(f"置換前の説明: {embed.description}")
 
-        # 正規表現でタイムスタンプを置換
         embed.description = re.sub(
             r"終了予定時間: <t:\d+> \| <t:\d+:R>",
             f"~~終了予定時間: <t:{original_end_time}> | <t:{original_end_time}:R>~~",
@@ -105,13 +103,11 @@ class SudoControlView(View):
         message = await interaction.channel.fetch_message(session["message_id"])
         embed = message.embeds[0]
         
-        # UTCのタイムスタンプを使用
         now_utc = datetime.utcnow()
         original_end_time = int(now_utc.timestamp() + session["remaining_time"])
         logger.debug(f"original_end_time: {original_end_time}")
         logger.debug(f"置換前の説明: {embed.description}")
 
-        # 正規表現でタイムスタンプを置換
         embed.description = re.sub(
             r"終了予定時間: <t:\d+> \| <t:\d+:R>",
             f"~~終了予定時間: <t:{original_end_time}> | <t:{original_end_time}:R>~~",
@@ -233,7 +229,7 @@ class SudoCog(commands.Cog):
         data = self.config_manager.load()
         logger.info(f"設定がJSONファイルに保存されました。: {data}")
 
-    @commands.hybrid_command(name="sudo", description="一時的な権限を付与します。")
+    @commands.hybrid_command(name="beta_sudo", description="一時的な権限を付与します。")
     @is_moderator()
     @is_guild()
     @app_commands.rename(time="時間")
@@ -252,8 +248,9 @@ class SudoCog(commands.Cog):
         app_commands.Choice(name="3時間", value=10800),
     ])
     async def sudo(self, ctx: commands.Context, user: discord.Member, reason: str, time: int):
+        logger.debug(f"Current sessions: {self.sessions}")
         for session in self.sessions.values():
-            if session["affected_member"] == user.id:
+            if isinstance(session, dict) and session.get("affected_member") == user.id:
                 await ctx.send("このユーザーはすでにsudoを実行済みです。", ephemeral=True)
                 logger.warning(f"ユーザー {user} はすでにsudoを実行済みです。")
                 return
