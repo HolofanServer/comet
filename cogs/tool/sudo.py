@@ -229,7 +229,7 @@ class SudoCog(commands.Cog):
         data = self.config_manager.load()
         logger.info(f"設定がJSONファイルに保存されました。: {data}")
 
-    @commands.hybrid_command(name="beta_sudo", description="一時的な権限を付与します。")
+    @commands.hybrid_command(name="sudo", description="一時的な権限を付与します。")
     @is_moderator()
     @is_guild()
     @app_commands.rename(time="時間")
