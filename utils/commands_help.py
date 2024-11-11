@@ -45,6 +45,8 @@ def is_owner():
 
 def is_moderator():
     async def predicate(ctx: commands.Context):
+        if ctx.guild.id == int(dev_guild_id):
+            return True
         if not any(role.name == moderator_role_name for role in ctx.author.roles):
             logger.warning(f"モデレーター以外のユーザーがコマンドを実行しようとしました: {ctx.author}")
             await ctx.send("このコマンドは運営のみが利用できます。")
