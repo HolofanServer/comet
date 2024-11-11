@@ -5,6 +5,7 @@ import uuid
 
 from logging import getLogger, StreamHandler, Formatter, INFO, DEBUG, WARNING, ERROR, CRITICAL
 from typing import Optional
+from discord.ext.prometheus import PrometheusLoggingHandler
 
 from datetime import datetime
 
@@ -14,6 +15,13 @@ handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
 logger.propagate = False
+
+logger_gf = getLogger(__name__)
+handler_gf = PrometheusLoggingHandler()
+handler_gf.setLevel(DEBUG)
+logger_gf.setLevel(DEBUG)
+logger_gf.addHandler(handler_gf)
+logger_gf.propagate = False
 
 class CustomFormatter(Formatter):
     green = "\x1b[38;20m"
@@ -84,6 +92,15 @@ def setup_logging(mode: Optional[str] = None):
         level = ERROR
     elif mode == "critical" or mode == "C":
         level = CRITICAL
+    elif mode == "gf" or mode == "GF":
+        level = DEBUG
+        logger_gf.setLevel(DEBUG)
+        handler_gf.setLevel(DEBUG)
+        handler_gf.setFormatter(CustomFormatter())
+        logger_gf.addHandler(handler_gf)
+        logger_gf.propagate = False
+        
+        return logger
     else:
         level = INFO
 
