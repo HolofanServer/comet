@@ -1,5 +1,7 @@
 import discord
 from discord.ext import commands
+# from discord.ext.prometheus import PrometheusCog
+
 import os
 import re
 import pathlib
@@ -13,13 +15,14 @@ from dotenv import load_dotenv
 
 from utils import presence
 from utils.logging import save_log
-from utils.startup import startup_send_webhook, startup_send_botinfo, startup_message, yokobou
+from utils.startup import startup_send_webhook, startup_send_botinfo, startup_message, yokobou, git_pull, pip_install, check_dev
 from utils.startup_status import update_status
 from utils.logging import setup_logging
 from utils.error import handle_command_error, handle_application_command_error
-from utils.auth import verify_auth, load_auth, get_auth
+from utils.auth import verify_auth, load_auth
+# from utils.prometheus_config import add_bot_endpoint, reload_prometheus
 
-logger: logging.Logger = setup_logging()
+logger: logging.Logger = setup_logging("D")
 load_dotenv()
 
 with open('config/bot.json', 'r') as f:
@@ -59,8 +62,21 @@ class MyBot(commands.AutoShardedBot):
         try:
             await self.auth()
             logger.info("認証に成功しました。Cogのロードを開始します。")
+            await git_pull()
+            await pip_install()
+            await check_dev()
             await self.load_cogs('cogs')
             await self.load_extension('jishaku')
+
+            # add_bot_endpoint(
+            #     job_name="discord-bots",
+            #     target="localhost:8001",
+            #     labels={"bot": f"{bot_config['name']}"}
+            # )
+            # reload_prometheus()
+
+            # await self.add_cog(PrometheusCog(self, port=8001))
+
         except Exception as e:
             logger.error(f"認証に失敗しました。Cogのロードをスキップします。: {e}")
             return

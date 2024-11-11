@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from utils.startup_create import create_usage_bar
 from utils.logging import setup_logging
 
-logger = setup_logging()
+logger = setup_logging("D")
 load_dotenv()
 
 bot_owner_id = int(os.getenv('BOT_OWNER_ID'))
@@ -242,3 +242,24 @@ def rainbow_text(text):
     for i, char in enumerate(text):
         colored_text += colors[i % len(colors)] + char
     return colored_text + reset
+
+async def git_pull():
+    logger.info("Git pull started")
+    subprocess.run(["git", "pull"])
+    logger.info("Git pull completed")
+
+async def pip_install():
+    logger.info("Pip install started")
+    subprocess.run(["pip", "install", "-r", "requirements.txt"])
+    logger.info("Pip install completed")
+    
+async def check_dev():
+    result = get_github_branch()
+    if result == "Dev" or result == "dev":
+        logger.info("Dev branch detected. Updating discord.py...")
+        subprocess.run(["python", "-m", "pip", "install", "git+https://github.com/rapptz/discord.py"])
+        logger.info("Discord.py updated")
+        return True
+    else:
+        logger.info("Not dev branch. Skipping discord.py update.")
+        return False
