@@ -4,16 +4,17 @@ from discord.ext import commands
 from discord.errors import ConnectionClosed
 
 import asyncio
-import os
 
 from aiohttp.client_exceptions import ClientConnectorDNSError
-from dotenv import load_dotenv
 
 from utils.logging import setup_logging
 from utils import presence
 
-load_dotenv()
-bot_token = os.getenv("BOT_TOKEN")
+from config.setting import get_settings
+
+settings = get_settings()
+
+bot_token = settings.bot_token
 logger = setup_logging("D")
 
 class StatusManager(commands.Cog):
