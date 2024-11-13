@@ -1,17 +1,14 @@
 import discord
 
 import asyncio
-import os
-
-from dotenv import load_dotenv
 
 from utils.logging import setup_logging
-
-load_dotenv()
+from config.setting import get_settings
 
 logger = setup_logging()
+settings = get_settings()
 
-main_guild_id = int(os.getenv("MAIN_GUILD_ID"))
+main_guild_id = settings.admin_main_guild_id
 
 presences = [
     {"type": "Playing", "name": "/omikuji", "state": "1日一回運試し！"},

@@ -5,18 +5,18 @@ import os
 import aiohttp
 import pytz
 
-from dotenv import load_dotenv
 from datetime import datetime
+
+from config.setting import get_settings
 
 from utils.commands_help import is_guild, is_booster
 from utils.logging import setup_logging
 
 logger = setup_logging("D")
+settings = get_settings()
 
-load_dotenv()
-
-api_key = os.getenv("OPENAI_API_KEY")
-fastapi_url = os.getenv("FASTAPI_URL")
+api_key = settings.etc_api_openai_api_key
+fastapi_url = settings.fastapi_url
 
 class DalleImageGenerator(commands.Cog):
     def __init__(self, bot):
@@ -46,7 +46,7 @@ class DalleImageGenerator(commands.Cog):
 
         logger.debug(f"画像を保存しました: {image_path}")
         return image_path, file_name
-    
+
     async def upload_to_fastapi(self, image_path):
         logger.debug(f"upload_to_fastapiが呼び出されました: {image_path}")
         async with aiohttp.ClientSession() as session:
@@ -54,7 +54,7 @@ class DalleImageGenerator(commands.Cog):
                 form = aiohttp.FormData()
                 form.add_field('file', f, filename=os.path.basename(image_path), content_type='image/png')
                 headers = {}
-                
+
                 try:
                     async with session.post(fastapi_url, data=form, headers=headers) as response:
                         if response.status != 200:
@@ -73,6 +73,7 @@ class DalleImageGenerator(commands.Cog):
     @is_booster()
     async def generate_image(self, ctx: commands.Context, *, prompt: str):
         """DALL·E APIを使って画像を生成します"""
+        logger.debug(f"generate_imageコマンドが呼び出されました: {prompt}")
         await ctx.defer()
         try:
             fm = await ctx.send(f"生成中: '{prompt}' に基づいた画像を作成しています。お待ちください...")
