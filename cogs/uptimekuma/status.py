@@ -3,25 +3,30 @@ from discord.ext import commands, tasks
 from discord import app_commands
 
 import httpx
-import os
-from dotenv import load_dotenv
+import math
+import asyncio
+import traceback
+
+from config.setting import get_settings
 
 from utils.logging import setup_logging
 from utils.commands_help import is_guild
 
 logger = setup_logging()
 
-load_dotenv()
+settings = get_settings()
 
-push_url = os.getenv("PUSH_URL")
-status_url = os.getenv("STATUS_URL")
+push_url = settings.uptimekuma_push_url
+status_url = settings.uptimekuma_status_url
+dev_guild_id = settings.admin_dev_guild_id
+spam_logger_channel_id = settings.admin_commands_log_channel_id
 
 class UptimeKumaStatus(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.push_status.start()
         
-    @commands.hybrid_group(name="status", description="ステータス感れのコマンドです。")
+    @commands.hybrid_group(name="status", description="ステータス関連のコマンドです。")
     @is_guild()
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.user_install()
@@ -57,28 +62,47 @@ class UptimeKumaStatus(commands.Cog):
 
     @tasks.loop(seconds=60)
     async def push_status(self):
-        #logger.info("push_statusが呼び出されました")
+        logger.info("push_statusが呼び出されました")
         ping = self.bot.latency
-        #logger.info(f"ping: {ping}")
-        if ping is None or ping != ping:
+        if ping is None or math.isnan(ping):
             ping = 0
         else:
             ping = round(ping * 1000)
         url = f"{push_url}{ping}ms"
-        #logger.info(f"URL: {url}")
+        logger.info(f"URL: {url}")
+        max_retries = 3
+        retry_delay = 5
+
         async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(url)
-                #logger.info(f"response: {response}")
-                if response.status_code == 200:
-                    #logger.info(f"response.status_code: {response.status_code}")
-                    pass
+            for attempt in range(1, max_retries + 1):
+                try:
+                    response = await client.get(url)
+                    if response.status_code == 200:
+                        logger.info(f"Status push successful on attempt {attempt}: {response.status_code}")
+                        break
+                    else:
+                        logger.warning(f"Unexpected status code on attempt {attempt}: {response.status_code}")
+                except httpx.RequestError as e:
+                    await self.log_error(f"Request error on attempt {attempt}: {e}")
+                except Exception as e:
+                    await self.log_error(f"Unexpected error on attempt {attempt}: {e}")
+                
+                if attempt < max_retries:
+                    await asyncio.sleep(retry_delay)
                 else:
-                    #logger.info(f"response.status_code: {response.status_code}")
-                    pass
-            except Exception as e:
-                logger.error(f"Error pushing status: {e}")
-                pass
+                    logger.error("Max retries reached. Failed to push status.")
+                    await self.log_error("Max retries reached. Failed to push status.")
+
+    async def log_error(self, message):
+        logger.error(message, exc_info=True)
+        error_traceback = traceback.format_exc()
+        full_message = f"{message}\n```{error_traceback}```"
+        
+        dev_server = dev_guild_id
+        if dev_server:
+            spam_logger_channel = spam_logger_channel_id
+            if spam_logger_channel:
+                await spam_logger_channel.send(full_message)
 
 async def setup(bot):
     await bot.add_cog(UptimeKumaStatus(bot))

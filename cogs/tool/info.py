@@ -146,7 +146,7 @@ class ServerInfoCog(commands.Cog):
         embed = discord.Embed(title=f'{channel.name} チャンネル情報', description=description, color=discord.Color.blue())
 
         await ctx.send(embed=embed)
-    
+
     @info_group.command(name='emoji')
     @is_guild()
     @is_moderator()
@@ -163,7 +163,7 @@ class ServerInfoCog(commands.Cog):
         embed.set_thumbnail(url=str(emoji.url))
 
         await ctx.send(embed=embed)
-    
+
     @info_group.command(name='emoji_list')
     @is_guild()
     @is_moderator()

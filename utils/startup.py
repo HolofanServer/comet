@@ -16,13 +16,16 @@ from dotenv import load_dotenv
 
 from utils.startup_create import create_usage_bar
 from utils.logging import setup_logging
+from config.setting import get_settings
 
 logger = setup_logging("D")
 load_dotenv()
 
-bot_owner_id = int(os.getenv('BOT_OWNER_ID'))
-startup_channel_id = int(os.getenv('STARTUP_CHANNEL_ID'))
-startup_guild_id = int(os.getenv('DEV_GUILD_ID'))
+settings = get_settings()
+
+bot_owner_id = settings.bot_owner_id
+startup_channel_id = settings.admin_startup_channel_id
+startup_guild_id = settings.admin_dev_guild_id
 
 with open('config/bot.json', 'r') as f:
     bot_config = json.load(f)

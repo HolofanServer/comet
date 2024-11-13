@@ -1,14 +1,15 @@
 import httpx
-import os
 import json
 
 from utils.logging import setup_logging
+from config.setting import get_settings
 
 logger = setup_logging("D")
+settings = get_settings()
 
-GITHUB_TOKEN = os.getenv("GITHUB_PAT")
-GITHUB_AUTHOR = os.getenv("GITHUB_AUTHOR")
-GITHUB_REPO = os.getenv("GITHUB_REPO")
+GITHUB_TOKEN = settings.github_pat
+GITHUB_AUTHOR = settings.github_author
+GITHUB_REPO = settings.github_repo
 
 with open('config/bot.json', 'r') as f:
     bot_config = json.load(f)

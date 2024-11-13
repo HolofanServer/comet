@@ -3,21 +3,20 @@ from discord.ext import commands
 
 import uuid
 import pytz
-import os
 import asyncio
 
 from datetime import datetime
-from dotenv import load_dotenv
+
+from config.setting import get_settings
 
 from utils.logging import setup_logging
 from utils.github_issue import create_github_issue
 
 logger = setup_logging("E")
+settings = get_settings()
 
-load_dotenv()
-
-ERROR_LOG_CHANNEL_ID = os.getenv("ERROR_LOG_CHANNEL_ID")
-BUG_REPORT_CHANNEL_ID = os.getenv("BUG_REPORT_CHANNEL_ID")
+ERROR_LOG_CHANNEL_ID = settings.admin_error_log_channel_id
+BUG_REPORT_CHANNEL_ID = settings.admin_bug_report_channel_id
 
 class BugReportModal(discord.ui.Modal, title="バグ報告"):
     reason = discord.ui.TextInput(

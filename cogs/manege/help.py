@@ -6,17 +6,14 @@ from discord import SelectOption
 
 import pytz
 from datetime import datetime
-import os
-from dotenv import load_dotenv
 
 from utils.logging import setup_logging
+from config.setting import get_settings
 
 logger = setup_logging()
+settings = get_settings()
 
-load_dotenv()
-
-help_channel_id_env = os.getenv("HELP_CHANNEL_ID", "0")
-help_command_id_env = os.getenv("HELP_COMMAND_ID", "0")
+help_command_id_env = settings.bot_help_command_id
 
 jst = pytz.timezone('Asia/Tokyo')
 now = datetime.now(jst)
@@ -36,12 +33,12 @@ class HelpReplyEditView(View):
     def __init__(self, user: discord.User, help_embed: discord.Message, reply_msg: discord.Message):
         super().__init__()
         self.add_item(HelpReplyEditButton(user, help_embed, reply_msg))
-        
+
 class HelpModal(Modal):
     def __init__(self):
-        self.help_channel_id = help_channel_id_env
+        self.help_channel_id = settings.help_channel_id
         try:
-            self.help_channel_id = int(help_channel_id_env)
+            self.help_channel_id = int(settings.help_channel_id)
         except ValueError:
             self.help_channel_id = 1289693851560316942
 
@@ -68,10 +65,9 @@ class HelpModal(Modal):
 
 class HelpReplyModal(Modal):
     def __init__(self, user: discord.User, help_embed: discord.Message):
-        self.help_channel_id = help_channel_id_env
-        self.help_embed = help_embed
+        self.help_channel_id = settings.help_channel_id
         try:
-            self.help_channel_id = int(help_channel_id_env)
+            self.help_channel_id = int(settings.help_channel_id)
         except ValueError:
             self.help_channel_id = 1233304435967529031
 
@@ -132,7 +128,7 @@ class HelpReplyEditModal(Modal):
         view = discord.ui.View()
         view.add_item(button)
         await interaction.followup.send("返信を編集するには以下のボタンをクリックしてください。", view=view, ephemeral=True)
-        
+
 class HelpReplyButton(Button):
     def __init__(self, user: discord.User, help_embed: discord.Message):
         super().__init__(style=discord.ButtonStyle.primary, label="返信", emoji="📩")
@@ -185,7 +181,7 @@ class HelpSelect(Select):
             if interaction.client.user.avatar:
                 icon_url = interaction.client.user.avatar.url
             else:
-                icon_url = ""  # ここにデフォルトのアバターURLを設定
+                icon_url = ""
             e.add_field(name='コマンド一覧', value='/help <カテゴリ名> : </help:1289693851560316942>\n/help omikuji : </omikuji:1289693851560316947>\n/help bug_report : </bug_report:1289693851560316946>', inline=False)
             e.set_footer(text="ヘルプ")
             e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
@@ -199,7 +195,7 @@ class HelpSelect(Select):
             if interaction.client.user.avatar:
                 icon_url = interaction.client.user.avatar.url
             else:
-                icon_url = ""  # ここにデフォルトのアバターURLを設定
+                icon_url = ""
             e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
         elif selected_value == "bug_report":
@@ -209,7 +205,7 @@ class HelpSelect(Select):
             if interaction.client.user.avatar:
                 icon_url = interaction.client.user.avatar.url
             else:
-                icon_url = ""  # ここにデフォルトのアバターURLを設定
+                icon_url = ""
             e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
         else:
@@ -222,13 +218,13 @@ class HelpButton(Button):
         super().__init__(style=discord.ButtonStyle.primary, label="直接質問", emoji="❓")
 
     async def callback(self, interaction: discord.Interaction):
-        modal = HelpModal()  # HelpModal インスタンスを作成
-        await interaction.response.send_modal(modal)  # 修正: send_modal を正しく呼び出す
+        modal = HelpModal()
+        await interaction.response.send_modal(modal)
 
 class HelpCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        help_command_id_env = os.getenv("HELP_COMMAND_ID", "0")
+        help_command_id_env = settings.bot_help_command_id
         try:
             self.help_command_id = int(help_command_id_env)
         except ValueError:
@@ -254,7 +250,7 @@ class HelpCog(commands.Cog):
             if interaction.client.user.avatar:
                 icon_url = interaction.client.user.avatar.url
             else:
-                icon_url = ""  # ここにデフォルトのアバターURLを設定
+                icon_url = ""
 
             e.add_field(name='コマンド一覧', value='/help <カテゴリ名> : </help:1289693851560316942>\n/help omikuji : </omikuji:1289693851560316947>\n/help bug_report : </bug_report:1289693851560316946>', inline=False)
             e.set_footer(text="ヘルプ")
@@ -283,10 +279,10 @@ class HelpCog(commands.Cog):
                 e.add_field(name='おみくじ結果の追加コマンド\n(サーバーブースター専用)', value='/omkj add_fortune <結果> : </omkj add_fortune:1289693851790999703>', inline=False)
                 e.add_field(name='おみくじ結果の削除コマンド\n(サーバーブースター専用)', value='/omkj remove_fortune <結果> : </omkj remove_fortune:1289693851790999703>', inline=False)
                 e.set_footer(text="おみくじコマンドの説明")
-                if interaction.client.user.avatar:  # 修正: コロンを追加
+                if interaction.client.user.avatar:
                     icon_url = interaction.client.user.avatar.url
                 else:
-                    icon_url = ""  # ここにデフォルトのアバターURLを設定
+                    icon_url = ""
                 e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
             elif selected_value == "bug_report":
@@ -303,7 +299,7 @@ class HelpCog(commands.Cog):
                 if interaction.client.user.avatar:
                     icon_url = interaction.client.user.avatar.url
                 else:
-                    icon_url = ""  # ここにデフォルトのアバターURLを設定
+                    icon_url = ""
                 e.set_author(name=f"{interaction.client.user.name}のヘルプ", icon_url=icon_url)
 
             else:
