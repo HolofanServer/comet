@@ -114,7 +114,8 @@ def is_guild_app():
 
 def is_owner_app():
     async def predicate(interaction: discord.Interaction):
-        if interaction.user.id not in owner_id:
+        owner_ids = [owner_id] if isinstance(owner_id, int) else owner_id
+        if interaction.user.id not in owner_ids:
             logger.warning(f"オーナー以外のユーザーがアプリコマンドを実行しようとしました: {interaction.user}")
             await interaction.response.send_message("このコマンドはBotのオーナーのみが利用できます。", ephemeral=True)
             return False

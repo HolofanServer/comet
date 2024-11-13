@@ -3,14 +3,14 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    """ 全ての設定クラス """
-    # Discord Bot の設定
+    """ 設定クラス """
+    # Discord Bot
     bot_token: str
     bot_owner_id: int
     bot_help_command_id: str
     bot_service_name: str
 
-    # 管理者用の設定
+    # 管理者
     admin_main_guild_id: int
     admin_dev_guild_id: int
     admin_error_log_channel_id: int
@@ -22,20 +22,20 @@ class Settings(BaseSettings):
     admin_spam_notice_channel_id: int
     admin_commands_log_channel_id: int
 
-    # GitHub に関する設定
+    # GitHub
     github_pat: str
     github_repo: str
     github_author: str
 
-    # その他の API の設定
+    # その他のAPI
     etc_api_openai_api_key: str
     etc_api_realtime_api_key: str
 
-    # UptimeKuma の設定
+    # UptimeKuma
     uptimekuma_push_url: str
     uptimekuma_status_url: str
 
-    # FastAPI に関する設定
+    # FastAPI
     fastapi_url: str
 
     class Config:
