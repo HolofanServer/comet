@@ -5,10 +5,13 @@ import os
 
 from utils.logging import setup_logging
 
+from config.setting import get_settings
+
 logger = setup_logging()
 
-main_dev_channel_id = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
-main_dev_server_id = int(os.getenv('MAIN_GUILD_ID'))
+settings = get_settings()
+main_dev_channel_id = settings.admin_bug_report_channel_id
+main_dev_server_id = settings.admin_main_guild_id
 
 class BugReportCog(commands.Cog):
     def __init__(self, bot):
