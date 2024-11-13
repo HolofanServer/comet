@@ -5,14 +5,13 @@ import json
 import os
 
 from collections import Counter, defaultdict
-from dotenv import load_dotenv
 from typing import Union
 
 from utils.logging import setup_logging
-
-load_dotenv()
+from config.setting import get_settings
 
 log = setup_logging()
+settings = get_settings()
 
 class SpamBlocker:
     def __init__(self, bot: commands.Bot):
@@ -68,13 +67,12 @@ class SpamBlocker:
         if os.path.exists(self.blacklist_file):
             with open(self.blacklist_file, 'r') as f:
                 self.blacklist.update(json.load(f))
-            log.info("Blacklist loaded.")
         else:
             log.info("Blacklist file does not exist. Creating a new one.")
             self.save_blacklist()
 
     async def check_blacklist(self, ctx: commands.Context) -> bool:
-        """ブラックリストに登録されているユーザーやサーバ���かどうかを確認"""
+        """ブラックリストに登録されているユーザーやサーバかどうかを確認"""
         if ctx.author.id in self.blacklist:
             return True
         if ctx.guild is not None and ctx.guild.id in self.blacklist:
@@ -108,7 +106,7 @@ class SpamBlocker:
         return self.blacklist
 
     async def process_spam(self, ctx: commands.Context, obj):
-        """スパム行��のチェックと処理
+        """スパム行のチェックと処理
         
         discord.Message と discord.Interaction に対応
         """
@@ -162,12 +160,12 @@ class SpamBlocker:
 
     async def send_webhook_notification(self, ctx: commands.Context, obj: Union[discord.Message, discord.Interaction], retry_after: float):
         """スパムが発生した場合にWebHook通知を送信"""
-        spam_notice_channel_id = os.getenv('SPAM_NOTICE_CHANNEL_ID')
+        spam_notice_channel_id = settings.spam_notice_channel_id
         if spam_notice_channel_id is None:
             log.error("SPAM_NOTICE_CHANNEL_ID is not set in environment variables.")
             return
 
-        channel = self.bot.get_channel(int(spam_notice_channel_id))
+        channel = self.bot.get_channel(spam_notice_channel_id)
         if channel is None:
             log.error(f"Channel with ID {spam_notice_channel_id} not found.")
             return

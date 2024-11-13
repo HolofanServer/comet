@@ -5,21 +5,20 @@ import sys
 import subprocess
 import platform
 import time
-import os
 import asyncio
 import json
-
-from dotenv import load_dotenv
 
 from utils import api
 from utils.spam_blocker import SpamBlocker
 from utils.logging import setup_logging
 from utils.commands_help import is_owner, log_commnads
 
-logger = setup_logging()
+from config.setting import get_settings
 
-load_dotenv()
-SERVICE_NAME = os.getenv("SERVICE_NAME")
+logger = setup_logging()
+settings = get_settings()
+
+SERVICE_NAME = settings.bot_service_name
 
 with open('config/bot.json', 'r') as f:
     bot_config = json.load(f)

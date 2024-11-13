@@ -1,9 +1,4 @@
-import json
-import subprocess
-import os
-
 from utils.auth import get_auth
-
 from utils.logging import setup_logging
 
 logger = setup_logging("D")

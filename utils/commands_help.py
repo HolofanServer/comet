@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-import os
 import pytz
 import json
 
@@ -10,11 +9,14 @@ from datetime import datetime
 from typing import Callable
 
 from utils.logging import setup_logging
+from config.setting import get_settings
 
-owner_id = [int(os.environ["BOT_OWNER_ID"])]
-moderator_role_name = os.environ.get("MODERATOR_ROLE_NAME", "moderator")
-dev_guild_id = os.environ.get("DEV_GUILD_ID")
-log_commnads_channel_id = os.environ.get("COMANNDS_LOG_CHANNEL_ID")
+settings = get_settings()
+
+owner_id = settings.bot_owner_id
+moderator_role_name = "moderator"
+dev_guild_id = settings.admin_dev_guild_id
+log_commnads_channel_id = settings.admin_commands_log_channel_id
 
 with open("config/bot.json", "r", encoding="utf-8") as f:
     bot_config = json.load(f)

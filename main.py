@@ -21,6 +21,7 @@ from utils.logging import setup_logging
 from utils.error import handle_command_error, handle_application_command_error
 from utils.auth import verify_auth, load_auth
 # from utils.prometheus_config import add_bot_endpoint, reload_prometheus
+from config.setting import get_settings
 
 logger: logging.Logger = setup_logging("D")
 load_dotenv()
@@ -43,19 +44,22 @@ logger_session: logging.Logger = logging.getLogger('discord.gateway')
 logger_session.setLevel(logging.INFO)
 logger_session.addHandler(SessionIDHandler())
 
-TOKEN: str = os.getenv('BOT_TOKEN')
-command_prefix: list[str] = [bot_config['prefix']]
-main_guild_id: int = int(os.getenv('MAIN_GUILD_ID'))
-dev_guild_id: int = int(os.getenv('DEV_GUILD_ID'))
-startup_channel_id: int = int(os.getenv('STARTUP_CHANNEL_ID'))
-main_dev_channel_id: int = int(os.getenv('BUG_REPORT_CHANNLE_ID'))
+settings = get_settings()
+
+TOKEN: str = settings.bot_token
+command_prefix: list[str] = [settings.bot_help_command_id]
+main_guild_id: int = settings.admin_main_guild_id
+dev_guild_id: int = settings.admin_dev_guild_id
+startup_channel_id: int = settings.admin_startup_channel_id
+bug_report_channel_id: int = settings.admin_bug_report_channel_id
+error_log_channel_id: int = settings.admin_error_log_channel_id
 
 class MyBot(commands.AutoShardedBot):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.initialized: bool = False
         self.cog_classes: dict = {}
-        self.ERROR_LOG_CHANNEL_ID: int = int(os.getenv('ERROR_LOG_CHANNEL_ID'))
+        self.ERROR_LOG_CHANNEL_ID: int = error_log_channel_id
         self.gagame_sessions: dict = {}
 
     async def setup_hook(self) -> None:
