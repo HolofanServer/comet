@@ -8,14 +8,8 @@ on:
 jobs:
   generate-structure:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
 
     steps:
-      - name: Install System Dependencies
-        run: sudo apt-get install -y build-essential python3
-
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -24,13 +18,16 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Build and Install Project Structure Tool
+      - name: Install Project Structure Tool
         run: |
           git clone https://github.com/jlantz/copilot-instructions-project-structure
           cd copilot-instructions-project-structure
           npm install
           npm run build
           npm install -g .
+
+      - name: Add Node Global Bin to PATH
+        run: echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
 
       - name: Generate Project Structure
         run: copilot-project-structure --output .github/copilot-instructions.md
