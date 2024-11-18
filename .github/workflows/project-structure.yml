@@ -19,7 +19,7 @@ jobs:
           node-version: '16'
 
       - name: Install Project Structure Tool
-        run: npm install -g copilot-project-structure
+        run: npm install -g https://github.com/jlantz/copilot-instructions-project-structure
 
       - name: Generate Project Structure
         run: copilot-project-structure --output .github/copilot-instructions.md
