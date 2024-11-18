@@ -3,7 +3,7 @@ import os
 import shutil
 import uuid
 
-from logging import getLogger, StreamHandler, Formatter, INFO, DEBUG, WARNING, ERROR, CRITICAL
+from logging import getLogger, StreamHandler, Formatter, INFO, DEBUG, WARNING, ERROR, CRITICAL, FileHandler
 from typing import Optional
 from discord.ext.prometheus import PrometheusLoggingHandler
 
@@ -101,6 +101,25 @@ def setup_logging(mode: Optional[str] = None):
         logger_gf.propagate = False
         
         return logger
+    elif mode == "api" or mode == "API":
+        path = "data/logging/api"
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        api_logger = getLogger("API")
+        api_logger.setLevel(DEBUG)
+        
+        api_stream_handler = StreamHandler()
+        api_stream_handler.setLevel(DEBUG)
+        api_stream_handler.setFormatter(CustomFormatter())
+        api_logger.addHandler(api_stream_handler)
+        
+        api_file_handler = FileHandler(f'{path}/api.log')
+        api_file_handler.setLevel(DEBUG)
+        api_file_handler.setFormatter(CustomFormatter())
+        api_logger.addHandler(api_file_handler)
+        
+        api_logger.propagate = False
+        return api_logger
     else:
         level = INFO
 
