@@ -11,6 +11,10 @@ from datetime import datetime, timedelta
 from utils.logging import setup_logging
 from utils.commands_help import is_guild, is_owner, is_booster
 
+from config.setting import get_settings
+
+settings = get_settings()
+
 logger = setup_logging("D")
 
 class OmikujiCog(commands.Cog):
@@ -107,7 +111,11 @@ class OmikujiCog(commands.Cog):
     async def omikuji(self, ctx):
         """1日1回だけおみくじを引くことができます。"""
         logger.debug("Starting omikuji command")
+        
+        self.streak_data = self.load_streak_data()
+        
         user_id = str(ctx.author.id)
+        special_user_id = str(settings.bot_owner_id)
 
         now_utc = datetime.utcnow()
         now_jst = now_utc + timedelta(hours=9)
@@ -116,19 +124,30 @@ class OmikujiCog(commands.Cog):
         logger.debug(f"User ID: {user_id}, Today JST: {today_jst}")
 
         if user_id in self.last_omikuji and self.last_omikuji[user_id] == today_jst.isoformat():
-            await ctx.send("今日はもうおみくじを引いています！\n日本時間24時にリセットされます。")
-            return
+            if user_id != special_user_id:
+                logger.debug(special_user_id)
+                await ctx.send("今日はもうおみくじを引いています！\n日本時間24時にリセットされます。")
+                logger.debug(f"User {user_id} has already drawn the omikuji today.")
+                return
 
         logger.debug("Checking streak data")
         if user_id in self.streak_data:
             last_date = datetime.fromisoformat(self.streak_data[user_id]['last_date']).date()
-            if last_date == today_jst - timedelta(days=1):
+            logger.debug(f"Last date: {last_date}")
+            if user_id == special_user_id:
+                if last_date < today_jst - timedelta(days=1):
+                    self.streak_data[user_id]['streak'] = self.streak_data[user_id].get('streak', 1)
+                    logger.debug(f"Streak: {self.streak_data[user_id]['streak']}")
+            elif last_date == today_jst - timedelta(days=1):
                 self.streak_data[user_id]['streak'] += 1
+                logger.debug(f"Streak: {self.streak_data[user_id]['streak']}")
             else:
                 self.streak_data[user_id]['streak'] = 1
+                logger.debug(f"Streak: {self.streak_data[user_id]['streak']}")
         else:
             self.streak_data[user_id] = {'streak': 1}
-
+            logger.debug(f"Streak: {self.streak_data[user_id]['streak']}")
+            
         self.streak_data[user_id]['last_date'] = today_jst.isoformat()
         self.save_streak_data(self.streak_data)
 
@@ -152,7 +171,7 @@ class OmikujiCog(commands.Cog):
         weights = [1] * len(base_fortunes)
 
         iphone_fortune_index = base_fortunes.index("iPhoneだけだよ!!")
-        weights[iphone_fortune_index] += streak
+        weights[iphone_fortune_index] += streak // 2
 
         fortune = random.choices(base_fortunes, weights=weights, k=1)[0]
 
@@ -233,7 +252,7 @@ class OmikujiCog(commands.Cog):
         fortune = "iPhoneだけだよ!!"
 
         embed = discord.Embed(title="おみくじ結果", color=0x34343c)
-        embed.set_author(name="大当たりが当たる確率がN/A%アップ中だよ！\niPhoneだけだよ神社にて...")
+        embed.set_author(name="大当たりが当たる確率がN/A%アップ中だよ！\niPhoneだけ���よ神社にて...")
         embed.set_thumbnail(url="https://images.frwi.net/data/images/7b54adae-c988-47f1-a090-625a7838f1c1.png")
 
         fm = await ctx.send(content=f"{ctx.author.mention}\nおみくじを引きに行く...", embed=None)

@@ -100,7 +100,7 @@ class UptimeKumaStatus(commands.Cog):
         
         dev_server = dev_guild_id
         if dev_server:
-            spam_logger_channel = spam_logger_channel_id
+            spam_logger_channel = self.bot.get_channel(spam_logger_channel_id)
             if spam_logger_channel:
                 await spam_logger_channel.send(full_message)
 

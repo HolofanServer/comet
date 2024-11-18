@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     admin_attachment_thread_id: int
     admin_spam_notice_channel_id: int
     admin_commands_log_channel_id: int
+    admin_tubuyaki_channel_id: int
+    admin_mod_channel_id: int
 
     # GitHub
     github_pat: str
