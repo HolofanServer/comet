@@ -30,13 +30,19 @@ jobs:
           npm install -g .
 
       - name: Add Node Global Bin to PATH
-        run: echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
+        run: |
+          NODE_BIN=$(npm config get prefix)/bin
+          echo "$NODE_BIN" >> $GITHUB_PATH
 
       - name: Verify Executable Path
-        run: ls -l "$(npm config get prefix)/bin"
+        run: |
+          NODE_BIN=$(npm config get prefix)/bin
+          ls -l "$NODE_BIN"
 
       - name: Generate Project Structure
-        run: "$(npm config get prefix)/bin/copilot-project-structure" --output .github/copilot-instructions.md
+        run: |
+          NODE_BIN=$(npm config get prefix)/bin
+          "$NODE_BIN/copilot-project-structure" --output .github/copilot-instructions.md
 
       - name: Commit and Push Changes
         run: |
