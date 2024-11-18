@@ -16,10 +16,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: '18'
+
+      - name: Install Required Dependencies
+        run: npm install -g @vercel/ncc
 
       - name: Install Project Structure Tool
-        run: npm install -g copilot-project-structure
+        run: npm install -g https://github.com/jlantz/copilot-instructions-project-structure
 
       - name: Generate Project Structure
         run: copilot-project-structure --output .github/copilot-instructions.md
