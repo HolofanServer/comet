@@ -47,7 +47,7 @@ logger_session.addHandler(SessionIDHandler())
 settings = get_settings()
 
 TOKEN: str = settings.bot_token
-command_prefix: list[str] = [settings.bot_help_command_id]
+command_prefix: list[str] = bot_config["prefix"]
 main_guild_id: int = settings.admin_main_guild_id
 dev_guild_id: int = settings.admin_dev_guild_id
 startup_channel_id: int = settings.admin_startup_channel_id

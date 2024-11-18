@@ -18,36 +18,41 @@ class Announcement(commands.Cog):
         app_commands.Choice(name="基本お知らせ", value="announcement"),
         app_commands.Choice(name="サーバーブースター専用機能お知らせ", value="announcement_server_booster"),
     ]
+    description_new_feature = "> 新機能の説明を入力してください。\n{feature}\n\n> コマンド一覧"
+    description_update_notice = "> アップデート内容を入力してください。\n{feature}\n\n> コマンド一覧"
+    description_feature_intro = "> 新機能の説明を入力してください。\n{feature}\n\n> コマンド一覧"
+    description_announcement = "> お知らせ内容を入力してください。"
+    description_announcement_server_booster = "> サーバーブースター専用機能のお知らせ内容を入力してください。\n{feature}\n\n> コマンド一覧"
 
     def create_embed(self, template, feature):
         if template.value == "new_feature":
             embed = discord.Embed(
                 title="🌟 新機能リリースのお知らせ",
-                description=feature,
+                description=self.description_new_feature.format(feature=feature),
                 color=discord.Color.green()
             ).set_footer(text="今すぐチェックしてください！")
         elif template.value == "update_notice":
             embed = discord.Embed(
                 title="✨ アップデートのお知らせ",
-                description=feature,
+                description=self.description_update_notice.format(feature=feature),
                 color=discord.Color.blue()
             ).set_footer(text="最新情報をお見逃しなく！")
         elif template.value == "feature_intro":
             embed = discord.Embed(
                 title="🚀 新機能のご紹介",
-                description=feature,
+                description=self.description_feature_intro.format(feature=feature),
                 color=discord.Color.purple()
             ).set_footer(text="フィードバックをお待ちしています！")
         elif template.value == "announcement":
             embed = discord.Embed(
                 title="📢 お知らせ",
-                description=feature,
+                description=self.description_announcement,
                 color=discord.Color.orange()
             ).set_footer(text="お知らせをお見逃しなく！")
         elif template.value == "announcement_server_booster":
             embed = discord.Embed(
                 title="💰 サーバーブースター専用機能のお知らせ",
-                description=feature,
+                description=self.description_announcement_server_booster.format(feature=feature),
                 color=discord.Color.gold()
             ).set_footer(text="お知らせをお見逃しなく！")
         logger.info(f"Embed created with template: {template.value}")
