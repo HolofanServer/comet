@@ -10,8 +10,9 @@
 # データディレクトリ
 data/
 
-# Devディレクトリ
+# Dev関連
 Dev/
+requirements-dev.txt
 
 # Pythonのバイトコード
 __pycache__/
