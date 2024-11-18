@@ -51,15 +51,15 @@ class ManagementBotCog(commands.Cog):
         """BotのPingを表示します"""
         self.spam_blocker.is_not_blacklisted()
         start_time = time.monotonic()
-        api_ping = await api.measure_api_ping()
+        websocket_url, api_ping = await api.measure_api_ping()
 
-        if not api_ping:
+        if api_ping is None:
             color = discord.Color.red()
         else:
             color = discord.Color.green()
 
         e = discord.Embed(title="Pong!", color=color)
-        e.add_field(name="API Ping", value=f"{round(api_ping)}ms" if api_ping else "測定失敗", inline=True)
+        e.add_field(name="API Ping", value=f"{round(api_ping)}ms" if api_ping is not None else "測定失敗", inline=True)
         e.add_field(name="WebSocket Ping", value=f"{round(self.bot.latency * 1000)}ms", inline=True)
         e.set_footer(text=f"Bot Version: {version_config['version']}")
         sent_message = await ctx.send(embed=e)

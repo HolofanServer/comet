@@ -37,7 +37,8 @@ def is_guild():
 
 def is_owner():
     async def predicate(ctx: commands.Context):
-        if ctx.author.id not in owner_id:
+        owner_ids = [settings.bot_owner_id]
+        if ctx.author.id not in owner_ids:
             logger.warning(f"オーナー以外のユーザーがコマンドを実行しようとしました: {ctx.author}")
             await ctx.send("このコマンドはBotのオーナーのみが利用できます。")
             return False
@@ -114,7 +115,7 @@ def is_guild_app():
 
 def is_owner_app():
     async def predicate(interaction: discord.Interaction):
-        owner_ids = [owner_id] if isinstance(owner_id, int) else owner_id
+        owner_ids = [1234567890]
         if interaction.user.id not in owner_ids:
             logger.warning(f"オーナー以外のユーザーがアプリコマンドを実行しようとしました: {interaction.user}")
             await interaction.response.send_message("このコマンドはBotのオーナーのみが利用できます。", ephemeral=True)

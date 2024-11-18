@@ -1,7 +1,4 @@
 import asyncio
-import logging
-
-logger = logging.getLogger("TimerManager")
 
 class TimerManager:
     def __init__(self):

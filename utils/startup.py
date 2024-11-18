@@ -253,7 +253,11 @@ async def git_pull():
 
 async def pip_install():
     logger.info("Pip install started")
-    subprocess.run(["pip", "install", "-r", "requirements.txt"])
+    result = get_github_branch()
+    if result == "Dev" or result == "dev":
+        subprocess.run(["pip", "install", "-r", "requirements-dev.txt"])
+    else:
+        subprocess.run(["pip", "install", "-r", "requirements.txt"])
     logger.info("Pip install completed")
     
 async def check_dev():

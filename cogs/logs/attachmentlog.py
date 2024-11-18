@@ -25,12 +25,10 @@ class AttachmentLogCog(commands.Cog):
 
     def get_channel_id(self, guild_id):
         config_file_path = f"data/logs/{guild_id}/config/attachment.json"
-        logger.debug(f"チャンネルIDを取得するために設定ファイルを確認中: {config_file_path}")
         if os.path.exists(config_file_path):
             with open(config_file_path, 'r') as f:
                 config = json.load(f)
                 channel_id = config.get("log_channel")
-                logger.debug(f"取得したチャンネルID: {channel_id}")
                 return channel_id
         logger.warning("設定ファイルが存在しません。")
         return None
