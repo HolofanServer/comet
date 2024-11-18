@@ -32,8 +32,11 @@ jobs:
       - name: Add Node Global Bin to PATH
         run: echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
 
+      - name: Verify Executable Path
+        run: ls -l "$(npm config get prefix)/bin"
+
       - name: Generate Project Structure
-        run: copilot-project-structure --output .github/copilot-instructions.md
+        run: "$(npm config get prefix)/bin/copilot-project-structure" --output .github/copilot-instructions.md
 
       - name: Commit and Push Changes
         run: |
