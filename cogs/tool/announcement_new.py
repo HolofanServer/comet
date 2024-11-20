@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-from utils.commands_help import is_owner, log_commnads
+from utils.commands_help import is_owner, log_commands
 from utils.logging import setup_logging
 
 logger = setup_logging("D")
@@ -62,7 +62,7 @@ class Announcement(commands.Cog):
     @app_commands.choices(template=template_choices)
     @app_commands.describe(channel="通知を送信するチャンネル", template="テンプレートを選択", feature="新機能の説明")
     @is_owner()
-    @log_commnads()
+    @log_commands()
     async def prepare_announcement(self, interaction: discord.Interaction, channel: discord.TextChannel, template: app_commands.Choice[str], feature: str):
         embed = self.create_embed(template, feature)
         view = AnnouncementView(channel, embed)

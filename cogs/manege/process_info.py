@@ -8,7 +8,7 @@ import platform
 
 from utils.startup_create import create_usage_bar
 from utils.stats import get_stats
-from utils.commands_help import log_commnads, is_moderator
+from utils.commands_help import log_commands, is_moderator
 from utils.logging import setup_logging
 
 logger = setup_logging("D")
@@ -25,7 +25,7 @@ class ProcessInfoCog(commands.Cog):
 
     @bot.command(name="info")
     @is_moderator()
-    @log_commnads()
+    @log_commands()
     async def info(self, ctx):
         """BOTのプロセス情報を取得します。"""
         logger.info("BOTのプロセス情報取得コマンドが実行されました。")

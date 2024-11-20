@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from utils.logging import setup_logging
-from utils.commands_help import log_commnads
+from utils.commands_help import log_commands
 
 from config.setting import get_settings
 
@@ -18,7 +18,7 @@ class BugReportCog(commands.Cog):
 
     @commands.hybrid_command(name="bug_report")
     @commands.dm_only()
-    @log_commnads()
+    @log_commands()
     async def bug_report(self, ctx, 内容: str, 画像: discord.Attachment = None):
         """バグを報告します。"""
         dev_channel = self.bot.get_channel(main_dev_channel_id)
