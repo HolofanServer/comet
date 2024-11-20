@@ -4,7 +4,6 @@ from discord.ext import commands
 import dateparser
 import re
 import asyncio
-import os
 import json
 
 from datetime import datetime, timedelta, timezone
