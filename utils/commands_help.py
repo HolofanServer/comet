@@ -102,7 +102,7 @@ def log_commands():
         e.add_field(name="サーバー名", value=f"{ctx.guild.name}/{ctx.guild.id}")
         e.add_field(name="チャンネル名", value=f"{ctx.channel.name}/{ctx.channel.id}")
         e.set_footer(text=f"Bot Version: {version_config['version']}")
-        await channel.send(embed=e)
+        #await channel.send(embed=e)
 
         stats = await get_stats()
         command_count = stats.get("commands", {}).get("total", 0)
