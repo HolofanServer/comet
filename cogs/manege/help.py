@@ -8,7 +8,7 @@ import pytz
 from datetime import datetime
 
 from utils.logging import setup_logging
-from utils.commands_help import log_commnads
+from utils.commands_help import log_commands
 
 from config.setting import get_settings
 
@@ -238,7 +238,7 @@ class HelpCog(commands.Cog):
         app_commands.Choice(name="おみくじコマンド", value="omikuji"),
         app_commands.Choice(name="バグ報告コマンド", value="bug_report"),
     ])
-    @log_commnads()
+    @log_commands()
     async def help(self, interaction: discord.Interaction, option: app_commands.Choice[str] = None):
         if option is None:
             if interaction.guild:

@@ -9,7 +9,7 @@ from datetime import datetime
 
 from config.setting import get_settings
 
-from utils.commands_help import is_guild, is_booster, log_commnads
+from utils.commands_help import is_guild, is_booster, log_commands
 from utils.logging import setup_logging
 
 logger = setup_logging("D")
@@ -71,7 +71,7 @@ class DalleImageGenerator(commands.Cog):
     @commands.hybrid_command(name="generate_image")
     @is_guild()
     @is_booster()
-    @log_commnads()
+    @log_commands()
     async def generate_image(self, ctx: commands.Context, *, prompt: str):
         """DALL·E APIを使って画像を生成します"""
         logger.debug(f"generate_imageコマンドが呼び出されました: {prompt}")

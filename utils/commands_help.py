@@ -17,7 +17,7 @@ settings = get_settings()
 owner_id = settings.bot_owner_id
 moderator_role_name = "moderator"
 dev_guild_id = settings.admin_dev_guild_id
-log_commnads_channel_id = settings.admin_commands_log_channel_id
+log_commands_channel_id = settings.admin_commands_log_channel_id
 
 with open("config/bot.json", "r", encoding="utf-8") as f:
     bot_config = json.load(f)
@@ -38,7 +38,7 @@ def is_guild():
 
 def is_owner():
     async def predicate(ctx: commands.Context):
-        logger.warning(f"{owner_id}/{ctx.author.id}")
+        logger.debug(f"{owner_id}/{ctx.author.id}")
         if ctx.author.id != owner_id:
             logger.warning(f"オーナー以外のユーザーがコマンドを実行しようとしました: {ctx.author}")
             await ctx.send("このコマンドはBotのオーナーのみが利用できます。")
@@ -69,7 +69,7 @@ def is_booster():
             return True
     return commands.check(predicate)
 
-def log_commnads():
+def log_commands():
     async def predicate(ctx: commands.Context):
         jst_time = datetime.now(pytz.timezone('Asia/Tokyo'))
         guild = ctx.bot.get_guild(int(dev_guild_id))
@@ -77,9 +77,9 @@ def log_commnads():
             logger.warning(f"開発用サーバーが見つかりません: {dev_guild_id}")
             return True
         
-        channel = guild.get_channel(int(log_commnads_channel_id))
+        channel = guild.get_channel(int(log_commands_channel_id))
         if channel is None:
-            logger.warning(f"ログチャンネルが見つかりません: {log_commnads_channel_id}")
+            logger.warning(f"ログチャンネルが見つかりません: {log_commands_channel_id}")
             return True
         
         e = discord.Embed(

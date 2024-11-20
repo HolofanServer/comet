@@ -9,7 +9,7 @@ import os
 from datetime import datetime, timedelta
 
 from utils.logging import setup_logging
-from utils.commands_help import is_guild, is_owner, is_booster, log_commnads
+from utils.commands_help import is_guild, is_owner, is_booster, log_commands
 
 from config.setting import get_settings
 
@@ -108,7 +108,7 @@ class OmikujiCog(commands.Cog):
 
     @commands.hybrid_command(name="omikuji", aliases=["おみくじ"])
     @is_guild()
-    @log_commnads()
+    @log_commands()
     async def omikuji(self, ctx):
         """1日1回だけおみくじを引くことができます。"""
         logger.debug("Starting omikuji command")

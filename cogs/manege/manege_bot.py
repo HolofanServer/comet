@@ -11,7 +11,7 @@ import json
 from utils import api
 from utils.spam_blocker import SpamBlocker
 from utils.logging import setup_logging
-from utils.commands_help import is_owner, log_commnads
+from utils.commands_help import is_owner, log_commands
 
 from config.setting import get_settings
 
@@ -46,7 +46,7 @@ class ManagementBotCog(commands.Cog):
             logger.error(f"再起動中にエラーが発生しました: {e}")
 
     @commands.hybrid_command(name='ping', hidden=True)
-    @log_commnads()
+    @log_commands()
     async def ping(self, ctx):
         """BotのPingを表示します"""
         self.spam_blocker.is_not_blacklisted()
