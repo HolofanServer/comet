@@ -4,6 +4,7 @@ from discord.ext import commands
 import time
 import subprocess
 import datetime
+import platform
 
 from utils.startup_create import create_usage_bar
 from utils.stats import get_stats
@@ -29,18 +30,33 @@ class ProcessInfoCog(commands.Cog):
         """BOTのプロセス情報を取得します。"""
         logger.info("BOTのプロセス情報取得コマンドが実行されました。")
         try:
-            result = subprocess.run(
-                ["pgrep", "-af", "/Users/freewifi/iphone3g/iphone3g/bin/python"],
-                stdout=subprocess.PIPE,
-                text=True
-            )
+            if platform.system() == "Darwin":
+                python_path = "/Users/freewifi/iphone3g/iphone3g/bin/python"
+            elif platform.system() == "Linux":
+                python_path = "/home/freewifi110/iphone3g/iphone3g/bin/python"
+            else:
+                python_path = None
+                logger.warning("サポートされていないOSです。")
+                await ctx.send("サポートされていないOSです。")
+                return
+
+            if python_path:
+                result = subprocess.run(
+                    ["pgrep", "-af", python_path],
+                    stdout=subprocess.PIPE,
+                    text=True
+                )
+            else:
+                await ctx.send("サポートされていないOSです。")
+                logger.warning("サポートされていないOSです。")
+                return
+
             lines = result.stdout.strip().split("\n")
             if not lines:
                 await ctx.send("指定されたコマンドを実行しているプロセスが見つかりませんでした。")
                 logger.warning("指定されたコマンドを実行しているプロセスが見つかりませんでした。")
                 return
             
-            # プロセス情報を一度にまとめて取得
             process_info = []
             for line in lines:
                 parts = line.split(None, 1)
@@ -61,7 +77,6 @@ class ProcessInfoCog(commands.Cog):
 
                 process_info.append((cpu_bar, mem_bar, memory_usage_gb))
 
-            # メッセージを一度だけ送信
             embed1 = discord.Embed(title="BOTのプロセス情報", color=discord.Color.blue())
             embed1.add_field(name="CPU使用率", value=f"{cpu_bar}", inline=True)
             embed1.add_field(name="メモリ使用率", value=f"{mem_bar} / {memory_usage_gb}GB", inline=True)
