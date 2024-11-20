@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 # from discord.ext.prometheus import PrometheusCog
 
-import os
 import re
 import pathlib
 import logging
