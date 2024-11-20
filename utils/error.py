@@ -144,9 +144,7 @@ async def handle_command_error(ctx, error, error_log_channel_id):
 
     logger.error(f"UnknownError: {error}")
 
-    stats = await get_stats()
-    total_error_count = stats.get("errors", 0)
-    await update_stats("errors", "total", total_error_count + 1)
+    await update_stats("errors", "total", increment=1)
 
     channel_id = ctx.channel.id
     server_id = ctx.guild.id if ctx.guild else 'DM'
@@ -240,9 +238,7 @@ async def handle_application_command_error(interaction, error):
             
         logger.error(f"UnknownError: {error}")
 
-        stats = await get_stats()
-        total_error_count = stats.get("errors", 0)
-        await update_stats("errors", "total", total_error_count + 1)
+        await update_stats("errors", "total", increment=1)
 
         channel_id = interaction.channel_id
         server_id = interaction.guild_id if interaction.guild else 'DM'
