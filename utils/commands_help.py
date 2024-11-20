@@ -10,13 +10,14 @@ from typing import Callable
 
 from utils.logging import setup_logging
 from config.setting import get_settings
+from utils.stats import update_stats, get_stats
 
 settings = get_settings()
 
 owner_id = settings.bot_owner_id
 moderator_role_name = "moderator"
 dev_guild_id = settings.admin_dev_guild_id
-log_commnads_channel_id = settings.admin_commands_log_channel_id
+log_commands_channel_id = settings.admin_commands_log_channel_id
 
 with open("config/bot.json", "r", encoding="utf-8") as f:
     bot_config = json.load(f)
@@ -37,8 +38,8 @@ def is_guild():
 
 def is_owner():
     async def predicate(ctx: commands.Context):
-        owner_ids = [settings.bot_owner_id]
-        if ctx.author.id not in owner_ids:
+        logger.debug(f"{owner_id}/{ctx.author.id}")
+        if ctx.author.id != owner_id:
             logger.warning(f"オーナー以外のユーザーがコマンドを実行しようとしました: {ctx.author}")
             await ctx.send("このコマンドはBotのオーナーのみが利用できます。")
             return False
@@ -68,7 +69,7 @@ def is_booster():
             return True
     return commands.check(predicate)
 
-def log_commnads():
+def log_commands():
     async def predicate(ctx: commands.Context):
         jst_time = datetime.now(pytz.timezone('Asia/Tokyo'))
         guild = ctx.bot.get_guild(int(dev_guild_id))
@@ -76,9 +77,9 @@ def log_commnads():
             logger.warning(f"開発用サーバーが見つかりません: {dev_guild_id}")
             return True
         
-        channel = guild.get_channel(int(log_commnads_channel_id))
+        channel = guild.get_channel(int(log_commands_channel_id))
         if channel is None:
-            logger.warning(f"ログチャンネルが見つかりません: {log_commnads_channel_id}")
+            logger.warning(f"ログチャンネルが見つかりません: {log_commands_channel_id}")
             return True
         
         e = discord.Embed(
@@ -88,9 +89,11 @@ def log_commnads():
             timestamp=jst_time
         )
         if ctx.interaction:
-            e.add_field(name="使用コマンド", value=f"/{ctx.command.name}")
+            command_name = f"/{ctx.command.name}"
+            e.add_field(name="使用コマンド", value=command_name)
         else:
-            e.add_field(name="使用コマンド", value=f"{bot_config['prefix']}{ctx.command.name}")
+            command_name = f"{bot_config['prefix']}{ctx.command.name}"
+            e.add_field(name="使用コマンド", value=command_name)
             if ctx.args:
                 e.add_field(name="コマンド引数", value=f"{ctx.args}")
             else:
@@ -100,6 +103,11 @@ def log_commnads():
         e.add_field(name="チャンネル名", value=f"{ctx.channel.name}/{ctx.channel.id}")
         e.set_footer(text=f"Bot Version: {version_config['version']}")
         await channel.send(embed=e)
+
+        stats = await get_stats()
+        command_count = stats.get("commands", {}).get("total", 0)
+        await update_stats("commands", "total", command_count + 1)
+
         return True
     return commands.check(predicate)
 
@@ -115,8 +123,7 @@ def is_guild_app():
 
 def is_owner_app():
     async def predicate(interaction: discord.Interaction):
-        owner_ids = [1234567890]
-        if interaction.user.id not in owner_ids:
+        if interaction.user.id != owner_id:
             logger.warning(f"オーナー以外のユーザーがアプリコマンドを実行しようとしました: {interaction.user}")
             await interaction.response.send_message("このコマンドはBotのオーナーのみが利用できます。", ephemeral=True)
             return False

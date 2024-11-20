@@ -3,7 +3,7 @@ from discord.ext import commands
 
 from typing import Optional
 
-from utils.commands_help import is_guild, is_moderator
+from utils.commands_help import is_guild, is_moderator, log_commands
 from utils.logging import setup_logging
 
 logger = setup_logging()
@@ -38,6 +38,7 @@ class ServerInfoCog(commands.Cog):
     @info_group.command(name='server')
     @is_guild()
     @is_moderator()
+    @log_commands()
     async def server_info(self, ctx):
         """サーバーの情報を表示します"""
         guild = ctx.guild
@@ -99,6 +100,7 @@ class ServerInfoCog(commands.Cog):
     @info_group.command(name='user')
     @is_guild()
     @is_moderator()
+    @log_commands()
     async def user_info(self, ctx, *, user: discord.Member = None):
         """ユーザーの情報を表示します"""
         user = user or ctx.author
@@ -118,6 +120,7 @@ class ServerInfoCog(commands.Cog):
     @info_group.command(name='channel')
     @is_guild()
     @is_moderator()
+    @log_commands()
     async def channel_info(self, ctx, *, channel: Optional[discord.abc.GuildChannel] = None):
         """チャンネルの情報を表示します"""
         await ctx.defer()
@@ -150,6 +153,7 @@ class ServerInfoCog(commands.Cog):
     @info_group.command(name='emoji')
     @is_guild()
     @is_moderator()
+    @log_commands()
     async def emoji_info(self, ctx, *, emoji: discord.Emoji):
         """絵文字の情報を表示します"""
         description = (
@@ -167,6 +171,7 @@ class ServerInfoCog(commands.Cog):
     @info_group.command(name='emoji_list')
     @is_guild()
     @is_moderator()
+    @log_commands()
     async def emoji_list(self, ctx):
         """絵文字のリストを表示します"""
         emojis_str = "\n".join(f"{emoji} `{emoji}`" for emoji in ctx.guild.emojis)
@@ -180,6 +185,7 @@ class ServerInfoCog(commands.Cog):
     @info_group.command(name='role')
     @is_guild()
     @is_moderator()
+    @log_commands()
     async def role_info(self, ctx, *, role: discord.Role):
         """ロールの情報を表示します"""
         role_permissions = "\n".join(f"{perm[0]}: {self.role_parmission.get(perm[0], 'Unknown')}" for perm in role.permissions if perm[1])
@@ -197,6 +203,7 @@ class ServerInfoCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @info_group.command(name='test')
+    @log_commands()
     async def test(self, ctx):
         """テスト"""
         ans = 20 / 0

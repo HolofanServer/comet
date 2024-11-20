@@ -11,6 +11,7 @@ from config.setting import get_settings
 
 from utils.logging import setup_logging
 from utils.github_issue import create_github_issue
+from utils.stats import update_stats, get_stats
 
 logger = setup_logging("E")
 settings = get_settings()
@@ -143,6 +144,8 @@ async def handle_command_error(ctx, error, error_log_channel_id):
 
     logger.error(f"UnknownError: {error}")
 
+    await update_stats("errors", "total", increment=1)
+
     channel_id = ctx.channel.id
     server_id = ctx.guild.id if ctx.guild else 'DM'
     server_name = ctx.guild.name if ctx.guild else 'DM'
@@ -234,6 +237,8 @@ async def handle_application_command_error(interaction, error):
         error_id = uuid.uuid4()
             
         logger.error(f"UnknownError: {error}")
+
+        await update_stats("errors", "total", increment=1)
 
         channel_id = interaction.channel_id
         server_id = interaction.guild_id if interaction.guild else 'DM'
