@@ -8,7 +8,7 @@ from datetime import datetime
 import random
 import re
 
-from utils.commands_help import is_moderator, is_guild
+from utils.commands_help import is_moderator, is_guild, log_commands
 from utils.logging import setup_logging
 from utils.sudo.json_manager import JSONManager
 from utils.sudo.timer_manager import TimerManager
@@ -232,6 +232,7 @@ class SudoCog(commands.Cog):
     @commands.hybrid_command(name="sudo", description="一時的な権限を付与します。")
     @is_moderator()
     @is_guild()
+    @log_commands()
     @app_commands.rename(time="時間")
     @app_commands.rename(user="付与するユーザー")
     @app_commands.rename(reason="目的または理由")
