@@ -1,4 +1,4 @@
-name: Create Release on Version Change
+name: Create Release on Merge to Main
 
 on:
   pull_request:
@@ -10,6 +10,10 @@ jobs:
   create_release:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
