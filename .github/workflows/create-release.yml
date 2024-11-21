@@ -1,0 +1,33 @@
+name: Create Release on Version Change
+
+on:
+  push:
+    paths:
+      - 'config/version.json'
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Read version from config/version.json
+        id: read_version
+        run: |
+          set -e
+          VERSION=$(jq -r '.version' config/version.json)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ env.VERSION }}
+          release_name: Release v${{ env.VERSION }}
+          draft: false
+          prerelease: false
