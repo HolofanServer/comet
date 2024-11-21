@@ -1,12 +1,14 @@
 name: Create Release on Version Change
 
 on:
-  push:
-    paths:
-      - 'config/version.json'
+  pull_request:
+    types: [closed]
+    branches:
+      - main
 
 jobs:
   create_release:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
