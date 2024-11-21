@@ -1,4 +1,4 @@
-name: Create Release on Version Change
+name: Create Release on Merge to Main
 
 on:
   pull_request:
@@ -10,6 +10,10 @@ jobs:
   create_release:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -22,15 +26,14 @@ jobs:
         run: |
           set -e
           VERSION=$(jq -r '.version' config/version.json)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "Version is $VERSION"
+          echo "::set-output name=VERSION::$VERSION"
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.VERSION }}
-          release_name: Release v${{ env.VERSION }}
+          tag_name: v${{ steps.read_version.outputs.VERSION }}
+          release_name: Release v${{ steps.read_version.outputs.VERSION }}
           draft: false
           prerelease: false
