@@ -2,7 +2,11 @@
     <img src="https://images.frwi.net/data/images/f573f557-1cd7-4f4e-b21b-22aa6f911634.png" alt="iPhone3G Logo" width="200" height="200">
     <h1>iPhone3G Developed by FreeWiFi7749</h1>
     <h3>Gizmodo woods専属BOTv2</h3>
-    <img src="https://wakatime.com/badge/user/426e61d3-f6b7-4324-bdf6-c87be0cdc667/project/b6a3690b-0456-413d-b78c-5cbb8eb8846a.svg"
+    <img src="https://wakatime.com/badge/user/426e61d3-f6b7-4324-bdf6-c87be0cdc667/project/b6a3690b-0456-413d-b78c-5cbb8eb8846a.svg" alt="wakatime">
+    <img src="https://github.com/GIZMODO_WOODS/iPhone3G/actions/workflows/create-release.yml/badge.svg?branch=dev" alt="release">
+    <img src="https://github.com/GIZMODO_WOODS/iPhone3G/actions/workflows/deploy_to_main.yml?branch=main" alt="deploy">
+
+
 </div>
 
 ---
