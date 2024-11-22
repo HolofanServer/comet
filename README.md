@@ -3,10 +3,13 @@
     <h1>iPhone3G Developed by FreeWiFi7749</h1>
     <h3>Gizmodo woods専属BOTv2</h3>
     <img src="https://wakatime.com/badge/user/426e61d3-f6b7-4324-bdf6-c87be0cdc667/project/b6a3690b-0456-413d-b78c-5cbb8eb8846a.svg" alt="wakatime">
-    <img src="https://github.com/GIZMODO_WOODS/iPhone3G/actions/workflows/create-release.yml/badge.svg?branch=dev" alt="release">
-    <img src="https://github.com/GIZMODO_WOODS/iPhone3G/actions/workflows/deploy_to_main.yml?branch=main" alt="deploy">
-
-
+    <a href="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/create-release.yml">
+        <img src="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/create-release.yml/badge.svg?branch=dev" alt="Create Release on Merge to Main">
+    </a>
+    <br>
+    <a href="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/deploy_to_main.yml">
+        <img src="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/deploy_to_main.yml/badge.svg?branch=main" alt="CI">
+    </a>
 </div>
 
 ---
