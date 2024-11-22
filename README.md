@@ -8,7 +8,7 @@
     </a>
     <br>
     <a href="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/deploy_to_main.yml">
-        <img src="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/deploy_to_main.yml/badge.svg?branch=main" alt="CI">
+        <img src="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/deploy_to_main.yml/badge.svg?branch=main" alt="Deploy to Server">
     </a>
 </div>
 
