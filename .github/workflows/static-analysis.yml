@@ -52,7 +52,7 @@ jobs:
     - name: Create Pull Request with Fix Suggestions
       if: steps.analyze_errors.outputs.openai_suggestions == 'true'
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PAT: ${{ secrets.PAT }}
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -63,7 +63,7 @@ jobs:
         git push origin fix-static-analysis
 
         curl -X POST \
-          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Authorization: token $PAT" \
           -H "Accept: application/vnd.github+json" \
           https://api.github.com/repos/${{ github.repository }}/pulls \
           -d "$(echo {"title": "🔧 静的解析エラーの修正提案","body": "このPRは静的解析で検出されたエラーを修正する提案です。\n\n### 詳細\n\n$(cat FIX_REPORT.md)","head": "fix-static-analysis","base": "main"})"
