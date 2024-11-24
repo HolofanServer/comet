@@ -29,7 +29,7 @@ jobs:
     - name: Run Ruff and Save Errors
       id: ruff_analysis
       run: |
-        ruff check . > ruff_errors.log || true
+        ruff check . > ruff_errors.log
 
     - name: Make env file
       run: echo ${{ secrets.OPENAI_API_KEY }} > .env
@@ -41,6 +41,7 @@ jobs:
           python test.py ruff_errors.log > openai_suggestions.md
           echo "Static analysis errors found and analyzed."
           echo "::set-output name=openai_suggestions::true"
+          exit 1
         else
           echo "No errors found." > openai_suggestions.md
           echo "::set-output name=openai_suggestions::false"
@@ -51,20 +52,20 @@ jobs:
     - name: Create Pull Request with Fix Suggestions
       if: steps.analyze_errors.outputs.openai_suggestions == 'true'
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PAT: ${{ secrets.PAT }}
       run: |
-        if [ -s ruff_errors.log ]; then
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b fix-static-analysis
-          mv openai_suggestions.md FIX_REPORT.md
-          git add FIX_REPORT.md
-          git commit -m "🔧 静的解析エラーの修正提案"
-          git push origin fix-static-analysis
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git checkout -b fix-static-analysis
+        mv openai_suggestions.md FIX_REPORT.md
+        git add FIX_REPORT.md
+        git commit -m "🔧 静的解析エラーの修正提案"
+        git push origin fix-static-analysis
 
-          curl -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/pulls \
-            -d "$(echo {"title": "🔧 静的解析エラーの修正提案","body": "このPRは静的解析で検出されたエラーを修正する提案です。\n\n### 詳細\n\n$(cat FIX_REPORT.md)","head": "fix-static-analysis","base": "main"})"
-        fi
+        curl -X POST \
+          -H "Authorization: token $PAT" \
+          -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.repository }}/pulls \
+          -d "$(echo {"title": "🔧 静的解析エラーの修正提案","body": "このPRは静的解析で検出されたエラーを修正する提案です。\n\n### 詳細\n\n$(cat FIX_REPORT.md)","head": "fix-static-analysis","base": "main"})"
+
+        exit 1
