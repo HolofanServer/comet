@@ -28,7 +28,17 @@ jobs:
           VERSION=$(jq -r '.version' config/version.json)
           echo "::set-output name=VERSION::$VERSION"
 
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.read_version.outputs.VERSION }}" >/dev/null 2>&1; then
+            echo "::set-output name=TAG_EXISTS::true"
+          else
+            echo "::set-output name=TAG_EXISTS::false"
+          fi
+
       - name: Create GitHub Release
+        if: steps.check_tag.outputs.TAG_EXISTS == 'false'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,3 +47,7 @@ jobs:
           release_name: Release v${{ steps.read_version.outputs.VERSION }}
           draft: false
           prerelease: false
+
+      - name: Tag already exists
+        if: steps.check_tag.outputs.TAG_EXISTS == 'true'
+        run: echo "Tag v${{ steps.read_version.outputs.VERSION }} already exists. Exiting successfully."
