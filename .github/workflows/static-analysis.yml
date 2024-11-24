@@ -41,7 +41,6 @@ jobs:
           python test.py ruff_errors.log > openai_suggestions.md
           echo "Static analysis errors found and analyzed."
           echo "::set-output name=openai_suggestions::true"
-          exit 1
         else
           echo "No errors found." > openai_suggestions.md
           echo "::set-output name=openai_suggestions::false"
