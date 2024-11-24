@@ -1,6 +1,8 @@
 import sys
 from openai import OpenAI, OpenAIError
+
 from utils.logging import setup_logging
+
 from config.setting import get_settings
 
 logger = setup_logging("StaticAnalysis")
