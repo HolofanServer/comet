@@ -1,0 +1,60 @@
+name: Static Analysis on Merge
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  analyze_and_create_pr:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff openai
+
+    - name: Run Ruff and Save Errors
+      id: ruff_analysis
+      run: |
+        ruff check . > ruff_errors.log || true
+
+    - name: Analyze Ruff Errors with OpenAI
+      id: analyze_errors
+      run: |
+        if [ -s ruff_errors.log ]; then
+          python test.py ruff_errors.log > openai_suggestions.md
+          echo "Static analysis errors found and analyzed."
+        else
+          echo "No errors found." > openai_suggestions.md
+        fi
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    - name: Create Pull Request with Fix Suggestions
+      if: success() && steps.analyze_errors.outputs.openai_suggestions != ''
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if [ -s ruff_errors.log ]; then
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b fix-static-analysis
+          mv openai_suggestions.md FIX_REPORT.md
+          git add FIX_REPORT.md
+          git commit -m "🔧 静的解析エラーの修正提案"
+          git push origin fix-static-analysis
+
+          gh pr create --title "🔧 静的解析エラーの修正提案" \
+                       --body "このPRは静的解析で検出されたエラーを修正する提案です。\n\n### 詳細\n\n$(cat FIX_REPORT.md)" \
+                       --base main
+        fi
