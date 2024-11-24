@@ -1,14 +1,15 @@
 import sys
+import os
 from openai import OpenAI, OpenAIError
+from dotenv import load_dotenv
 
 from utils.logging import setup_logging
 
-from config.setting import get_settings
-
 logger = setup_logging("D")
-settings = get_settings()
 
-api_key = settings.etc_api_openai_api_key
+load_dotenv()
+
+api_key = os.getenv("OPENAI_API_KEY")
 client_ai = OpenAI(api_key=api_key)
 
 def analyze_static_error_with_openai(error_message):

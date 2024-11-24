@@ -14,8 +14,9 @@ data/
 Dev/
 requirements-dev.txt
 
-# Pythonのバイトコード
+# キャッシュファイル
 __pycache__/
+.ruff_cache/
 
 # 仮想環境
 iphone3g/
