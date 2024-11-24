@@ -5,7 +5,7 @@ from utils.logging import setup_logging
 
 from config.setting import get_settings
 
-logger = setup_logging("StaticAnalysis")
+logger = setup_logging("D")
 settings = get_settings()
 
 api_key = settings.etc_api_openai_api_key
