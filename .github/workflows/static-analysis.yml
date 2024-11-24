@@ -63,12 +63,5 @@ jobs:
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/${{ github.repository }}/pulls \
-            -d @- <<EOF
-          {
-            "title": "🔧 静的解析エラーの修正提案",
-            "body": "このPRは静的解析で検出されたエラーを修正する提案です。\n\n### 詳細\n\n$(cat FIX_REPORT.md)",
-            "head": "fix-static-analysis",
-            "base": "main"
-          }
-EOF
+            -d "$(cat {"title": "🔧 静的解析エラーの修正提案","body": "このPRは静的解析で検出されたエラーを修正する提案です。\n\n### 詳細\n\n$(cat FIX_REPORT.md)","head": "fix-static-analysis","base": "main"}
         fi
