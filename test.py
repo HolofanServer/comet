@@ -24,6 +24,7 @@ def analyze_static_error_with_openai(error_message):
                     "role": "user",
                     "content": f"""
                     以下はPythonコードに対する静的解析エラーです。これを解決する提案を日本語で出してください。
+                    また```markdownは追加しないでください。実際のコードレイ部分のみ```を使用してください
                     マークダウン形式で以下を含めてください:
 
                     1. 🚨 **エラーの概要**
