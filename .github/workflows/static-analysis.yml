@@ -38,14 +38,16 @@ jobs:
         if [ -s ruff_errors.log ]; then
           python test.py ruff_errors.log > openai_suggestions.md
           echo "Static analysis errors found and analyzed."
+          echo "::set-output name=openai_suggestions::true"
         else
           echo "No errors found." > openai_suggestions.md
+          echo "::set-output name=openai_suggestions::false"
         fi
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     - name: Create Pull Request with Fix Suggestions
-      if: success() && steps.analyze_errors.outputs.openai_suggestions != ''
+      if: success() && steps.analyze_errors.outputs.openai_suggestions != 'false'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
