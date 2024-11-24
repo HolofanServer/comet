@@ -1,16 +1,18 @@
 name: Deploy to Server
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Static Analysis on Merge"]
+    types:
+      - completed
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Deploy
+      - name: Deploy to Server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -24,9 +26,6 @@ jobs:
             find . -type d -name "__pycache__" -exec rm -r {} +
             git pull
             bash -c "source iphone3g/bin/activate && pip install -r requirements.txt"
-            pip install -r requirements.txt
-            python3 setup.py
-            git pull
             sudo systemctl stop iphone3g.service
             sleep 10
             sudo systemctl start iphone3g.service
