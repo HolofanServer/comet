@@ -27,7 +27,11 @@ jobs:
       id: ruff_analysis
       run: |
         ruff check . > ruff_errors.log || true
-
+        
+    - name: Make env file
+      id: make_env_file
+      run: echo ${{ secrets.OPENAI_API_KEY }} > .env
+      
     - name: Analyze Ruff Errors with OpenAI
       id: analyze_errors
       run: |
