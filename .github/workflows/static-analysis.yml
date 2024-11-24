@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: "3.10"
+        python-version: "3.10.9"
 
     - name: Install dependencies
       run: |
@@ -27,11 +27,10 @@ jobs:
       id: ruff_analysis
       run: |
         ruff check . > ruff_errors.log || true
-        
+
     - name: Make env file
-      id: make_env_file
       run: echo ${{ secrets.OPENAI_API_KEY }} > .env
-      
+
     - name: Analyze Ruff Errors with OpenAI
       id: analyze_errors
       run: |
@@ -47,7 +46,7 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     - name: Create Pull Request with Fix Suggestions
-      if: success() && steps.analyze_errors.outputs.openai_suggestions != 'false'
+      if: steps.analyze_errors.outputs.openai_suggestions == 'true'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -60,7 +59,16 @@ jobs:
           git commit -m "🔧 静的解析エラーの修正提案"
           git push origin fix-static-analysis
 
-          gh pr create --title "🔧 静的解析エラーの修正提案" \
-                       --body "このPRは静的解析で検出されたエラーを修正する提案です。\n\n### 詳細\n\n$(cat FIX_REPORT.md)" \
-                       --base main
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/pulls \
+            -d @- <<EOF
+          {
+            "title": "🔧 静的解析エラーの修正提案",
+            "body": "このPRは静的解析で検出されたエラーを修正する提案です。\n\n### 詳細\n\n$(cat FIX_REPORT.md)",
+            "head": "fix-static-analysis",
+            "base": "main"
+          }
+EOF
         fi
