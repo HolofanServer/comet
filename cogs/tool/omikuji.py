@@ -41,9 +41,9 @@ class OmikujiCog(commands.Cog):
             return {}
 
     def save_last_omikuji(self, data):
+        if not os.path.exists(os.path.dirname(self.omikujifile)):
+            os.makedirs(os.path.dirname(self.omikujifile), exist_ok=True)
         with open(self.omikujifile, "w") as f:
-            if not os.path.exists(os.path.dirname(self.omikujifile)):
-                os.makedirs(os.path.dirname(self.omikujifile), exist_ok=True)
             json.dump(data, f, indent=4, ensure_ascii=False)
 
     def load_streak_data(self):
@@ -56,11 +56,10 @@ class OmikujiCog(commands.Cog):
             return {}
 
     def save_streak_data(self, data):
+        if not os.path.exists(os.path.dirname(self.streakfile)):
+            os.makedirs(os.path.dirname(self.streakfile), exist_ok=True)
         with open(self.streakfile, "w") as f:
-            if not os.path.exists(os.path.dirname(self.streakfile)):
-                os.makedirs(os.path.dirname(self.streakfile), exist_ok=True)
             json.dump(data, f, indent=4, ensure_ascii=False)
-
     def load_today_stats(self):
         try:
             with open(self.today_stats_file, "r") as f:
@@ -74,9 +73,9 @@ class OmikujiCog(commands.Cog):
             return {'count': 0}
 
     def save_today_stats(self, data):
+        if not os.path.exists(os.path.dirname(self.today_stats_file)):
+            os.makedirs(os.path.dirname(self.today_stats_file), exist_ok=True)
         with open(self.today_stats_file, "w") as f:
-            if not os.path.exists(os.path.dirname(self.today_stats_file)):
-                os.makedirs(os.path.dirname(self.today_stats_file), exist_ok=True)
             json.dump(data, f, indent=4, ensure_ascii=False)
 
     def load_last_fortune(self):
@@ -89,9 +88,9 @@ class OmikujiCog(commands.Cog):
             return {}
 
     def save_last_fortune(self, data):
+        if not os.path.exists(os.path.dirname(self.fortunefile)):
+            os.makedirs(os.path.dirname(self.fortunefile), exist_ok=True)
         with open(self.fortunefile, "w") as f:
-            if not os.path.exists(os.path.dirname(self.fortunefile)):
-                os.makedirs(os.path.dirname(self.fortunefile), exist_ok=True)
             json.dump(data, f, indent=4, ensure_ascii=False)
 
     def load_ids(self):
