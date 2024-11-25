@@ -7,6 +7,7 @@ import platform
 import time
 import asyncio
 import json
+import shlex
 
 from utils import api
 from utils.spam_blocker import SpamBlocker
@@ -87,8 +88,8 @@ class ManagementBotCog(commands.Cog):
     @is_owner()
     async def tree(self, ctx):
         """Botのディレクトリ構成を表示します"""
-        tree = subprocess.check_output('tree --prune -I "iphone3g" -I "config" -I "logs" -I "__pycache__" -I ".DS_Store"', shell=True)
-        tree = tree.decode('utf-8')
+        command = shlex.split('tree --prune -I "iphone3g" -I "config" -I "logging" -I "__pycache__" -I ".DS_Store"')
+        tree = subprocess.check_output(command, shell=False).decode('utf-8')
         tree = f"```sh\n{tree}```"
         await ctx.send(tree)
 
