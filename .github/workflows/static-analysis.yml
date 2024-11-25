@@ -80,7 +80,6 @@ jobs:
         if [[ $RESPONSE -ne 201 ]]; then
           echo "Failed to create pull request. Response:"
           cat response.json
-          exit 1
         fi
 
         echo "Pull request created. Exiting with error due to static analysis issues."
