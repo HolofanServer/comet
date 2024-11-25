@@ -11,7 +11,7 @@ from config.setting import get_settings
 
 from utils.logging import setup_logging
 from utils.github_issue import create_github_issue
-from utils.stats import update_stats, get_stats
+from utils.stats import update_stats
 
 logger = setup_logging("E")
 settings = get_settings()
