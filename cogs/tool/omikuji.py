@@ -206,7 +206,7 @@ class OmikujiCog(commands.Cog):
             title="おみくじ結果",
             color=0xffd700 if is_super_rare else 0x34343c
         )
-        embed.set_author(name=f"大当たりが当たる確率が{streak}%アップ中だよ！\niPhoneだけだよ神社にて...", url=normal_icon)
+        embed.set_author(name=f"大当たりが当たる確率が{streak}%アップ中だよ！\niPhoneだけだよ神社にて...", icon_url=normal_icon)
         embed.set_thumbnail(url="https://images.frwi.net/data/images/7b54adae-c988-47f1-a090-625a7838f1c1.png")
 
         fm = await ctx.send(content=f"{ctx.author.mention}\nおみくじを引きに行く...", embed=None)
@@ -217,7 +217,7 @@ class OmikujiCog(commands.Cog):
             await asyncio.sleep(2 if not is_rich_animation else 3)
 
             if is_chance and i == len(steps) - 2:
-                embed.set_thumbnail(url=chance_icon)
+                embed.set_author(name=f"大当たりが当たる確率が{streak}%アップ中だよ！\niPhoneだけだよ神社にて...", icon_url=chance_icon)
                 description_with_steps += "\n\n✨✨**チャンス到来！**✨✨"
 
             if is_super_rare and i == len(steps) - 1:
@@ -240,7 +240,7 @@ class OmikujiCog(commands.Cog):
 
         emoji_list = [iphonedakedayo_emoji1, iphonedakedayo_emoji2, iphonedakedayo_emoji3, iphonedakedayo_emoji4, iphonedakedayo_emoji5]
         if is_super_rare:
-            embed.set_author(name=f"大当たりが当たる確率が{streak}%アップ中だよ！\niPhoneだけだよ神社にて...", url=special_icon)
+            embed.set_author(name=f"大当たりが当たる確率が{streak}%アップ中だよ！\niPhoneだけだよ神社にて...", icon_url=special_icon)
             await asyncio.sleep(2)
             embed.description += "\n\n✨✨「神々しい光があなたを包み込んだ！」✨✨"
             embed.set_image(url="https://images.frwi.net/data/images/a0cdbfa7-047e-43c5-93f3-f1c6478a6c64.jpeg")
