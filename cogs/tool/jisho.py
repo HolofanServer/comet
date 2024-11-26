@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import ui, app_commands
 
 import os
+import sys
 from typing import Tuple, List, Optional, Dict
 import subprocess
 
@@ -182,27 +183,30 @@ class JishoCog(commands.Cog):
             for subdir in ["word", "kanji", "sentence"]:
                 dir_path = os.path.join(jisho_dir, subdir)
                 os.makedirs(dir_path, exist_ok=True)
-            branch = get_github_branch()
-            if branch != "main":
-                result = subprocess.run(
-                ['/home/freewifi110/iphone3g/iphone3g/bin/jisho', 'search', command, query],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-            else:
-                result = subprocess.run(
-                    ['jisho', 'search', command, query],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
+            
+            venv_bin = os.path.dirname(sys.executable)
+            jisho_path = os.path.join(venv_bin, 'jisho')
+            logger.info(f"Using jisho path: {jisho_path}")
+            
+            cmd = [jisho_path, 'search', command, query]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            logger.info(f"Command output: {result.stdout if result.stdout else 'No output'}")
+            if result.stderr:
+                logger.error(f"Command stderr: {result.stderr}")
             outputs = [line for line in result.stdout.split('\n') if line.strip()]
             return outputs, True
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Command failed with error: {str(e)}")
+            logger.error(f"Command stderr: {e.stderr}")
             return [], False
         except Exception as e:
-            print(f"Error in _run_jisho_cli: {str(e)}")
+            logger.error(f"Unexpected error in _run_jisho_cli: {str(e)}")
             return [], False
 
     def _parse_word_result(self, outputs: List[str]) -> List[discord.Embed]:
