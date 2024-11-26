@@ -8,6 +8,7 @@ import subprocess
 
 from utils.logging import setup_logging
 from utils.commands_help import is_guild_app, log_commands
+from utils.startup import get_github_branch
 
 logger = setup_logging("D")
 
@@ -181,13 +182,21 @@ class JishoCog(commands.Cog):
             for subdir in ["word", "kanji", "sentence"]:
                 dir_path = os.path.join(jisho_dir, subdir)
                 os.makedirs(dir_path, exist_ok=True)
-
-            result = subprocess.run(
-                ['jisho', 'search', command, query],
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            branch = get_github_branch()
+            if branch != "main":
+                result = subprocess.run(
+                ['/home/freewifi110/iphone3g/iphone3g/bin/jisho', 'search', command, query],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+            else:
+                result = subprocess.run(
+                    ['jisho', 'search', command, query],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
             outputs = [line for line in result.stdout.split('\n') if line.strip()]
             return outputs, True
         except subprocess.CalledProcessError:
