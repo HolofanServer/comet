@@ -27,9 +27,9 @@ sentry_sdk.init(
 class DetailedMonitoringCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.uptime_start = datetime.datetime.utcnow()  # Botの起動時間
-        self.host_status_monitor.start()  # ホストステータス監視
-        self.ping_monitor.start()  # Ping監視
+        self.uptime_start = datetime.datetime.utcnow()
+        self.host_status_monitor.start()
+        self.ping_monitor.start()
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -183,7 +183,6 @@ class DetailedMonitoringCog(commands.Cog):
         """Sentryの問題一覧を表示するコマンド"""
         with sentry_sdk.start_transaction(op="command", name="/issues"):
             try:
-                # Get issues from Sentry
                 issues = sentry_sdk.Hub.current.client.transport.get_issues()
                 
                 if not issues:
@@ -199,7 +198,7 @@ class DetailedMonitoringCog(commands.Cog):
                         color=discord.Color.orange()
                     )
                     
-                    for issue in issues[:10]:  # Display up to 10 most recent issues
+                    for issue in issues[:10]:
                         error_title = issue.get('title', 'Unknown Error')
                         last_seen = issue.get('lastSeen', 'Unknown')
                         count = issue.get('count', 0)
