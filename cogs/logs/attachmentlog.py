@@ -28,7 +28,11 @@ class AttachmentLogCog(commands.Cog):
         if os.path.exists(config_file_path):
             with open(config_file_path, 'r') as f:
                 config = json.load(f)
-                channel_id = config.get("log_channel")
+                if config.get("log_attachment", False) is False:
+                    return None
+                channel_id = config.get("log_channel", None)
+                if channel_id is None:
+                    return None
                 return channel_id
         logger.warning("設定ファイルが存在しません。")
         return None
