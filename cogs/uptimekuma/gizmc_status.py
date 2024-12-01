@@ -2,8 +2,6 @@ import discord
 from discord.ext import commands, tasks
 
 import json
-import asyncio
-import traceback
 import os
 import socket
 import datetime
@@ -24,18 +22,16 @@ class GizmcStatusCog(commands.Cog):
         self.server_ports = {}
         self.server_states = {}
         self.offline_messages = {}
-        
-        # ファイルパスの設定
+
         guild_dir = f'data/status/gizmc/{main_guild_id}'
         if not os.path.exists(guild_dir):
             os.makedirs(guild_dir, exist_ok=True)
             logger.info(f"Created directory: {guild_dir}")
-            
+
         self.mod_ch_file = f'{guild_dir}/mod_ch.json'
         self.status_ch_file = f'{guild_dir}/status_ch.json'
         self.server_ip_file = f'{guild_dir}/server_ip.json'
-        
-        # データの読み込み
+
         try:
             mod_ch_data = self.load_mod_ch()
             status_ch_data = self.load_status_ch()
@@ -52,10 +48,9 @@ class GizmcStatusCog(commands.Cog):
             logger.error(f"Error loading channels: {e}")
             self.mod_ch = None
             self.status_ch = None
-            
-        # Start the background task after initialization
+
         self.check_servers.start()
-        
+
     def get_guild_id(self, guild_id):
         logger.debug(f"Checking guild ID: {guild_id}")
         if guild_id == main_guild_id:
@@ -182,45 +177,45 @@ class GizmcStatusCog(commands.Cog):
     def create_status_embed(self, label: str, ip: str, port: int, is_up: bool, duration: str = None) -> discord.Embed:
         logger.debug(f"Creating status embed for {label}, is_up: {is_up}")
         branch = self.get_gh_branch()
-        
+
         if is_up:
             if branch == "dev":
-                status = "<:ONLINE:1311908128169791578> Operational"  
+                status = "<:ONLINE:1311908128169791578> Operational"
             else:
-                status = "<:ONLINE:1311908265604677733> Operational"  
+                status = "<:ONLINE:1311908265604677733> Operational"
             color = discord.Color.green()
             description = f"サーバー {label} は正常に動作しています。"
         else:
             if branch == "dev":
-                status = "<:OFFLINE:1311908112437084300> Service Disruption"  
+                status = "<:OFFLINE:1311908112437084300> Service Disruption"
             else:
-                status = "<:OFFLINE:1311908249745887332> Service Disruption"  
+                status = "<:OFFLINE:1311908249745887332> Service Disruption"
             color = discord.Color.red()
             description = f"サーバー {label} との接続が切断されました。開発チームが状況を確認しています。"
             if duration:
                 description += f"\n\n停止時間: {duration}"
-        
+
         embed = discord.Embed(
             title=f"サーバーステータス: {label}",
             timestamp=datetime.datetime.now()
         )
-        
+
         embed.color = color
         embed.description = description
-        
+
         embed.add_field(
-            name="Status", 
-            value=status, 
+            name="Status",
+            value=status,
             inline=False
         )
         embed.add_field(
-            name="Server Information", 
-            value=f"```\nHost: {label}\n```", 
+            name="Server Information",
+            value=f"```\nHost: {label}\n```",
             inline=False
         )
-        
+
         embed.set_footer(text="最終更新")
-        
+
         logger.debug(f"Created status embed for {label}")
         return embed
 
@@ -230,7 +225,7 @@ class GizmcStatusCog(commands.Cog):
         if not self.status_ch or not self.mod_ch:
             logger.warning("No status channel or mod channel set")
             return
-        
+
         status_channel = self.bot.get_channel(self.status_ch)
         mod_channel = self.bot.get_channel(self.mod_ch)
         if not status_channel or not mod_channel:
@@ -239,18 +234,30 @@ class GizmcStatusCog(commands.Cog):
 
         server_ips = self.load_server_ip()
         current_time = datetime.datetime.now()
-        
+
         for label, server_info in server_ips.items():
             ip = server_info["ip"]
             port = server_info["port"]
-            
+
             is_up = self.check_tcp_connection(ip, port)
             prev_state = self.server_states.get(label, True)
-            
+
             if not is_up and prev_state:
+                # Check if there's already an unresolved message
+                if label in self.offline_messages:
+                    try:
+                        # Try to fetch the existing message
+                        await status_channel.fetch_message(self.offline_messages[label])
+                        logger.info(f"Skipping alert for {label} as there's already an unresolved message")
+                        continue
+                    except discord.NotFound:
+                        # If message is not found, we can proceed with sending a new one
+                        logger.info(f"Previous message for {label} not found, will send new alert")
+                        del self.offline_messages[label]
+
                 self.server_states[label] = False
                 self.server_states[f"{label}_down_time"] = current_time
-                
+
                 status_embed = self.create_status_embed(label, ip, port, False)
                 status_msg = await status_channel.send(
                     f"⚠️ **Service Disruption** - {label}\n" \
@@ -259,21 +266,21 @@ class GizmcStatusCog(commands.Cog):
                     embed=status_embed
                 )
                 self.offline_messages[label] = status_msg.id
-                
+
                 await mod_channel.send(
                     f"🚨 **Service Alert** - {label}\n" \
-                    f"<@698739561563422812> <@707320830387814531>\n接続の問題が検出されました。至急確認をお願いします。",
+                    f"接続の問題が検出されました。至急確認をお願いします。",
                     embed=status_embed
                 )
-                
+
             elif is_up and not prev_state:
                 self.server_states[label] = True
                 down_time = self.server_states.get(f"{label}_down_time")
-                
+
                 if down_time:
                     duration = self.format_duration((current_time - down_time).seconds)
                     status_embed = self.create_status_embed(label, ip, port, True, duration)
-                    
+
                     if label in self.offline_messages:
                         branch = self.get_gh_branch()
                         try:
@@ -309,7 +316,7 @@ class GizmcStatusCog(commands.Cog):
                                 )
                         except discord.NotFound:
                             pass
-                        
+
                         del self.offline_messages[label]
                         del self.server_states[f"{label}_down_time"]
 
@@ -318,7 +325,7 @@ class GizmcStatusCog(commands.Cog):
         minutes, seconds = divmod(seconds, 60)
         hours, minutes = divmod(minutes, 60)
         days, hours = divmod(hours, 24)
-        
+
         parts = []
         if days > 0:
             parts.append(f"{days}日")
@@ -328,7 +335,7 @@ class GizmcStatusCog(commands.Cog):
             parts.append(f"{minutes}分")
         if seconds > 0:
             parts.append(f"{seconds}秒")
-            
+
         logger.debug(f"Formatted duration: {(''.join(parts))}")
         return "".join(parts) if parts else "0秒"
 
@@ -344,8 +351,8 @@ class GizmcStatusCog(commands.Cog):
     def get_gh_branch(self):
         logger.debug("Getting git branch")
         try:
-            branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], 
-                                          cwd=os.path.dirname(os.path.abspath(__file__))).decode('utf-8').strip()
+            branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                                            cwd=os.path.dirname(os.path.abspath(__file__))).decode('utf-8').strip()
             logger.info(f"Current git branch: {branch}")
             return branch
         except subprocess.CalledProcessError as e:
