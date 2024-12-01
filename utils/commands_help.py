@@ -4,6 +4,7 @@ from discord import app_commands
 
 import pytz
 import json
+import subprocess
 
 from datetime import datetime
 from typing import Callable
@@ -162,6 +163,36 @@ def context_menu(name: str, type: app_commands.ContextMenu):
         )
         async def wrapper(self, interaction: discord.Interaction):
             await func(self, interaction)
-        
         return context_menu
+            
+def is_dev():
+    def decorator(func: Callable):
+        async def wrapper(self, ctx, *args, **kwargs):
+            try:
+                result = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)
+                branch = result.stdout.strip()
+                if branch != "dev":
+                    await ctx.send("この機能は開発環境でのみ使用できます。")
+                    return
+                return await func(self, ctx, *args, **kwargs)
+            except subprocess.CalledProcessError:
+                await ctx.send("ブランチの取得に失敗しました。")
+                return
+        return wrapper
+    return decorator
+
+def is_main():
+    def decorator(func: Callable):
+        async def wrapper(self, ctx, *args, **kwargs):
+            try:
+                result = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)
+                branch = result.stdout.strip()
+                if branch != "main":
+                    await ctx.send("この機能は本番環境でのみ使用できます。")
+                    return
+                return await func(self, ctx, *args, **kwargs)
+            except subprocess.CalledProcessError:
+                await ctx.send("ブランチの取得に失敗しました。")
+                return
+        return wrapper
     return decorator

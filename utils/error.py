@@ -4,6 +4,7 @@ from discord.ext import commands
 import uuid
 import pytz
 import asyncio
+import sentry_sdk
 
 from datetime import datetime
 
@@ -279,3 +280,11 @@ async def handle_application_command_error(interaction, error):
             await interaction.response.send_message(embed=es, view=view, ephemeral=True)
         except discord.InteractionResponded:
             await interaction.followup.send(embed=es, view=view, ephemeral=True)
+
+def log_error_to_sentry(error, context=None):
+    with sentry_sdk.configure_scope() as scope:
+        if context:
+            for key, value in context.items():
+                scope.set_context(key, value)
+    sentry_sdk.capture_exception(error)
+    logger.error(f"Error logged to Sentry: {error}")
