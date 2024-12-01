@@ -110,7 +110,7 @@ class MessageDeleteLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_message_delete": True, "log_channel": None, "form": None}
+            return {"log_message_delete": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
@@ -120,7 +120,7 @@ class MessageDeleteLoggingCog(commands.Cog):
             return
         
         config = self.load_config(message.guild.id)
-        if not config.get("log_message_delete"):
+        if config.get("log_message_delete", False) is False:  
             return
         
         log_channel_id = config.get("log_channel")

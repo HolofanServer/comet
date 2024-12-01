@@ -22,14 +22,14 @@ class BanLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_ban": True, "log_channel": None, "form": None}
+            return {"log_ban": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         config = self.load_config(guild.id)
-        if not config.get("log_ban"):
+        if config.get("log_ban", False) is False:
             return
         
         JST = timezone(timedelta(hours=+9))

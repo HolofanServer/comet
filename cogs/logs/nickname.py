@@ -20,7 +20,7 @@ class NicknameLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_nickname": True, "log_channel": None, "form": None}
+            return {"log_nickname": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
@@ -30,9 +30,12 @@ class NicknameLoggingCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
+        if before.nick == after.nick:
+            return
+
         guild_id = before.guild.id
         config = self.load_config(guild_id)
-        if not config.get("log_nickname"):
+        if config.get("log_nickname", False) is False:
             return
         if not before.nick or not after.nick:
             return

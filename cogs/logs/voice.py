@@ -22,7 +22,7 @@ class VoiceLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_voice": True, "log_channel": None, "form": None}
+            return {"log_voice": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
@@ -34,7 +34,7 @@ class VoiceLoggingCog(commands.Cog):
     async def on_voice_state_update(self, member, before, after):
         guild_id = member.guild.id
         config = self.load_config(guild_id)
-        if not config.get("log_voice"):
+        if config.get("log_voice", False) is False:
             return
         
         log_channel_id = config.get("log_channel")

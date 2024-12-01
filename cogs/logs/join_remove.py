@@ -22,14 +22,14 @@ class JoinLeaveLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_join_remove": True, "log_channel": None, "form": None}
+            return {"log_join_remove": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
         config = self.load_config(member.guild.id)
-        if not config.get("log_join_remove"):
+        if config.get("log_join_remove", False) is False:
             return
         
         log_channel_id = config.get("log_channel")
@@ -69,7 +69,7 @@ class JoinLeaveLoggingCog(commands.Cog):
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         config = self.load_config(member.guild.id)
-        if not config.get("log_join_remove"):
+        if config.get("log_join_remove", False) is False:
             return
         
         log_channel_id = config.get("log_channel")
