@@ -78,8 +78,8 @@ class ProcessInfoCog(commands.Cog):
                 process_info.append((cpu_bar, mem_bar, memory_usage_gb))
 
             embed1 = discord.Embed(title="BOTのプロセス情報", color=discord.Color.blue())
-            embed1.add_field(name="CPU使用率", value=f"{cpu_bar}", inline=True)
-            embed1.add_field(name="メモリ使用率", value=f"{mem_bar} / {memory_usage_gb}GB", inline=True)
+            embed1.add_field(name="CPU使用率", value=f"{cpu_bar}", inline=False)
+            embed1.add_field(name="メモリ使用率", value=f"{mem_bar} / {memory_usage_gb}GB", inline=False)
 
             embed2 = discord.Embed(title="BOTの情報", color=discord.Color.blue())
             elapsed_time = time.monotonic() - self.start_time
@@ -102,22 +102,23 @@ class ProcessInfoCog(commands.Cog):
             else:
                 uptime_text = f"{int(seconds)}秒"
 
-            embed2.add_field(name="UPTIME", value=uptime_text, inline=False)
+            embed2.add_field(name="UPTIME", value=uptime_text, inline=True)
+            embed2.add_field(name="Bot Ping", value="計測中...", inline=True)
+            
+            embed2.add_field(name="統計", value="コマンドの合計実行回数とエラー回数を表示します。", inline=False)
 
             stats = await get_stats()
             embed2.add_field(name="トータルコマンド回数", value=f"{stats.get('commands', {}).get('total', 0)}回", inline=True)
             embed2.add_field(name="トータルエラー回数", value=f"{stats.get('errors', {}).get('total', 0)}回", inline=True)
-            embed2.add_field(name="Bot Ping", value="計測中...", inline=True)
 
             sent_message = await ctx.send(embeds=[embed1, embed2])
             logger.info("BOTのプロセス情報を送信しました。")
-            end_time = time.monotonic()
             logger.info("BOTのPingを計測します。")
 
-            bot_ping = round((end_time - self.start_time) * 1000)
+            bot_ping = round(self.bot.latency * 1000)
             logger.info(f"BOTのPingを計測しました。{bot_ping}ms")
             
-            embed2.set_field_at(3, name="Bot Ping", value=f"{bot_ping}ms", inline=True)
+            embed2.set_field_at(1, name="Bot Ping", value=f"{bot_ping}ms", inline=True)
             
             await sent_message.edit(embeds=[embed1, embed2])
             logger.info("BOTのPingを送信しました。")
