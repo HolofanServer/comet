@@ -22,7 +22,7 @@ class RoleLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_roles": True, "log_channel": None, "form": None}
+            return {"log_roles": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
@@ -32,8 +32,8 @@ class RoleLoggingCog(commands.Cog):
 
     async def _log_role_change(self, guild_id, embed):
         config = self.load_config(guild_id)
-        if not config.get("log_roles", True):
-            print("Role logging is disabled.")
+        if config.get("log_roles", False) is False:
+            logger.info("Role logging is disabled.")
             return
 
         log_channel_id = config.get("log_channel")
@@ -56,7 +56,7 @@ class RoleLoggingCog(commands.Cog):
             print("Logging to thread.")
         elif not log_channel:
             print("Role Log channel is not set and no form thread is available.")
-            return 
+            return
 
         await log_channel.send(embed=embed)
 

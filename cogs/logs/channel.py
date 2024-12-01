@@ -21,7 +21,7 @@ class ChannelLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_channellog": True, "log_channel": None, "form": None}
+            return {"log_channellog": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 

@@ -21,7 +21,7 @@ class TimeoutLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_timeout": True, "log_channel": None, "form": None}
+            return {"log_timeout": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
@@ -31,65 +31,67 @@ class TimeoutLoggingCog(commands.Cog):
     
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
-        if before.timed_out_until != after.timed_out_until:
-            guild_id = before.guild.id
-            config = self.load_config(guild_id)
-            if not config.get("log_timeout"):
-                return
+        if before.timed_out_until == after.timed_out_until:
+            return
 
-            log_channel_id = config.get("log_channel")
-            log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
-            
-            logs_form_id = config.get("form")
-            logs_form = None
-            if logs_form_id:
-                for channel in self.bot.get_guild(after.guild.id).channels:
-                    if hasattr(channel, 'threads'):
-                        for thread in channel.threads:
-                            if thread.id == logs_form_id:
-                                logs_form = thread
-                                break
-                    if logs_form:
-                        break
-            
-            if logs_form:
-                log_channel = logs_form
-                print("Logging to thread.")
-            elif not log_channel:
-                print("Timeout Log channel is not set and no form thread is available.")
-                return 
+        guild_id = before.guild.id
+        config = self.load_config(guild_id)
+        if config.get("log_timeout", False) is False:
+            return
 
-            reason = None
-            executor = None
-            async for entry in after.guild.audit_logs(action=discord.AuditLogAction.member_update, limit=1):
-                if entry.target.id == after.id and entry.after.timed_out_until == after.timed_out_until:
-                    reason = entry.reason
-                    executor = entry.user
+        log_channel_id = config.get("log_channel")
+        log_channel = self.bot.get_channel(log_channel_id) if log_channel_id else None
+        
+        logs_form_id = config.get("form")
+        logs_form = None
+        if logs_form_id:
+            for channel in self.bot.get_guild(after.guild.id).channels:
+                if hasattr(channel, 'threads'):
+                    for thread in channel.threads:
+                        if thread.id == logs_form_id:
+                            logs_form = thread
+                            break
+                if logs_form:
                     break
+        
+        if logs_form:
+            log_channel = logs_form
+            print("Logging to thread.")
+        elif not log_channel:
+            print("Timeout Log channel is not set and no form thread is available.")
+            return 
 
-            if after.timed_out_until is not None:
-                timeout_time = after.timed_out_until.timestamp()
-                timeout_time_stamp = "<t:{}> | <t:{}:R>".format(int(timeout_time), int(timeout_time))
+        reason = None
+        executor = None
+        async for entry in after.guild.audit_logs(action=discord.AuditLogAction.member_update, limit=1):
+            if entry.target.id == after.id and entry.after.timed_out_until == after.timed_out_until:
+                reason = entry.reason
+                executor = entry.user
+                break
 
-                embed = discord.Embed(title=f"{after.display_name} がタイムアウトされました", color=discord.Color.red())
-                embed.set_thumbnail(url=after.avatar.url)
-                embed.set_author(name=after.display_name, icon_url=after.avatar.url)
-                embed.add_field(name="タイムアウト期限", value=timeout_time_stamp, inline=False)
-                embed.add_field(name="理由", value=reason, inline=False)
-                embed.add_field(name="タイムアウトを実行したユーザー", value=executor.mention, inline=False)
-                embed.set_footer(text=before.guild.name, icon_url=before.guild.icon.url)
-                
-                await log_channel.send(embed=embed)
+        if after.timed_out_until is not None:
+            timeout_time = after.timed_out_until.timestamp()
+            timeout_time_stamp = "<t:{}> | <t:{}:R>".format(int(timeout_time), int(timeout_time))
 
-            if after.timed_out_until is None:
-                embed = discord.Embed(title=f"{after.display_name} のタイムアウトが解除されました", color=discord.Color.green())
-                embed.set_thumbnail(url=after.avatar.url)
-                embed.set_author(name=after.display_name, icon_url=after.avatar.url)
-                if executor is not None:
-                    embed.add_field(name="タイムアウトを解除したユーザー", value=executor.mention, inline=False)
-                embed.set_footer(text=before.guild.name, icon_url=before.guild.icon.url)
+            embed = discord.Embed(title=f"{after.display_name} がタイムアウトされました", color=discord.Color.red())
+            embed.set_thumbnail(url=after.avatar.url)
+            embed.set_author(name=after.display_name, icon_url=after.avatar.url)
+            embed.add_field(name="タイムアウト期限", value=timeout_time_stamp, inline=False)
+            embed.add_field(name="理由", value=reason, inline=False)
+            embed.add_field(name="タイムアウトを実行したユーザー", value=executor.mention, inline=False)
+            embed.set_footer(text=before.guild.name, icon_url=before.guild.icon.url)
+            
+            await log_channel.send(embed=embed)
 
-                await log_channel.send(embed=embed)
+        if after.timed_out_until is None:
+            embed = discord.Embed(title=f"{after.display_name} のタイムアウトが解除されました", color=discord.Color.green())
+            embed.set_thumbnail(url=after.avatar.url)
+            embed.set_author(name=after.display_name, icon_url=after.avatar.url)
+            if executor is not None:
+                embed.add_field(name="タイムアウトを解除したユーザー", value=executor.mention, inline=False)
+            embed.set_footer(text=before.guild.name, icon_url=before.guild.icon.url)
+
+            await log_channel.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(TimeoutLoggingCog(bot))
