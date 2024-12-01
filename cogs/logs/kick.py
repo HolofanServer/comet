@@ -22,14 +22,14 @@ class KickLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_kick": True, "log_channel": None, "form": None}
+            return {"log_kick": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         config = self.load_config(member.guild.id)
-        if not config.get("log_kick"):
+        if config.get("log_kick", False) is False:
             return
         
         log_channel_id = config.get("log_channel")

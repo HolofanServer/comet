@@ -20,7 +20,7 @@ class AutoModLogCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_automod": True, "log_channel": None, "form": None}
+            return {"log_automod": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
@@ -33,7 +33,7 @@ class AutoModLogCog(commands.Cog):
         print("Automod action detected")
         guild_id = action.guild_id
         config = self.load_config(guild_id)
-        if not config.get("log_automod"):
+        if config.get("log_automod", False) is False:
             return
         
         log_channel_id = config.get("log_channel")

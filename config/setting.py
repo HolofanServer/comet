@@ -24,6 +24,7 @@ class Settings:
         self.admin_commands_log_channel_id: int = int(os.getenv("ADMIN_COMMANDS_LOG_CHANNEL_ID", "0"))
         self.admin_tubuyaki_channel_id: int = int(os.getenv("ADMIN_TUBUYAKI_CHANNEL_ID", "0"))
         self.admin_mod_channel_id: int = int(os.getenv("ADMIN_MOD_CHANNEL_ID", "0"))
+        self.admin_monitor_channel_id: int = int(os.getenv("ADMIN_MONITOR_CHANNEL_ID", "0"))
 
         # GitHub
         self.github_pat: str = os.getenv("GITHUB_PAT", "")
@@ -40,6 +41,10 @@ class Settings:
 
         # FastAPI
         self.fastapi_url: str = os.getenv("FASTAPI_URL", "")
+        
+        # Sentry
+        self.sentry_dsn: str = os.getenv("SENTRY_DSN", "")
+        self.sentry_token: str = os.getenv("SENTRY_TOKEN", "")
 
 _settings = None
 

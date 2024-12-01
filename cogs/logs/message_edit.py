@@ -25,7 +25,7 @@ class MessageEditLoggingCog(commands.Cog):
     def load_config(self, guild_id):
         config_path = self.get_config_path(guild_id)
         if not os.path.exists(config_path):
-            return {"log_message_edit": True, "log_channel": None, "form": None}
+            return {"log_message_edit": False, "log_channel": None, "form": None}
         with open(config_path, 'r') as f:
             return json.load(f)
 
@@ -34,13 +34,13 @@ class MessageEditLoggingCog(commands.Cog):
             json.dump(config, f, indent=4)
 
     @commands.Cog.listener()
-    async def on_message_edit(self, message_before, message_after):
-        if message_before.author.bot or message_before.content == message_after.content:
+    async def on_message_edit(self, before, after):
+        if before.author.bot or before.content == after.content:
             return
 
-        guild_id = message_before.guild.id
+        guild_id = before.guild.id
         config = self.load_config(guild_id)
-        if not config.get("log_message_edit"):
+        if config.get("log_message_edit", False) is False:
             return
 
         log_channel_id = config.get("log_channel")
@@ -68,12 +68,12 @@ class MessageEditLoggingCog(commands.Cog):
         JST = timezone(timedelta(hours=+9), 'JST')
         now = datetime.now(JST)
 
-        embed = discord.Embed(title="メッセージ編集", description=message_after.jump_url, color=discord.Color.orange(), timestamp=now)
-        embed.add_field(name="編集前", value=shorten_text(message_before.content), inline=False)
-        embed.add_field(name="編集後", value=shorten_text(message_after.content), inline=False)
-        embed.add_field(name="チャンネル", value=message_before.channel.mention, inline=False)
-        embed.set_author(name=message_before.author.display_name, icon_url=message_before.author.avatar.url)
-        embed.set_footer(text=f"メッセージID: {message_before.id} | 編集時刻: {now.strftime('%Y-%m-%d %H:%M:%S')} JST")
+        embed = discord.Embed(title="メッセージ編集", description=after.jump_url, color=discord.Color.orange(), timestamp=now)
+        embed.add_field(name="編集前", value=shorten_text(before.content), inline=False)
+        embed.add_field(name="編集後", value=shorten_text(after.content), inline=False)
+        embed.add_field(name="チャンネル", value=before.channel.mention, inline=False)
+        embed.set_author(name=before.author.display_name, icon_url=before.author.avatar.url)
+        embed.set_footer(text=f"メッセージID: {before.id} | 編集時刻: {now.strftime('%Y-%m-%d %H:%M:%S')} JST")
 
         try:
             await log_channel.send(embed=embed)
