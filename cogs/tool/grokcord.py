@@ -76,7 +76,7 @@ class ChatWithWebhook(commands.Cog):
         if guild_id not in self.settings or not self.settings[guild_id].get(channel_id, False):
             return
         
-        booster_member_list = message.guild.premium_subscribers
+        booster_member_list = await message.guild.premium_subscribers
         if message.author in booster_member_list:
             logger.debug(booster_member_list)
             logger.info(f"User {message.author} is a booster in guild {message.guild.name}")
