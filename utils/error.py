@@ -5,6 +5,7 @@ import uuid
 import pytz
 import asyncio
 import sentry_sdk
+import traceback
 
 from datetime import datetime
 
@@ -96,6 +97,7 @@ async def handle_command_error(ctx, error, error_log_channel_id):
 
     error_id = uuid.uuid4()
     error_message = str(error)
+    traceback_text = "".join(traceback.format_exception(type(error), error, error.__traceback__))
     issue_title = f"エラー発生: {ctx.command.qualified_name if ctx.command else 'N/A'}"
     issue_body = (
         f"**サーバー**: {ctx.guild.name if ctx.guild else 'DM'}\n"
@@ -105,6 +107,7 @@ async def handle_command_error(ctx, error, error_log_channel_id):
         f"**エラーID**: `{error_id}`\n"
         f"**ユーザー**: {ctx.author.display_name}\n"
         f"**エラーメッセージ**: {error_message}\n"
+        f"**トレースバック**:\n```python\n{traceback_text}\n```"
     )
     await create_github_issue(issue_title, issue_body)
     
@@ -152,6 +155,7 @@ async def handle_command_error(ctx, error, error_log_channel_id):
     server_name = ctx.guild.name if ctx.guild else 'DM'
     channel_mention = f"<#{channel_id}>"
     now = datetime.now(pytz.timezone('Asia/Tokyo'))
+    logger.debug(f"{traceback_text[:1000]}")
 
     e = discord.Embed(
         title="エラー通知",
@@ -161,6 +165,7 @@ async def handle_command_error(ctx, error, error_log_channel_id):
             f"**コマンド**: {ctx.command.qualified_name if ctx.command else 'N/A'}\n"
             f"**ユーザー**: {ctx.author.mention}\n"
             f"**エラーメッセージ**: {error}\n"
+            f"**トレースバック**:\n```python\n{traceback_text[:1000]}```\n"
         ),
         color=discord.Color.red(),
         timestamp=now
@@ -173,8 +178,11 @@ async def handle_command_error(ctx, error, error_log_channel_id):
         description=(
             "> <:Error:1289674741845594193>コマンド実行中にエラーが発生しました。\n"
             f"エラーID: `{error_id}`\n"
+            f"コマンド: {ctx.command.qualified_name if ctx.command else 'N/A'}\n"
+            f"ユーザー: {ctx.author.mention}\n"
             f"チャンネル: {channel_mention}\n"
             f"サーバー: `{server_name}`\n\n"
+            f"エラーメッセージ: {traceback_text[:1000]}\n"
             "__下のボタンを押してバグを報告してください。__\n参考となるスクリーンショットがある場合は**__事前に画像URL__**を準備してください。"
         ),
         color=discord.Color.red(),
@@ -236,6 +244,7 @@ async def handle_application_command_error(interaction, error):
 
     if not interaction.handled:
         error_id = uuid.uuid4()
+        traceback_text = "".join(traceback.format_exception(type(error), error, error.__traceback__))
             
         logger.error(f"UnknownError: {error}")
 
@@ -255,6 +264,7 @@ async def handle_application_command_error(interaction, error):
                 f"**コマンド**: {interaction.command.qualified_name if interaction.command else 'N/A'}\n"
                 f"**ユーザー**: {interaction.user.mention}\n"
                 f"**エラーメッセージ**: {error}\n"
+                f"**トレースバック**:\n```python\n{traceback_text[:1000]}```\n"
             ),
             color=discord.Color.red(),
             timestamp=now
@@ -269,6 +279,7 @@ async def handle_application_command_error(interaction, error):
                 f"エラーID: `{error_id}`\n"
                 f"チャンネル: {channel_mention}\n"
                 f"サーバー: `{server_name}`\n\n"
+                f"エラーメッセージ: {traceback_text[:1000]}\n"
                 "__下のボタンを押してバグを報告してください。__\n参考となるスクリーンショットがある場合は**__事前に画像URL__**を準備してください。"
             ),
             color=discord.Color.red(),
