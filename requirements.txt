@@ -16,7 +16,7 @@ discord-ext-prometheus==0.2.0
 pyyaml==6.0.2
 annotated-types==0.7.0
 pydantic>=1.9.0,<2.0.0
-Pygments==2.18.0
+Pygments==2.19.1
 ruff==0.8.1
 jisho_api==0.1.8
 sentry-sdk==2.19.0
