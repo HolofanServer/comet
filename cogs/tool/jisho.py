@@ -6,12 +6,19 @@ import os
 import sys
 from typing import Tuple, List, Optional, Dict
 import subprocess
+import re
+from openai import OpenAI, OpenAIError
+import json
 
 from utils.logging import setup_logging
-from utils.commands_help import is_guild_app, log_commands
-from utils.startup import get_github_branch
+from config.setting import get_settings
+from utils.commands_help import is_guild_app, log_commands, is_guild
 
 logger = setup_logging("D")
+settings = get_settings()
+
+api_key = settings.etc_api_openai_api_key
+client_ai = OpenAI(api_key=api_key)
 
 class SearchTypeView(ui.View):
     def __init__(self, cog: 'JishoCog', query: str):
@@ -36,7 +43,7 @@ class SearchTypeView(ui.View):
                 outputs, success = self.cog._run_jisho_cli(search_type, self.query)
                 if success and outputs:
                     if search_type == "word":
-                        embeds = self.cog._parse_word_result(outputs)
+                        embeds = self.cog._parse_word_result(outputs, self.query)
                         if embeds:
                             self.pages[search_type] = embeds
                             self.embeds[search_type] = embeds[0]
@@ -209,16 +216,18 @@ class JishoCog(commands.Cog):
             logger.error(f"Unexpected error in _run_jisho_cli: {str(e)}")
             return [], False
 
-    def _parse_word_result(self, outputs: List[str]) -> List[discord.Embed]:
+    def _parse_word_result(self, outputs: List[str], search_query: str = None) -> List[discord.Embed]:
         """単語検索結果をEmbedのリストに整形"""
         if not outputs:
             return []
 
         embeds = []
         current_word = None
-        current_readings = []
+        current_reading = None
         current_info = []
         current_definitions = []
+        exact_match_embed = None
+        raw_line = None
         
         for line in outputs:
             if line.startswith('─'):
@@ -228,9 +237,8 @@ class JishoCog(commands.Cog):
                         color=0x3b82f6
                     )
                     
-                    if current_readings:
-                        readings_text = ' | '.join(f"**{r}**" for r in current_readings)
-                        embed.description = readings_text
+                    if raw_line:
+                        embed.description = f"**{raw_line}**"
 
                     if current_info:
                         embed.add_field(
@@ -247,33 +255,38 @@ class JishoCog(commands.Cog):
                             inline=False
                         )
 
-                    embeds.append(embed)
-                
+                    if search_query and (
+                        re.search(f"^{re.escape(search_query)}$", current_word, re.IGNORECASE) or
+                        (current_reading and re.search(f"^{re.escape(search_query)}$", current_reading, re.IGNORECASE))
+                    ):
+                        exact_match_embed = embed
+                    else:
+                        embeds.append(embed)
+
                 current_word = None
-                current_readings = []
+                current_reading = None
                 current_info = []
                 current_definitions = []
-            elif not line.startswith('['):
-                if current_word is None:
-                    parts = line.split(' ', 1)
-                    current_word = parts[0]
-                    if len(parts) > 1:
-                        readings = parts[1].strip('()')
-                        current_readings = [r.strip() for r in readings.split(',')]
-                elif line.strip().startswith('['):
-                    info = line.strip('[]').split(', ')
-                    current_info.extend(i for i in info if i.startswith(('JLPT', 'Common', 'Wanikani')))
-                elif line.strip().startswith(str(len(current_definitions) + 1) + '.'):
-                    definition = line.split('.', 1)[1].strip()
-                    if ' [' in definition:
-                        base_def, info = definition.split(' [', 1)
-                        info = info.rstrip(']')
-                        if "See also:" in info:
-                            info, see_also = info.split("See also:", 1)
-                            see_also = see_also.strip()
-                            definition = f"{base_def} [{info}]\n↳ 参照: {see_also}"
-                        else:
-                            definition = f"{base_def} [{info}]"
+                raw_line = None
+                continue
+
+            if not line.strip():
+                continue
+
+            if not current_word:
+                raw_line = line.strip()
+                parts = line.strip().split(' ', 1)
+                current_word = parts[0]
+                if len(parts) > 1:
+                    reading_match = re.match(r'\((.*?)\)', parts[1])
+                    if reading_match:
+                        current_reading = reading_match.group(1)
+            elif line.strip().startswith('['):
+                info = line.strip('[]').split(', ')
+                current_info.extend(info)
+            else:
+                definition = re.sub(r'^\d+\.\s*', '', line.strip())
+                if definition:
                     current_definitions.append(definition)
 
         if current_word:
@@ -282,9 +295,8 @@ class JishoCog(commands.Cog):
                 color=0x3b82f6
             )
             
-            if current_readings:
-                readings_text = ' | '.join(f"**{r}**" for r in current_readings)
-                embed.description = readings_text
+            if raw_line:
+                embed.description = f"**{raw_line}**"
 
             if current_info:
                 embed.add_field(
@@ -300,13 +312,47 @@ class JishoCog(commands.Cog):
                     value=definitions_text,
                     inline=False
                 )
-
             embeds.append(embed)
 
-        for i, embed in enumerate(embeds, 1):
-            embed.set_footer(text=f"Page {i} of {len(embeds)}")
+        if exact_match_embed:
+            embeds.insert(0, exact_match_embed)
 
         return embeds
+
+    def _create_word_embed(self, word: str, readings: List[str], info: List[str], definitions: List[str]) -> discord.Embed:
+        """単語のEmbedを作成"""
+        embed = discord.Embed(
+            title=f"📚 「{word}」",
+            color=0x3b82f6
+        )
+        
+        if readings:
+            readings_text = ' | '.join(f"**{r}**" for r in readings)
+            if all(char in 'ぁ-んー' or char in 'ァ-ンー' for char in word):
+                try:
+                    kanji = self._get_kanji_for_kana(word)
+                    if kanji:
+                        readings_text = f"**{kanji}** | {readings_text}"
+                except Exception as e:
+                    logger.error(f"Error getting kanji: {e}")
+            embed.description = readings_text
+
+        if info:
+            embed.add_field(
+                name="ℹ️ 情報",
+                value=', '.join(info),
+                inline=False
+            )
+
+        if definitions:
+            definitions_text = '\n'.join(f"・{d}" for d in definitions)
+            embed.add_field(
+                name="📝 意味",
+                value=definitions_text,
+                inline=False
+            )
+
+        return embed
 
     def _parse_kanji_result(self, outputs: List[str]) -> Optional[discord.Embed]:
         """漢字検索結果をEmbedに整形"""
@@ -523,60 +569,203 @@ class JishoCog(commands.Cog):
 
         return embeds
 
-    @app_commands.command(name="jisho", description="日本語の単語を検索します。漢字・ひらがな・カタカナ・英語で検索できます。")
-    @is_guild_app()
+    # @app_commands.command(name="jisho", description="日本語の単語を検索します。漢字・ひらがな・カタカナ・英語で検索できます。")
+    # @is_guild_app()
+    # @log_commands()
+    # @app_commands.describe(query="日本語の単語を入力してください。")
+    # async def jisho(self, interaction: discord.Interaction, query: str):
+    #     try:
+    #         await interaction.response.defer(ephemeral=True)
+
+    #         word_outputs, word_success = self._run_jisho_cli('word', query)
+    #         if word_success and word_outputs:
+    #             embeds = self._parse_word_result(word_outputs, query)
+    #             if embeds:
+    #                 if len(embeds) > 1:
+    #                     view = JishoPages(embeds, query, self)
+    #                     view.original_interaction = interaction
+    #                     first_embed = embeds[0]
+    #                     first_embed.title = f"📚 「{query}」"
+    #                     first_embed.set_footer(text=f"Page 1/{len(embeds)}")
+    #                     await interaction.followup.send(embed=first_embed, view=view, ephemeral=True)
+    #                 else:
+    #                     view = SearchTypeView(self, query)
+    #                     view.original_interaction = interaction
+    #                     embeds[0].title = f"📚 「{query}」"
+    #                     view.embeds["word"] = embeds[0]
+    #                     await interaction.followup.send(embed=embeds[0], view=view, ephemeral=True)
+    #                 return
+
+    #         kanji_outputs, kanji_success = self._run_jisho_cli('kanji', query)
+    #         if kanji_success and kanji_outputs:
+    #             embed = self._parse_kanji_result(kanji_outputs)
+    #             if embed:
+    #                 view = SearchTypeView(self, query)
+    #                 view.original_interaction = interaction
+    #                 embed.title = f"🈁 「{query}」"
+    #                 view.embeds["kanji"] = embed
+    #                 await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+    #                 return
+
+    #         sentence_outputs, sentence_success = self._run_jisho_cli('sentence', query)
+    #         if sentence_success and sentence_outputs:
+    #             embeds = self._parse_sentence_result(sentence_outputs)
+    #             if embeds:
+    #                 view = JishoPages(embeds, query, self)
+    #                 view.original_interaction = interaction
+    #                 first_embed = embeds[0]
+    #                 first_embed.title = f"📝 「{query}」"
+    #                 first_embed.set_footer(text=f"Page 1/{len(embeds)}")
+    #                 await interaction.followup.send(embed=first_embed, view=view, ephemeral=True)
+    #                 return
+
+    #         await interaction.followup.send(f"⚠️ 申し訳ありません。「{query}」の検索結果が見つかりませんでした。", ephemeral=True)
+
+    #     except Exception as e:
+    #         await interaction.followup.send(f"⚠️ エラーが発生しました: {str(e)}", ephemeral=True)
+
+    @commands.hybrid_command(name="jisho", description="日本語の単語を検索します。")
+    @is_guild()
     @log_commands()
-    @app_commands.describe(query="日本語の単語を入力してください。")
-    async def jisho(self, interaction: discord.Interaction, query: str):
+    async def jisho_ai(self, ctx: commands.Context, *, query: str):
         try:
-            await interaction.response.defer(ephemeral=True)
+            await ctx.defer(ephemeral=True)
+            
+            response = client_ai.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": """
+                        あなたは日本語辞書として機能する専門家です。
+                        入力された単語に対して以下の情報を提供してください。
+                        特に漢字が含まれる場合は、その漢字に関する詳細な情報も提供してください。
+                        英語の場合は逆に日本語での意味を同じように提供してください。
 
-            word_outputs, word_success = self._run_jisho_cli('word', query)
-            if word_success and word_outputs:
-                embeds = self._parse_word_result(word_outputs)
-                if embeds:
-                    if len(embeds) > 1:
-                        view = JishoPages(embeds, query, self)
-                        view.original_interaction = interaction
-                        first_embed = embeds[0]
-                        first_embed.title = f"📚 「{query}」"
-                        first_embed.set_footer(text=f"Page 1/{len(embeds)}")
-                        await interaction.followup.send(embed=first_embed, view=view, ephemeral=True)
-                    else:
-                        view = SearchTypeView(self, query)
-                        view.original_interaction = interaction
-                        embeds[0].title = f"📚 「{query}」"
-                        view.embeds["word"] = embeds[0]
-                        await interaction.followup.send(embed=embeds[0], view=view, ephemeral=True)
-                    return
+                        基本情報：
+                        1. 読み方：漢字の場合は読み方（ひらがな）を提供
+                        2. 品詞：名詞、動詞、形容詞など
+                        3. 意味：日本語での意味や用法を箇条書きで説明
+                        4. 英訳：英語での意味を箇条書きで提供
+                        5. 例文：その単語を使用した例文を2つ提供（日本語と英訳）
+                        6. JLPT レベル（わかる場合）
 
-            kanji_outputs, kanji_success = self._run_jisho_cli('kanji', query)
-            if kanji_success and kanji_outputs:
-                embed = self._parse_kanji_result(kanji_outputs)
-                if embed:
-                    view = SearchTypeView(self, query)
-                    view.original_interaction = interaction
-                    embed.title = f"🈁 「{query}」"
-                    view.embeds["kanji"] = embed
-                    await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-                    return
+                        漢字情報（漢字を含む場合）：
+                        1. 学年：小学校で習う学年（該当する場合）
+                        2. 音読み：音読みのリスト
+                        3. 訓読み：訓読みのリスト
+                        4. 部首：漢字の部首
+                        5. 画数：漢字の画数
+                        6. 使用例：その漢字を使用する一般的な単語2-3例
 
-            sentence_outputs, sentence_success = self._run_jisho_cli('sentence', query)
-            if sentence_success and sentence_outputs:
-                embeds = self._parse_sentence_result(sentence_outputs)
-                if embeds:
-                    view = JishoPages(embeds, query, self)
-                    view.original_interaction = interaction
-                    first_embed = embeds[0]
-                    first_embed.title = f"📝 「{query}」"
-                    first_embed.set_footer(text=f"Page 1/{len(embeds)}")
-                    await interaction.followup.send(embed=first_embed, view=view, ephemeral=True)
-                    return
+                        以下の形式でJSON形式で返してください：
+                        {
+                            "word": "入力された単語",
+                            "reading": "読み方（ひらがなのみ）",
+                            "pos": "品詞",
+                            "meanings_jp": ["意味1", "意味2", ...],
+                            "meanings_en": ["meaning1", "meaning2", ...],
+                            "examples": [
+                                {"jp": "例文1", "en": "Example 1"},
+                                {"jp": "例文2", "en": "Example 2"}
+                            ],
+                            "jlpt": "N1-N5 or null",
+                            "kanji_info": {
+                                "grade": "学年 or null",
+                                "onyomi": ["音読み1", "音読み2", ...],
+                                "kunyomi": ["訓読み1", "訓読み2", ...],
+                                "radical": "部首",
+                                "stroke_count": 画数,
+                                "common_words": ["例1", "例2", "例3"]
+                            }
+                        }
+                        """},
+                    {"role": "user", "content": query}
+                ]
+            )
+            
+            result = response.choices[0].message.content
+            logger.debug(f"OpenAI response: {result}")
+            
+            data = json.loads(result)
+            
+            embed = discord.Embed(
+                title=f"📚 「{data['word']}」",
+                description=f"**{data['word']} ({data['reading']})**",
+                color=0x3b82f6
+            )
+            
+            embed.add_field(
+                name="📝 品詞",
+                value=data['pos'],
+                inline=False
+            )
+            
+            if data['meanings_jp']:
+                meanings_text = '\n'.join(f"・{m}" for m in data['meanings_jp'])
+                embed.add_field(
+                    name="🇯🇵 意味",
+                    value=meanings_text,
+                    inline=False
+                )
+            
+            if data['meanings_en']:
+                meanings_text = '\n'.join(f"・{m}" for m in data['meanings_en'])
+                embed.add_field(
+                    name="🇬🇧 English",
+                    value=meanings_text,
+                    inline=False
+                )
 
-            await interaction.followup.send(f"⚠️ 申し訳ありません。「{query}」の検索結果が見つかりませんでした。", ephemeral=True)
+            if 'kanji_info' in data and any(data['kanji_info'].values()):
+                kanji_info = []
+                if data['kanji_info'].get('grade'):
+                    kanji_info.append(f"学年：{data['kanji_info']['grade']}")
+                if data['kanji_info'].get('onyomi'):
+                    kanji_info.append(f"音読み：{', '.join(data['kanji_info']['onyomi'])}")
+                if data['kanji_info'].get('kunyomi'):
+                    kanji_info.append(f"訓読み：{', '.join(data['kanji_info']['kunyomi'])}")
+                if data['kanji_info'].get('radical'):
+                    kanji_info.append(f"部首：{data['kanji_info']['radical']}")
+                if data['kanji_info'].get('stroke_count'):
+                    kanji_info.append(f"画数：{data['kanji_info']['stroke_count']}")
+                if data['kanji_info'].get('common_words'):
+                    kanji_info.append(f"使用例：{', '.join(data['kanji_info']['common_words'])}")
+                
+                if kanji_info:
+                    embed.add_field(
+                        name="漢字情報",
+                        value='\n'.join(kanji_info),
+                        inline=False
+                    )
+            
+            if data['examples']:
+                examples_text = []
+                for i, example in enumerate(data['examples'], 1):
+                    examples_text.append(f"{i}. {example['jp']}")
+                    examples_text.append(f"   {example['en']}")
+                embed.add_field(
+                    name="💭 例文",
+                    value='\n'.join(examples_text),
+                    inline=False
+                )
+            
+            if data.get('jlpt'):
+                embed.add_field(
+                    name="📊 JLPT",
+                    value=data['jlpt'],
+                    inline=True
+                )
 
+            await ctx.send(embed=embed, ephemeral=True)
+            
+        except OpenAIError as e:
+            logger.error(f"OpenAI API error: {str(e)}")
+            await ctx.send("⚠️ AI処理中にエラーが発生しました。しばらく待ってから再度お試しください。", ephemeral=True)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {str(e)}")
+            await ctx.send("⚠️ AI応答の解析に失敗しました。", ephemeral=True)
         except Exception as e:
-            await interaction.followup.send(f"⚠️ エラーが発生しました: {str(e)}", ephemeral=True)
-
+            logger.error(f"Unexpected error in jisho_ai: {str(e)}")
+            await ctx.send(f"⚠️ エラーが発生しました: {str(e)}", ephemeral=True)
+            
 async def setup(bot):
     await bot.add_cog(JishoCog(bot))
