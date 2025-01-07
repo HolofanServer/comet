@@ -160,12 +160,14 @@ class ChatWithWebhook(commands.Cog):
                 logger.warning("Referenced message is deleted or invalid")
                 return
             logger.info(f"Reply detected - Reference message author ID: {ref_message.author.id}, Bot ID: {self.bot.user.id}")
-            # Check if the reply is to a webhook message
+            
             webhook_name = "Grokcord v1"
             if ref_message.author.name == webhook_name:
                 if message.guild is None:
                     await message.channel.send("This feature is only available in server channels.")
                     return
+                  
+            if ref_message.author.id == self.bot.user.id or ref_message.webhook_id:
                 booster_member_list = message.guild.premium_subscribers
                 if message.author in booster_member_list:
                     logger.debug(booster_member_list)
@@ -177,9 +179,11 @@ class ChatWithWebhook(commands.Cog):
                     logger.warning(f"User {message.author} is not a booster in guild {message.guild.name}")
                     await message.channel.send("```error```\n```> Grokcordは現在サーバーブースター向け試験中機能です。```")
                     return
+
             else:
                 logger.info("Reply is not to a webhook message, ignoring.")
                 return
+
 
         trigger_words = [
             "Hey Grokcord",
@@ -209,6 +213,11 @@ class ChatWithWebhook(commands.Cog):
                 logger.debug(booster_member_list)
                 logger.info(f"User {message.author} is a booster in guild {message.guild.name}")
                 await message.channel.typing()
+            booster_member_list = message.guild.premium_subscribers
+            if message.author in booster_member_list:
+                logger.debug(booster_member_list)
+                logger.info(f"User {message.author} is a booster in guild {message.guild.name}")
+
                 await self.handle_grokcord_message(message)
                 return
             else:
