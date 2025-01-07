@@ -128,9 +128,10 @@ class OmikujiCog(commands.Cog):
     async def omikuji(self, ctx):
         """1日1回だけおみくじを引くことができます。"""
         logger.debug("Starting omikuji command")
-        
+        await ctx.defer()
+
         self.streak_data = self.load_streak_data()
-        
+
         user_id = str(ctx.author.id)
         special_user_id = str(settings.bot_owner_id)
 
@@ -164,7 +165,7 @@ class OmikujiCog(commands.Cog):
         else:
             self.streak_data[user_id] = {'streak': 1}
             logger.debug(f"Streak: {self.streak_data[user_id]['streak']}")
-            
+
         self.streak_data[user_id]['last_date'] = today_jst.isoformat()
         self.save_streak_data(self.streak_data)
 
@@ -265,7 +266,7 @@ class OmikujiCog(commands.Cog):
             await asyncio.sleep(1)
             embed.description += "\n\niPhoneだけじゃなかったのかよ..."
             await fm.edit(embed=embed)
-            
+
             for emoji in emoji_list:
                 try:
                     await fm.add_reaction(emoji)
@@ -285,7 +286,8 @@ class OmikujiCog(commands.Cog):
     async def fortune(self, ctx):
         """1日1回だけ今日の運勢を占えます。"""
         logger.debug("Starting fortune command")
-        
+        await ctx.defer()
+
         user_id = str(ctx.author.id)
         special_user_id = str(settings.bot_owner_id)
 
@@ -319,7 +321,7 @@ class OmikujiCog(commands.Cog):
 
         fortunes = ["大吉", "中吉", "小吉", "吉", "末吉", "凶"]
         weights = [10, 15, 20, 25, 20, 10]
-        
+
         lucky_colors_with_hex = {
             "スペースブラック": 0x1C1C1E,
             "シルバー": 0xE3E3E3,
@@ -332,9 +334,9 @@ class OmikujiCog(commands.Cog):
             "パシフィックブルー": 0x1E90FF,
             "アルパイングリーン": 0x228B22
         }
-        
+
         lucky_colors = list(lucky_colors_with_hex.keys())
-        
+
         lucky_items = [
             "Lightning充電器",
             "iPhoneケース",
@@ -350,7 +352,7 @@ class OmikujiCog(commands.Cog):
             "MacBook Pro",
             "Mac Pro",
         ]
-        
+
         lucky_apps = [
             "メモ",
             "カメラ",
@@ -395,12 +397,12 @@ class OmikujiCog(commands.Cog):
             await fm.edit(embed=embed)
 
         await asyncio.sleep(1)
-        
+
         embed.color = lucky_colors_with_hex[lucky_color]
         await fm.edit(embed=embed)
-        
+
         await asyncio.sleep(1)
-        
+
         fortune_messages = {
             "大吉": "素晴らしい1日になりそうです！新しいiPhoneに出会えるかも...？",
             "中吉": "良い1日になりそうです。iPhoneの調子も最高！",
@@ -414,7 +416,7 @@ class OmikujiCog(commands.Cog):
         embed.add_field(name="🎨 ラッキーカラー", value=lucky_color, inline=True)
         embed.add_field(name="🎁 ラッキーアイテム", value=lucky_item, inline=True)
         embed.add_field(name="📱 ラッキーアプリ", value=lucky_app, inline=True)
-        
+
         embed.set_footer(text="Lightningおじさんの占いをご利用いただき、ありがとうございます。\nまた明日も占いにいらしてください。")
         await fm.edit(embed=embed)
 
