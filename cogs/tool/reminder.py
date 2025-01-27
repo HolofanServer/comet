@@ -217,7 +217,7 @@ class ReminderCog(commands.Cog):
                 self.processing_task = asyncio.create_task(self.process_reminders())
 
 
-    @commands.hybrid_command(name="リマインド", description="自然言語でリマインダーを設定します。例: 明日の朝9時にミーティング", aileas=["remind", "reminder"])
+    @commands.hybrid_command(name="reminder", description="自然言語でリマインダーを設定します。例: 明日の朝9時にミーティング", aileas=["remind", "reminder"])
     async def remind(self, ctx: commands.Context, *, input_text: str):
         """自然言語でリマインダーを設定するコマンド"""
         if input_text.strip() == "ヘルプ":
