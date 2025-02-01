@@ -19,6 +19,8 @@ class NoticeModCog(commands.Cog):
         self.hensyu_role_name = "編集部"
         self.channel_names = {
             main_guild_id: ["モデレーター", "main"],
+            
+            
         }
         self.channel_ids = {}
 
