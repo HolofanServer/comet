@@ -58,14 +58,13 @@ class ActionButtons(ui.View):
         self.original_message = original_message
         self.alert_message = alert_message
         self.mod_channel_id = mod_channel_id
-
-    @ui.button(label="メッセージを確認", style=discord.ButtonStyle.primary, emoji="🔍")
-    async def view_message(self, interaction: discord.Interaction, button: ui.Button):
-        """元のメッセージに飛ぶ"""
-        await interaction.response.send_message(
-            f"メッセージを確認します: {self.original_message.jump_url}",
-            ephemeral=True
-        )
+        
+        self.add_item(discord.ui.Button(
+            style=discord.ButtonStyle.link,
+            label="メッセージを確認",
+            emoji="🔍",
+            url=self.original_message.jump_url
+        ))
 
     async def delete_message_callback(self, interaction: discord.Interaction, reason: str):
         """メッセージ削除のコールバック"""
@@ -125,8 +124,14 @@ class ActionButtons(ui.View):
         )
         
         mod_role = discord.utils.get(interaction.guild.roles, name="moderator")
+        editor_role = discord.utils.get(interaction.guild.roles, name="編集部")
+        
         if mod_role:
             for member in mod_role.members:
+                if editor_role and editor_role in member.roles:
+                    logger.debug(f"Skipping editor {member.display_name}")
+                    continue
+                
                 try:
                     await thread.add_user(member)
                 except discord.HTTPException:
@@ -360,7 +365,6 @@ class AIContentChecker(commands.Cog):
             )
 
             basic_info = (
-                f"🔗 [メッセージを確認]({message.jump_url}) | "
                 f"📝 {message.channel.mention} | "
                 f"🆔 {message.id}"
             )
