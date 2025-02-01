@@ -30,6 +30,7 @@ class OmikujiCog(commands.Cog):
         self.last_fortune = self.load_last_fortune()
         self.idfile = 'data/ids.json'
         self.ids = self.load_ids()
+        self.streak_reset_enabled = True
 
     def load_last_omikuji(self):
         try:
@@ -160,8 +161,11 @@ class OmikujiCog(commands.Cog):
                 self.streak_data[user_id]['streak'] += 1
                 logger.debug(f"Streak: {self.streak_data[user_id]['streak']}")
             else:
-                self.streak_data[user_id]['streak'] = 1
-                logger.debug(f"Streak: {self.streak_data[user_id]['streak']}")
+                if self.streak_reset_enabled:
+                    self.streak_data[user_id]['streak'] = 1
+                    logger.debug(f"Streak: {self.streak_data[user_id]['streak']}")
+                else:
+                    logger.debug("Streak reset is disabled, maintaining current streak")
         else:
             self.streak_data[user_id] = {'streak': 1}
             logger.debug(f"Streak: {self.streak_data[user_id]['streak']}")
@@ -525,6 +529,17 @@ class OmikujiCog(commands.Cog):
             await ctx.send(f"{fortune}をおみくじから削除しました。")
         else:
             await ctx.send(f"{fortune}はおみくじに存在しません。")
+
+    @omikuji_group.command(name="toggle_streak_reset")
+    @is_guild()
+    @is_owner()
+    async def toggle_streak_reset(self, ctx):
+        """継続日数のリセットを一時的に無効/有効にするコマンドです。"""
+        await ctx.defer()
+        self.streak_reset_enabled = not self.streak_reset_enabled
+        status = "有効" if self.streak_reset_enabled else "無効"
+        await ctx.send(f"継続日数のリセットを{status}にしました。")
+        logger.info(f"Streak reset toggled to {status} by {ctx.author}")
 
     @omikuji_group.command(name="list_fortune")
     @is_guild()
