@@ -34,6 +34,7 @@ class Settings:
         # その他のAPI
         self.etc_api_openai_api_key: str = os.getenv("ETC_API_OPENAI_API_KEY", "")
         self.etc_api_realtime_api_key: str = os.getenv("ETC_API_REALTIME_API_KEY", "")
+        self.etc_api_undetectable_ai_key: str = os.getenv("ETC_API_UNDETECTABLE_AI_KEY", "")
 
         # UptimeKuma
         self.uptimekuma_push_url: str = os.getenv("UPTIMEKUMA_PUSH_URL", "")
@@ -45,6 +46,10 @@ class Settings:
         # Sentry
         self.sentry_dsn: str = os.getenv("SENTRY_DSN", "")
         self.sentry_token: str = os.getenv("SENTRY_TOKEN", "")
+        
+        #monitor-bot
+        self.monitor_bot_api_url: str = os.getenv("MONITOR_BOT_API_URL", "")
+        self.monitor_bot_api_secret: str = os.getenv("MONITOR_BOT_API_SECRET", "")
 
 _settings = None
 
