@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any, List, Tuple, Callable
 import asyncio
 import json
 from pathlib import Path
+import re
 
 from utils.logging import setup_logging
 from utils.error import handle_command_error
@@ -182,8 +183,10 @@ class AIContentChecker(commands.Cog):
         self.threshold = 50
         self.log_channel_id = None
         self.long_text_threshold = 400
+        self.short_text_threshold = 50
         self.data_dir = Path("data/aicheck")
         self.mod_channel_id = None
+        self.debug_mode = False
         self.load_data()
 
     def cog_unload(self):
@@ -200,7 +203,8 @@ class AIContentChecker(commands.Cog):
                 "threshold": self.threshold,
                 "log_channel_id": self.log_channel_id,
                 "long_text_threshold": self.long_text_threshold,
-                "mod_channel_id": self.mod_channel_id
+                "mod_channel_id": self.mod_channel_id,
+                "debug_mode": self.debug_mode
             }
             
             with open(self.data_dir / "settings.json", "w", encoding="utf-8") as f:
@@ -224,6 +228,7 @@ class AIContentChecker(commands.Cog):
             self.log_channel_id = data.get("log_channel_id", self.log_channel_id)
             self.long_text_threshold = data.get("long_text_threshold", self.long_text_threshold)
             self.mod_channel_id = data.get("mod_channel_id", self.mod_channel_id)
+            self.debug_mode = data.get("debug_mode", False)
             logger.info("Settings loaded successfully")
         except Exception as e:
             logger.error(f"Error loading settings: {e}")
@@ -282,6 +287,40 @@ class AIContentChecker(commands.Cog):
             self.save_data()
         except Exception as e:
             logger.error(f"Error setting long text threshold: {e}")
+            await handle_command_error(ctx, e, settings.admin_error_log_channel_id)
+            
+    @aicheck.command(name="set_threshold")
+    @is_guild()
+    @is_moderator()
+    @log_commands()
+    async def set_threshold(self, ctx, threshold: int):
+        """AI判定のしきい値を設定します"""
+        try:
+            if threshold < 1:
+                await ctx.send("しきい値は1以上に設定してください。")
+                return
+            self.threshold = threshold
+            await ctx.send(f"AI判定のしきい値を{threshold}に設定しました。")
+            logger.info(f"Threshold set to {threshold} by {ctx.author} in {ctx.guild.name}")
+            self.save_data()
+        except Exception as e:
+            logger.error(f"Error setting threshold: {e}")
+            await handle_command_error(ctx, e, settings.admin_error_log_channel_id)
+
+    @aicheck.command(name="debug")
+    @is_guild()
+    @is_moderator()
+    @log_commands()
+    async def toggle_debug(self, ctx):
+        """デバッグモードを切り替えます"""
+        try:
+            self.debug_mode = not self.debug_mode
+            status = "オン" if self.debug_mode else "オフ"
+            await ctx.send(f"デバッグモードを{status}に設定しました。")
+            logger.info(f"Debug mode set to {self.debug_mode} by {ctx.author} in {ctx.guild.name}")
+            self.save_data()
+        except Exception as e:
+            logger.error(f"Error toggling debug mode: {e}")
             await handle_command_error(ctx, e, settings.admin_error_log_channel_id)
 
     async def detect_ai_content(self, text: str) -> Optional[Dict[str, Any]]:
@@ -427,6 +466,15 @@ class AIContentChecker(commands.Cog):
         """メッセージを受信したときにAI判定と長文判定を行います"""
         if message.author.bot or not self.log_channel_id:
             return
+        
+        url_regex = re.compile(r'https?://\S+')
+        content_without_urls = url_regex.sub('', message.content).strip()
+        
+        MIN_CHARS = self.short_text_threshold
+        if not content_without_urls or len(content_without_urls) < MIN_CHARS:
+            return
+        
+        message.content = content_without_urls
 
         try:
             alerts = []
@@ -442,11 +490,25 @@ class AIContentChecker(commands.Cog):
                 result = await self.detect_ai_content(message.content)
                 
                 if result and result.get("status") == "done":
-                    human_score = result.get("result_details", {}).get("human", 0)
+                    result_details = result.get("result_details", {})
+                    human_score = result_details.get("human", 0)
                     logger.info(f"Message {message.id} - Human score: {human_score}%")
                     is_ai_content = human_score < self.threshold
                     if is_ai_content:
-                        alerts.append(("AI生成コンテンツ", f"人間らしさスコア: {human_score}%"))
+                        alert_info = f"人間らしさスコア: {human_score}%"
+                        if self.debug_mode:
+                            debug_scores = [
+                                f"GPT-Zero: {result_details.get('scoreGptZero', 0):.1f}%",
+                                f"OpenAI: {result_details.get('scoreOpenAI', 0):.1f}%",
+                                f"Writer: {result_details.get('scoreWriter', 0):.1f}%",
+                                f"CrossPlag: {result_details.get('scoreCrossPlag', 0):.1f}%",
+                                f"CopyLeaks: {result_details.get('scoreCopyLeaks', 0):.1f}%",
+                                f"Sapling: {result_details.get('scoreSapling', 0):.1f}%",
+                                f"ContentAtScale: {result_details.get('scoreContentAtScale', 0):.1f}%",
+                                f"ZeroGPT: {result_details.get('scoreZeroGPT', 0):.1f}%"
+                            ]
+                            alert_info += "\n" + "\n".join(debug_scores)
+                        alerts.append(("AI生成コンテンツ", alert_info))
 
             if len(alerts) > 0:
                 await self.send_alert(message, alerts)
