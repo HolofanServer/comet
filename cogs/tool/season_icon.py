@@ -13,7 +13,7 @@ from utils.commands_help import is_owner, log_commands, is_guild
 logger = setup_logging("D")
 settings = get_settings()
 
-DATA_PATH = settings.get("DATA_PATH", "data/si/data.json")
+DATA_PATH = "data/si/data.json"
 JST = pytz.timezone("Asia/Tokyo")
 
 class SeasonIcon(commands.Cog):
