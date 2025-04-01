@@ -43,6 +43,10 @@ class SoundboardCogs(commands.Cog):
         if ctx.voice_client:
             await ctx.voice_client.disconnect()
             await ctx.send("VCから切断したよ！")
+            
+    @commands.hybrid_command(name="ｴｯﾎｴｯﾎ　　εε＝🦉　　ｴｯﾎｴｯﾎ")
+    async def april(self, ctx: commands.Context):
+        await ctx.send("ｴｯﾎｴｯﾎ　　εε＝📱🦉　　ｴｯﾎｴｯﾎ")
 
 async def setup(bot):
     await bot.add_cog(SoundboardCogs(bot))
