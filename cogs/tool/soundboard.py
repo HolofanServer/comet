@@ -6,7 +6,7 @@ class SoundboardCogs(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
             
-    @commands.hybrid_command(name="ｴｯﾎｴｯﾎ_εε＝🦉_ｴｯﾎｴｯﾎ")
+    @commands.hybrid_command(name="ｴｯﾎｴｯﾎ")
     async def april(self, ctx: commands.Context):
         await ctx.send("ｴｯﾎｴｯﾎ　　εε＝📱🦉　　ｴｯﾎｴｯﾎ")
 
