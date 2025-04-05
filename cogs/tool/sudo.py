@@ -25,9 +25,19 @@ class SudoControlView(View):
 
     async def _has_permission(self, interaction: discord.Interaction):
         """ボタンを押す権限があるか確認"""
+        if not interaction.guild:
+            await interaction.response.send_message("このコマンドはサーバー内でのみ使用できます。", ephemeral=True)
+            logger.warning(f"DMからのボタン操作が試行されました。ユーザー: {interaction.user.id}")
+            return False
+            
         session = self.cog.sessions.get(self.session_id)
         if not session:
             await interaction.response.send_message("このセッションは既に終了しています。", ephemeral=True)
+            return False
+            
+        if interaction.guild.id != session["guild_id"]:
+            await interaction.response.send_message("このセッションは別のサーバーのものです。", ephemeral=True)
+            logger.warning(f"別のサーバーからのセッション操作が試行されました。ユーザー: {interaction.user.id}")
             return False
 
         user_id = interaction.user.id
@@ -95,52 +105,65 @@ class SudoControlView(View):
         if not await self._has_permission(interaction):
             return
 
-        session = self.cog.sessions.get(self.session_id)
-        guild = self.cog.bot.get_guild(session["guild_id"])
-        member = guild.get_member(session["affected_member"])
-        role = self.cog.role_manager.get_role_by_id(guild, session["role_id"])
+        try:
+            session = self.cog.sessions.get(self.session_id)
+            if not session:
+                await interaction.response.send_message("このセッションは既に終了しています。", ephemeral=True)
+                return
+                
+            guild = self.cog.bot.get_guild(session["guild_id"])
+            if not guild:
+                await interaction.response.send_message("サーバーが見つかりませんでした。", ephemeral=True)
+                logger.error(f"セッション {self.session_id} のギルドが見つかりませんでした。")
+                return
+                
+            member = guild.get_member(session["affected_member"])
+            role = self.cog.role_manager.get_role_by_id(guild, session["role_id"])
         
-        message = await interaction.channel.fetch_message(session["message_id"])
-        embed = message.embeds[0]
-        
-        now_utc = datetime.utcnow()
-        original_end_time = int(now_utc.timestamp() + session["remaining_time"])
-        logger.debug(f"original_end_time: {original_end_time}")
-        logger.debug(f"置換前の説明: {embed.description}")
-
-        embed.description = re.sub(
-            r"終了予定時間: <t:\d+> \| <t:\d+:R>",
-            f"~~終了予定時間: <t:{original_end_time}> | <t:{original_end_time}:R>~~",
-            embed.description
-        )
-        logger.debug(f"置換後の説明: {embed.description}")
-        
-        if embed.fields:
-            embed.fields[0].value = embed.fields[0].value.replace(
-                f"延長されました。\n新しい終了予定時間: <t:{int(datetime.now().timestamp() + session['remaining_time'])}> | <t:{int(datetime.now().timestamp() + session['remaining_time'])}:R>",
-                f"~~延長されました。\n新しい終了予定時間: <t:{int(datetime.now().timestamp() + session['remaining_time'])}> | <t:{int(datetime.now().timestamp() + session['remaining_time'])}:R>~~"
-            )
-        
-        now_time_stamp = int(datetime.now().timestamp())
-        embed.add_field(name="終了情報", value=f"<t:{now_time_stamp}> | <t:{now_time_stamp}:R>に終了されました。", inline=False)
-        embed.color = discord.Color.red()
-        
-        view = SudoControlView(self.cog, self.session_id)
-        for child in view.children:
-            child.disabled = True
-        await message.edit(embed=embed, view=view)
-
-        if member and role:
-            await member.remove_roles(role)
-            self.cog.sessions.pop(self.session_id)
-            self.cog.session_manager.save(self.cog.sessions)
-
-            await interaction.response.send_message("セッションが終了しました。", ephemeral=True)
+            message = await interaction.channel.fetch_message(session["message_id"])
+            embed = message.embeds[0]
             
-            logger.info(f"セッション {self.session_id} が終了しました。")
-        else:
-            await interaction.response.send_message("ユーザーまたはロールが見つかりませんでした。", ephemeral=True)
-            logger.warning(f"セッション {self.session_id} でユーザーまたはロールが見つかりませんでした。")
+            now_utc = datetime.utcnow()
+            original_end_time = int(now_utc.timestamp() + session["remaining_time"])
+            logger.debug(f"original_end_time: {original_end_time}")
+            logger.debug(f"置換前の説明: {embed.description}")
+
+            embed.description = re.sub(
+                r"終了予定時間: <t:\d+> \| <t:\d+:R>",
+                f"~~終了予定時間: <t:{original_end_time}> | <t:{original_end_time}:R>~~",
+                embed.description
+            )
+            logger.debug(f"置換後の説明: {embed.description}")
+            
+            if embed.fields:
+                embed.fields[0].value = embed.fields[0].value.replace(
+                    f"延長されました。\n新しい終了予定時間: <t:{int(datetime.now().timestamp() + session['remaining_time'])}> | <t:{int(datetime.now().timestamp() + session['remaining_time'])}:R>",
+                    f"~~延長されました。\n新しい終了予定時間: <t:{int(datetime.now().timestamp() + session['remaining_time'])}> | <t:{int(datetime.now().timestamp() + session['remaining_time'])}:R>~~"
+                )
+            
+            now_time_stamp = int(datetime.now().timestamp())
+            embed.add_field(name="終了情報", value=f"<t:{now_time_stamp}> | <t:{now_time_stamp}:R>に終了されました。", inline=False)
+            embed.color = discord.Color.red()
+            
+            view = SudoControlView(self.cog, self.session_id)
+            for child in view.children:
+                child.disabled = True
+            await message.edit(embed=embed, view=view)
+
+            if member and role:
+                await member.remove_roles(role)
+                self.cog.sessions.pop(self.session_id)
+                self.cog.session_manager.save(self.cog.sessions)
+
+                await interaction.response.send_message("セッションが終了しました。", ephemeral=True)
+                
+                logger.info(f"セッション {self.session_id} が終了しました。")
+            else:
+                await interaction.response.send_message("ユーザーまたはロールが見つかりませんでした。", ephemeral=True)
+                logger.warning(f"セッション {self.session_id} でユーザーまたはロールが見つかりませんでした。")
+        except Exception as e:
+            logger.error(f"セッション終了中にエラーが発生しました: {e}")
+            await interaction.response.send_message("セッションの終了中にエラーが発生しました。管理者にお問い合わせください。", ephemeral=True)
 
 
 class SudoCog(commands.Cog):
@@ -152,8 +175,36 @@ class SudoCog(commands.Cog):
         self.role_manager = RoleManager(self.config_manager)
         self.timer_manager = TimerManager()
 
-        self.sessions = self.session_manager.load()
-        logger.debug("SudoCog initialized with sessions: %s", self.sessions)
+        try:
+            self.sessions = self.session_manager.load()
+            self._validate_sessions()
+            logger.debug("SudoCog initialized with sessions: %s", self.sessions)
+        except Exception as e:
+            logger.error(f"セッションのロード中にエラーが発生しました: {e}")
+            self.sessions = {}
+            
+    def _validate_sessions(self):
+        """セッションの整合性をチェックし、無効なセッションを削除します"""
+        invalid_sessions = []
+        for session_id, session in list(self.sessions.items()):
+            required_keys = ["guild_id", "affected_member", "role_id", "executor", "remaining_time"]
+            if not all(key in session for key in required_keys):
+                logger.warning(f"無効なセッション（必須キー不足）: {session_id}")
+                invalid_sessions.append(session_id)
+                continue
+                
+            guild = self.bot.get_guild(session["guild_id"])
+            if not guild:
+                logger.warning(f"無効なセッション（ギルド不在）: {session_id}")
+                invalid_sessions.append(session_id)
+                continue
+            
+        for session_id in invalid_sessions:
+            self.sessions.pop(session_id, None)
+            
+        if invalid_sessions:
+            logger.info(f"{len(invalid_sessions)}件の無効なセッションを削除しました")
+            self.session_manager.save(self.sessions)
 
     def generate_unique_session_id(self):
         all_possible_ids = list(range(1000, 10000))
@@ -232,6 +283,7 @@ class SudoCog(commands.Cog):
     @commands.hybrid_command(name="sudo", description="一時的な権限を付与します。")
     @is_moderator()
     @is_guild()
+    @commands.guild_only()
     @log_commands()
     @app_commands.rename(time="時間")
     @app_commands.rename(user="付与するユーザー")
@@ -249,11 +301,23 @@ class SudoCog(commands.Cog):
         app_commands.Choice(name="3時間", value=10800),
     ])
     async def sudo(self, ctx: commands.Context, user: discord.Member, reason: str, time: int):
+        if not ctx.guild:
+            await ctx.send("このコマンドはサーバー内でのみ使用できます。", ephemeral=True)
+            logger.warning(f"DMからのsudoコマンドが試行されました。ユーザー: {ctx.author.id}")
+            return
+            
+        if user.bot:
+            await ctx.send("ボットにsudoを付与することはできません。", ephemeral=True)
+            logger.warning(f"ボットへのsudo付与が試行されました。実行者: {ctx.author.id}")
+            return
+            
         logger.debug(f"Current sessions: {self.sessions}")
         for session in self.sessions.values():
-            if isinstance(session, dict) and session.get("affected_member") == user.id:
+            if (isinstance(session, dict) and 
+                session.get("affected_member") == user.id and 
+                session.get("guild_id") == ctx.guild.id):
                 await ctx.send("このユーザーはすでにsudoを実行済みです。", ephemeral=True)
-                logger.warning(f"ユーザー {user} はすでにsudoを実行済みです。")
+                logger.warning(f"ユーザー {user} はすでにsudoを実行済みです。ギルドID: {ctx.guild.id}")
                 return
 
         role_ids = self.role_manager.load_roles()
@@ -300,78 +364,20 @@ class SudoCog(commands.Cog):
         await self.timer_manager.start_timer(user.id, session_id, time, self.remove_role_after_delay)
         logger.info(f"セッション {session_id} が作成されました。ユーザー: {user}, 理由: {reason}, 時間: {time}秒")
 
-    @commands.command(name="beta_aaaasudo", description="開発環境版のsudoコマンドです。")
-    @is_moderator()
-    @is_guild()
-    @app_commands.rename(time="時間")
-    @app_commands.rename(user="付与するユーザー")
-    @app_commands.rename(reason="目的または理由")
-    @app_commands.describe(
-        time="sudoの時間を指定します（秒単位）",
-        user="sudoを付与するユーザー",
-        reason="sudoを付与する理由",
-    )
-    @app_commands.choices(time=[
-        app_commands.Choice(name="10秒", value=10),
-        app_commands.Choice(name="30秒", value=30),
-        app_commands.Choice(name="1分", value=60),
-        app_commands.Choice(name="5分", value=300),
-        app_commands.Choice(name="10分", value=600),
-        app_commands.Choice(name="30分", value=1800),
-        app_commands.Choice(name="1時間", value=3600),
-        app_commands.Choice(name="3時間", value=10800),
-    ])
-    async def beta_sudo(self, ctx: commands.Context, user: discord.Member, reason: str, time: int):
-        role_ids = self.role_manager.load_roles()
-        role = self.role_manager.get_role_by_id(ctx.guild, role_ids.get("default_role"))
-
-        if not role:
-            await ctx.send("指定されたロールが見つかりませんでした。", ephemeral=True)
-            logger.warning(f"指定されたロールが見つかりませんでした。ユーザー: {user}, 理由: {reason}")
-            return
-
-        session_id = self.generate_unique_session_id()
-        now = datetime.now(pytz.timezone("Asia/Tokyo"))
-        end_time = now.timestamp() + time
-
-        embed = discord.Embed(
-            title="sudoコマンドログ",
-            description=(
-                f"{user.mention}に{role.mention}を付与しました。\n\n"
-                f"理由: {reason}\n"
-                f"終了予定: <t:{int(end_time)}> | <t:{int(end_time)}:R>"
-            ),
-            color=discord.Color.green(),
-            timestamp=now,
-        )
-        embed.set_footer(text="🟢延長ボタンで最大30分延長可能です。")
-
-        await user.add_roles(role)
-        view = SudoControlView(self, session_id)
-        message = await ctx.send(embed=embed, view=view)
-
-        self.sessions[session_id] = {
-            "time": now.isoformat(),
-            "executor": ctx.author.id,
-            "affected_member": user.id,
-            "role_id": role.id,
-            "guild_id": ctx.guild.id,
-            "channel_id": ctx.channel.id,
-            "remaining_time": time,
-            "message_id": message.id,
-        }
-        self.session_manager.save(self.sessions)
-
-        await self.timer_manager.start_timer(user.id, session_id, time, self.remove_role_after_delay)
-        logger.info(f"セッション {session_id} が作成されました。ユーザー: {user}, 理由: {reason}, 時間: {time}秒")
-
-
     @commands.hybrid_group(name="sd", description="sudoコマンドのグループです。")
     async def sd(self, ctx: commands.Context):
+        if not ctx.guild:
+            await ctx.send("このコマンドはサーバー内でのみ使用できます。", ephemeral=True)
+            logger.warning(f"DMからのsdコマンドが試行されました。ユーザー: {ctx.author.id}")
+            return
         pass
 
     @sd.group(name="add", description="")
     async def add(self, ctx: commands.Context):
+        if not ctx.guild:
+            await ctx.send("このコマンドはサーバー内でのみ使用できます。", ephemeral=True)
+            logger.warning(f"DMからのsd addコマンドが試行されました。ユーザー: {ctx.author.id}")
+            return
         pass
 
     @add.command(name="role", description="sudoで付与するロールを追加します。")
