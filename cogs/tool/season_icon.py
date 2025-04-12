@@ -129,12 +129,16 @@ class SeasonIcon(commands.Cog):
     @is_owner()
     @is_guild()
     async def set_guild_id(self, ctx: commands.Context):
-        """ 対象のギルドIDを設定 """
+        """ 対象のギルドIDを設定（他の設定を保持） """
+        await self.load_data()
+        if not isinstance(self.icon_data, dict):
+            self.icon_data = {}
         self.icon_data["guild_id"] = ctx.guild.id
         await self.save_data()
         await ctx.send(f"ギルドIDを `{ctx.guild.id}` に設定しました！")
 
 async def setup(bot: commands.Bot):
     cog = SeasonIcon(bot)
+    await cog.load_data()
     await bot.add_cog(cog)
     asyncio.create_task(cog.schedule_icon_change())
