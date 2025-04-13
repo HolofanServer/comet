@@ -51,33 +51,40 @@ class SeasonIcon(commands.Cog):
 
         special_days = {
             (12, 24): "クリスマス", (12, 25): "クリスマス",
-            (12, 31): "HNY", (1, 1): "HNY", (1, 2): "HNY", (1, 3): "HNY"
+            (12, 31): "HNY", (1, 1): "HNY", (1, 2): "HNY", (1, 3): "HNY",
+            (7, 7): "七夕", (9, 9): "月見", (10, 31): "ハロウィン"
         }
 
-        season_map = {
-            (3, 6): "春", (6, 6): "梅雨", (7, 9): "夏", (7, 7): "七夕", (9, 9): "月見",
-            (10, 11): "秋", (10, 31): "ハロウィン", (12, 2): "冬"
-        }
-
-        # 特別な日のチェック
         if (month, day) in special_days:
             season_name = special_days[(month, day)]
             icon_url = self.icon_data.get("icons", {}).get(season_name, None)
             logger.info(f"特別な日({season_name})のアイコン: {icon_url}")
             return icon_url, season_name
 
-        # 冬の特別期間チェック
-        if (month == 12 and day >= 26) or (month == 1 and day >= 4):
+        if (month == 12 and day >= 26) or (month == 1 and day <= 3):
             icon_url = self.icon_data.get("icons", {}).get("冬", None)
             logger.info(f"冬期間のアイコン: {icon_url}")
             return icon_url, "冬"
 
-        # 季節マップのチェック
-        for (m, d), season in season_map.items():
-            if month == m and (d == 9 or day == d):
-                icon_url = self.icon_data.get("icons", {}).get(season, None)
-                logger.info(f"{season}のアイコン: {icon_url}")
-                return icon_url, season
+        season_periods = {
+            (3, 5): "春",
+            (6, 6): "梅雨",
+            (7, 8): "夏",
+            (9, 11): "秋",
+            (12, 2): "冬"
+        }
+        
+        for (start_month, end_month), season in season_periods.items():
+            if start_month <= end_month:
+                if start_month <= month <= end_month:
+                    icon_url = self.icon_data.get("icons", {}).get(season, None)
+                    logger.info(f"{season}の期間 ({start_month}月〜{end_month}月) のアイコン: {icon_url}")
+                    return icon_url, season
+            else:
+                if month >= start_month or month <= end_month:
+                    icon_url = self.icon_data.get("icons", {}).get(season, None)
+                    logger.info(f"{season}の期間 ({start_month}月〜{end_month}月) のアイコン: {icon_url}")
+                    return icon_url, season
 
         logger.warning("該当する季節アイコンが見つかりませんでした")
         return None, None
