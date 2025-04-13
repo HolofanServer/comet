@@ -8,7 +8,7 @@ import logging
 import asyncio
 import traceback
 import json
-import sentry_sdk
+# import sentry_sdk
 import pytz
 from datetime import datetime
 from dotenv import load_dotenv
@@ -19,7 +19,7 @@ from utils.logging import save_log
 from utils.startup import startup_send_webhook, startup_send_botinfo, startup_message, yokobou, git_pull, pip_install, check_dev
 from utils.startup_status import update_status
 from utils.logging import setup_logging
-from utils.error import handle_command_error, handle_application_command_error, log_error_to_sentry
+from utils.error import handle_command_error, handle_application_command_error
 from utils.auth import verify_auth, load_auth
 # from utils.prometheus_config import add_bot_endpoint, reload_prometheus
 from config.setting import get_settings
@@ -55,12 +55,12 @@ startup_channel_id: int = settings.admin_startup_channel_id
 bug_report_channel_id: int = settings.admin_bug_report_channel_id
 error_log_channel_id: int = settings.admin_error_log_channel_id
 
-sentry_dsn: str = settings.sentry_dsn
+# sentry_dsn: str = settings.sentry_dsn
 
-sentry_sdk.init(
-    dsn=sentry_dsn,
-    traces_sample_rate=1.0,
-)
+# sentry_sdk.init(
+#    dsn=sentry_dsn,
+#    traces_sample_rate=1.0,
+# )
 
 class MyBot(commands.AutoShardedBot):
     def __init__(self, *args, **kwargs) -> None:
@@ -168,7 +168,7 @@ class MyBot(commands.AutoShardedBot):
                 "name": ctx.guild.name
             }
 
-        log_error_to_sentry(error, error_context)
+        # log_error_to_sentry(error, error_context)
         handled: bool = await handle_command_error(ctx, error, self.ERROR_LOG_CHANNEL_ID)
         if handled:
             ctx.handled = True
@@ -195,7 +195,7 @@ class MyBot(commands.AutoShardedBot):
                 "name": interaction.guild.name
             }
 
-        log_error_to_sentry(error, error_context)
+        # log_error_to_sentry(error, error_context)
         await handle_application_command_error(interaction, error)
 
 
@@ -205,5 +205,5 @@ bot: MyBot = MyBot(command_prefix=command_prefix, intents=intent, help_command=N
 try:
     bot.run(TOKEN)
 except Exception as e:
-    log_error_to_sentry(e, {"event": "bot_crash"})
+    # log_error_to_sentry(e, {"event": "bot_crash"})
     logger.critical(f"Bot crashed: {e}", exc_info=True)
