@@ -132,13 +132,19 @@ class SeasonIcon(commands.Cog):
             logger.error(f"サーバーアイコン変更失敗: {e}")
 
     async def schedule_icon_change(self) -> None:
-        await self.bot.wait_until_ready()
+        logger.info("アイコン自動更新スケジュールを開始します")
         while not self.bot.is_closed():
-            now = datetime.datetime.now(JST)
-            next_run = now.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
-            wait_time = (next_run - now).total_seconds()
-            await asyncio.sleep(wait_time)
-            await self.change_icon()
+            try:
+                now = datetime.datetime.now(JST)
+                next_run = now.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
+                wait_time = (next_run - now).total_seconds()
+                logger.info(f"次回のアイコン更新まで {wait_time:.1f} 秒待機します")
+                await asyncio.sleep(wait_time)
+                logger.info("定期アイコン更新を実行します")
+                await self.change_icon()
+            except Exception as e:
+                logger.error(f"スケジュール実行中にエラーが発生しました: {e}")
+                await asyncio.sleep(60)
 
     @commands.hybrid_group()
     @log_commands()
@@ -211,7 +217,6 @@ class SeasonIcon(commands.Cog):
         embed.add_field(name="ギルドID", value=str(guild_id) if guild_id else "設定なし", inline=True)
         embed.add_field(name="通知チャンネル", value=f"<#{notify_channel}>" if notify_channel else "設定なし", inline=True)
         
-        # 設定されているすべてのシーズンアイコン
         icons = self.icon_data.get("icons", {})
         icon_list = "\n".join([f"**{k}**: {v}" for k, v in icons.items()])
         embed.add_field(name="登録済みアイコン", value=icon_list if icon_list else "なし", inline=False)
@@ -279,8 +284,12 @@ async def setup(bot: commands.Bot):
     cog = SeasonIcon(bot)
     await cog.load_data()
     await bot.add_cog(cog)
-    # 起動時にアイコン更新をチェック
-    await cog.change_icon()
-    # スケジュールタスクを開始
-    asyncio.create_task(cog.schedule_icon_change())
-    logger.info("SeasonIcon Cogが正常に読み込まれました。スケジュール更新が設定されました。")
+    
+    async def start_icon_tasks():
+        await bot.wait_until_ready()
+        logger.info("ボットの準備が完了しました。アイコンの更新とスケジュールタスクを開始します。")
+        await cog.change_icon()
+        await cog.schedule_icon_change()
+
+    asyncio.create_task(start_icon_tasks())
+    logger.info("SeasonIcon Cogが正常に読み込まれました。")
