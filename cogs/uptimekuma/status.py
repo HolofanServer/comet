@@ -24,6 +24,7 @@ spam_logger_channel_id = settings.admin_commands_log_channel_id
 class UptimeKumaStatus(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.spam_logger_channel_id = spam_logger_channel_id
         self.push_status.start()
         
     @commands.hybrid_group(name="status", description="ステータス関連のコマンドです。")
@@ -62,14 +63,14 @@ class UptimeKumaStatus(commands.Cog):
 
     @tasks.loop(seconds=60)
     async def push_status(self):
-        logger.info("push_statusが呼び出されました")
+        #logger.info("push_statusが呼び出されました")
         ping = self.bot.latency
         if ping is None or math.isnan(ping):
             ping = 0
         else:
             ping = round(ping * 1000)
         url = f"{push_url}{ping}ms"
-        logger.info(f"URL: {url}")
+        #logger.info(f"URL: {url}")
         max_retries = 3
         retry_delay = 5
 
@@ -78,7 +79,7 @@ class UptimeKumaStatus(commands.Cog):
                 try:
                     response = await client.get(url)
                     if response.status_code == 200:
-                        logger.info(f"Status push successful on attempt {attempt}: {response.status_code}")
+                        #logger.info(f"Status push successful on attempt {attempt}: {response.status_code}")
                         break
                     else:
                         logger.warning(f"Unexpected status code on attempt {attempt}: {response.status_code}")
@@ -97,12 +98,11 @@ class UptimeKumaStatus(commands.Cog):
         logger.error(message, exc_info=True)
         error_traceback = traceback.format_exc()
         full_message = f"{message}\n```{error_traceback}```"
-        
-        dev_server = dev_guild_id
-        if dev_server:
-            spam_logger_channel = self.bot.get_channel(spam_logger_channel_id)
-            if spam_logger_channel:
-                await spam_logger_channel.send(full_message)
+        spam_logger_channel = self.bot.get_channel(self.spam_logger_channel_id)
+        if spam_logger_channel:
+            for i in range(0, len(full_message), 2000):
+                part = full_message[i:i+2000]
+                await spam_logger_channel.send(part)
 
 async def setup(bot):
     await bot.add_cog(UptimeKumaStatus(bot))
