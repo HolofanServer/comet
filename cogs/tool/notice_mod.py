@@ -47,9 +47,9 @@ class NoticeModCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
-        logger.debug(f"on_member_update: {before.display_name} -> {after.display_name}")
+        #logger.debug(f"on_member_update: {before.display_name} -> {after.display_name}")
         if before.roles == after.roles:
-            logger.debug("Roles are the same")
+            #logger.debug("Roles are the same")
             return
 
         added_roles = set(after.roles) - set(before.roles)
@@ -57,33 +57,33 @@ class NoticeModCog(commands.Cog):
 
         mod_role_names = [role.name for role in added_roles.union(removed_roles)]
         if not any(role_name in [self.mod_role_names, self.hensyu_role_name] for role_name in mod_role_names):
-            logger.debug(f"Target roles not found: {mod_role_names}")
+            #logger.debug(f"Target roles not found: {mod_role_names}")
             return
         
         if after.guild.id != main_guild_id:
-            logger.debug(f"Guild not supported: {after.guild.id}")
+            #logger.debug(f"Guild not supported: {after.guild.id}")
             return
 
         channel_id = self.channel_ids.get(after.guild.id)
         if not channel_id:
-            logger.warning(f"Channel ID not found for guild: {after.guild.id}")
+            #logger.warning(f"Channel ID not found for guild: {after.guild.id}")
             return
 
         guild = self.bot.get_guild(after.guild.id)
         if not guild:
-            logger.error(f"Bot is not in guild {after.guild.name} ({after.guild.id})")
+            #logger.error(f"Bot is not in guild {after.guild.name} ({after.guild.id})")
             return
 
         channel = guild.get_channel(channel_id)
         if not channel:
-            logger.error(f"Channel {channel_id} not found in guild {guild.name}. Available channels: {[ch.name for ch in guild.channels]}")
+            #logger.error(f"Channel {channel_id} not found in guild {guild.name}. Available channels: {[ch.name for ch in guild.channels]}")
             try:
                 channel = await self.bot.fetch_channel(channel_id)
             except discord.NotFound:
-                logger.error(f"Channel {channel_id} not found")
+                #logger.error(f"Channel {channel_id} not found")
                 return
             except discord.Forbidden:
-                logger.error(f"Bot doesn't have permission to access channel {channel_id} in guild {guild.name}")
+                #logger.error(f"Bot doesn't have permission to access channel {channel_id} in guild {guild.name}")
                 bot_member = guild.get_member(self.bot.user.id)
                 if bot_member:
                     logger.error(f"Bot roles in guild: {[role.name for role in bot_member.roles]}")

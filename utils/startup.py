@@ -3,6 +3,7 @@ from discord.ext import commands
 
 import pytz
 import platform
+import sys
 import psutil
 import os
 import subprocess
@@ -253,6 +254,7 @@ async def git_pull():
 
 async def pip_install():
     logger.info("Pip install started")
+    subprocess.run(["pip", "install", "--upgrade", "pip"])
     result = get_github_branch()
     if result == "Dev" or result == "dev":
         subprocess.run(["pip", "install", "-r", "requirements-dev.txt"])
@@ -264,7 +266,7 @@ async def check_dev():
     result = get_github_branch()
     if result == "Dev" or result == "dev":
         logger.info("Dev branch detected. Updating discord.py...")
-        subprocess.run(["python", "-m", "pip", "install", "git+https://github.com/rapptz/discord.py"])
+        subprocess.run([sys.executable, "-m", "pip", "install", "git+https://github.com/rapptz/discord.py"])
         logger.info("Discord.py updated")
         return True
     else:
