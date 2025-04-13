@@ -111,23 +111,32 @@ class SeasonIcon(commands.Cog):
                 return
                 
             logger.info(f"ギルド '{guild.name}' が見つかりました。アイコンの変更を試みます。")
-            
-            async with aiohttp.ClientSession() as session:
-                async with session.get(icon_url) as resp:
-                    if resp.status == 200:
-                        avatar = await resp.read()
-                        await guild.edit(icon=avatar)
-                        logger.info(f"ギルド '{guild.name}' のアイコンを {season_name} ({icon_url}) に変更しました")
-                        
-                        notify_channel_id = self.icon_data.get("notify_channel")
-                        if notify_channel_id:
-                            channel = self.bot.get_channel(notify_channel_id)
-                            if channel:
-                                await channel.send(f"サーバーアイコンを {season_name} ({icon_url}) に変更しました！")
-                            else:
-                                logger.warning(f"通知チャンネル(ID: {notify_channel_id})が見つかりませんでした")
-                    else:
-                        logger.error(f"アイコン画像の取得に失敗しました: HTTP {resp.status}")
+
+            last_icon_url = self.icon_data.get("last_icon_url")
+
+            if force or last_icon_url != icon_url:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(icon_url) as resp:
+                        if resp.status == 200:
+                            avatar = await resp.read()
+                            await guild.edit(icon=avatar)
+                            logger.info(f"ギルド '{guild.name}' のアイコンを {season_name} ({icon_url}) に変更しました")
+                            
+                            self.icon_data["last_icon_url"] = icon_url
+                            await self.save_data()
+
+                            notify_channel_id = self.icon_data.get("notify_channel")
+                            if notify_channel_id:
+                                channel = self.bot.get_channel(notify_channel_id)
+                                if channel:
+                                    embed = discord.Embed(title="🔔サーバーアイコン変更通知", description=f"{guild.name}のアイコンを **{season_name}** に変更しました！", color=discord.Color.green())
+                                    await channel.send(embed=embed)
+                                else:
+                                    logger.warning(f"通知チャンネル(ID: {notify_channel_id})が見つかりませんでした")
+                        else:
+                            logger.error(f"アイコン画像の取得に失敗しました: HTTP {resp.status}")
+            else:
+                logger.info(f"アイコンは既に {season_name} ({icon_url}) に設定されているため、変更をスキップします")
         except Exception as e:
             logger.error(f"サーバーアイコン変更失敗: {e}")
 
