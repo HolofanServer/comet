@@ -27,16 +27,27 @@ class SeasonIcon(commands.Cog):
             async with aiofiles.open(DATA_PATH, mode='r', encoding='utf-8') as f:
                 data = await f.read()
                 self.icon_data = json.loads(data)
-        except (FileNotFoundError, json.JSONDecodeError):
+            logger.info(f"アイコンデータを読み込みました: {self.icon_data}")
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logger.error(f"アイコンデータの読み込みに失敗しました: {e}")
             self.icon_data = {}
 
     async def save_data(self) -> None:
-        async with aiofiles.open(DATA_PATH, mode='w', encoding='utf-8') as f:
-            await f.write(json.dumps(self.icon_data, indent=4, ensure_ascii=False))
+        try:
+            async with aiofiles.open(DATA_PATH, mode='w', encoding='utf-8') as f:
+                await f.write(json.dumps(self.icon_data, indent=4, ensure_ascii=False))
+            logger.info(f"アイコンデータを保存しました: {self.icon_data}")
+        except Exception as e:
+            logger.error(f"アイコンデータの保存に失敗しました: {e}")
 
-    def get_season_icon(self) -> str | None:
-        now = datetime.datetime.now(JST)
+    def get_season_icon(self, custom_date=None) -> tuple[str, str] | tuple[None, None]:
+        if custom_date:
+            now = custom_date
+        else:
+            now = datetime.datetime.now(JST)
+        
         month, day = now.month, now.day
+        logger.info(f"現在の日付: {month}月{day}日")
 
         special_days = {
             (12, 24): "クリスマス", (12, 25): "クリスマス",
@@ -48,40 +59,68 @@ class SeasonIcon(commands.Cog):
             (10, 11): "秋", (10, 31): "ハロウィン", (12, 2): "冬"
         }
 
+        # 特別な日のチェック
         if (month, day) in special_days:
-            return self.icon_data.get("icons", {}).get(special_days[(month, day)], None)
+            season_name = special_days[(month, day)]
+            icon_url = self.icon_data.get("icons", {}).get(season_name, None)
+            logger.info(f"特別な日({season_name})のアイコン: {icon_url}")
+            return icon_url, season_name
 
+        # 冬の特別期間チェック
         if (month == 12 and day >= 26) or (month == 1 and day >= 4):
-            return self.icon_data.get("icons", {}).get("冬", None)
+            icon_url = self.icon_data.get("icons", {}).get("冬", None)
+            logger.info(f"冬期間のアイコン: {icon_url}")
+            return icon_url, "冬"
 
+        # 季節マップのチェック
         for (m, d), season in season_map.items():
             if month == m and (d == 9 or day == d):
-                return self.icon_data.get("icons", {}).get(season, None)
+                icon_url = self.icon_data.get("icons", {}).get(season, None)
+                logger.info(f"{season}のアイコン: {icon_url}")
+                return icon_url, season
 
-        return None
+        logger.warning("該当する季節アイコンが見つかりませんでした")
+        return None, None
 
-    async def change_icon(self) -> None:
+    async def change_icon(self, force=False) -> None:
         await self.load_data()
-        icon_url = self.get_season_icon()
+        icon_url, season_name = self.get_season_icon()
 
         if not icon_url:
+            logger.warning("変更するアイコンURLが見つかりませんでした")
             return
 
         try:
+            guild_id = self.icon_data.get("guild_id")
+            if guild_id is None:
+                logger.warning("guild_id が設定されていません。")
+                return
+                
+            logger.info(f"ギルドID: {guild_id}を検索中")
+            guild = self.bot.get_guild(guild_id)
+            
+            if not guild:
+                logger.error(f"ギルドID: {guild_id} が見つかりませんでした。ボットがこのサーバーに参加していることを確認してください。")
+                return
+                
+            logger.info(f"ギルド '{guild.name}' が見つかりました。アイコンの変更を試みます。")
+            
             async with aiohttp.ClientSession() as session:
                 async with session.get(icon_url) as resp:
                     if resp.status == 200:
                         avatar = await resp.read()
-                        guild_id = self.icon_data.get("guild_id")
-                        if guild_id is None:
-                            logger.warning("guild_id が設定されていません。")
-                            return
-                        guild = self.bot.get_guild(guild_id)
-                        if guild:
-                            await guild.edit(icon=avatar)
-                            channel = self.bot.get_channel(self.icon_data.get("notify_channel"))
+                        await guild.edit(icon=avatar)
+                        logger.info(f"ギルド '{guild.name}' のアイコンを {season_name} ({icon_url}) に変更しました")
+                        
+                        notify_channel_id = self.icon_data.get("notify_channel")
+                        if notify_channel_id:
+                            channel = self.bot.get_channel(notify_channel_id)
                             if channel:
-                                await channel.send(f"サーバーアイコンを {icon_url} に変更しました！")
+                                await channel.send(f"サーバーアイコンを {season_name} ({icon_url}) に変更しました！")
+                            else:
+                                logger.warning(f"通知チャンネル(ID: {notify_channel_id})が見つかりませんでした")
+                    else:
+                        logger.error(f"アイコン画像の取得に失敗しました: HTTP {resp.status}")
         except Exception as e:
             logger.error(f"サーバーアイコン変更失敗: {e}")
 
@@ -136,9 +175,105 @@ class SeasonIcon(commands.Cog):
         self.icon_data["guild_id"] = ctx.guild.id
         await self.save_data()
         await ctx.send(f"ギルドIDを `{ctx.guild.id}` に設定しました！")
+        
+    @seasonicon.command(name="update")
+    @log_commands()
+    @is_owner()
+    @is_guild()
+    async def update_icon(self, ctx: commands.Context):
+        """ 現在のシーズンに合わせて今すぐアイコンを更新 """
+        await ctx.send("アイコンの更新を試みています...")
+        await self.change_icon(force=True)
+        await ctx.send("アイコン更新処理を完了しました。ログを確認してください。")
+        
+    @seasonicon.command(name="status")
+    @log_commands()
+    @is_owner()
+    @is_guild()
+    async def check_status(self, ctx: commands.Context):
+        """ 現在の設定状況とシーズン情報を確認 """
+        await self.load_data()
+        
+        icon_url, season = self.get_season_icon()
+        guild_id = self.icon_data.get("guild_id")
+        notify_channel = self.icon_data.get("notify_channel")
+        
+        embed = discord.Embed(title="シーズンアイコン設定状況", color=0x00ff00)
+        embed.add_field(name="現在のシーズン", value=season if season else "設定なし", inline=False)
+        embed.add_field(name="アイコンURL", value=icon_url if icon_url else "設定なし", inline=False)
+        embed.add_field(name="ギルドID", value=str(guild_id) if guild_id else "設定なし", inline=True)
+        embed.add_field(name="通知チャンネル", value=f"<#{notify_channel}>" if notify_channel else "設定なし", inline=True)
+        
+        # 設定されているすべてのシーズンアイコン
+        icons = self.icon_data.get("icons", {})
+        icon_list = "\n".join([f"**{k}**: {v}" for k, v in icons.items()])
+        embed.add_field(name="登録済みアイコン", value=icon_list if icon_list else "なし", inline=False)
+        
+        await ctx.send(embed=embed)
+    
+    @seasonicon.command(name="test")
+    @log_commands()
+    @is_owner()
+    @is_guild()
+    async def test_date(self, ctx: commands.Context, month: int, day: int):
+        """ 特定の日付でアイコンをテスト """
+        if not (1 <= month <= 12 and 1 <= day <= 31):
+            await ctx.send("無効な日付です。月は1-12、日は1-31の範囲で指定してください。")
+            return
+            
+        test_date = datetime.datetime(2025, month, day, tzinfo=JST)
+        icon_url, season = self.get_season_icon(custom_date=test_date)
+        
+        if icon_url and season:
+            await ctx.send(f"{month}月{day}日は「{season}」のアイコン({icon_url})が適用されます。")
+        else:
+            await ctx.send(f"{month}月{day}日には適用されるアイコンがありません。")
+            
+    @seasonicon.command(name="force")
+    @log_commands()
+    @is_owner()
+    @is_guild()
+    async def force_icon(self, ctx: commands.Context, season: str):
+        """ 特定のシーズンアイコンを強制的に設定 """
+        await self.load_data()
+        
+        icons = self.icon_data.get("icons", {})
+        if season not in icons:
+            seasons_list = "、".join(list(icons.keys()))
+            await ctx.send(f"指定されたシーズン「{season}」は登録されていません。\n登録済み: {seasons_list}")
+            return
+            
+        icon_url = icons[season]
+        
+        try:
+            guild_id = self.icon_data.get("guild_id")
+            if not guild_id:
+                await ctx.send("ギルドIDが設定されていません。先に `/seasonicon set_guild_id` を実行してください。")
+                return
+                
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                await ctx.send(f"ギルドID: {guild_id} が見つかりませんでした。ボットがこのサーバーに参加していることを確認してください。")
+                return
+                
+            async with aiohttp.ClientSession() as session:
+                async with session.get(icon_url) as resp:
+                    if resp.status == 200:
+                        avatar = await resp.read()
+                        await guild.edit(icon=avatar)
+                        await ctx.send(f"サーバーアイコンを {season} ({icon_url}) に強制変更しました！")
+                    else:
+                        await ctx.send(f"アイコン画像の取得に失敗しました: HTTP {resp.status}")
+        except Exception as e:
+            await ctx.send(f"エラーが発生しました: {e}")
+            logger.error(f"強制アイコン変更失敗: {e}")
 
 async def setup(bot: commands.Bot):
     cog = SeasonIcon(bot)
     await cog.load_data()
     await bot.add_cog(cog)
+    # 起動時にアイコン更新をチェック
+    await cog.change_icon()
+    # スケジュールタスクを開始
     asyncio.create_task(cog.schedule_icon_change())
+    logger.info("SeasonIcon Cogが正常に読み込まれました。スケジュール更新が設定されました。")
