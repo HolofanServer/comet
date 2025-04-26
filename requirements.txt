@@ -1,12 +1,12 @@
-aiohttp==3.11.11
+aiohttp==3.11.18
 discord.py==2.5.0
-Pillow==11.0.0
+Pillow==11.2.1
 psutil==6.1.1
 python-dotenv>=0.21.0
-pytz==2025.1
+pytz==2025.2
 dateparser==1.2.0
 datetime==5.5
-openai==1.61.1
+openai==1.76.0
 jishaku==2.6.0
 pyfiglet==1.0.2
 flask==3.1.0
@@ -17,7 +17,7 @@ pyyaml==6.0.2
 annotated-types==0.7.0
 pydantic>=1.9.0,<2.0.0
 Pygments==2.19.1
-ruff==0.9.4
+ruff==0.11.7
 jisho_api==0.1.8
 sentry-sdk==2.19.0
 matplotlib==3.9.4
