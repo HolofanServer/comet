@@ -9,6 +9,7 @@ from config.setting import get_settings
 import httpx
 import uuid
 import random
+from utils.commands_help import is_guild, is_owner, log_commands
 
 logger = setup_logging("D")
 settings = get_settings()
@@ -101,10 +102,16 @@ class CountryBasedWelcome(commands.Cog):
         return None
 
     @commands.hybrid_group(name="welcome")
+    @is_guild()
+    @is_owner()
+    @log_commands()
     async def welcome(self, ctx):
         await ctx.send("Welcome to the server!")
         
     @welcome.command(name="set_channel")
+    @is_guild()
+    @is_owner()
+    @log_commands()
     async def set_channel(self, ctx, channel: discord.TextChannel):
         logger.info(f"ウェルカムチャンネル設定コマンド実行: ユーザー={ctx.author}, ギルド={ctx.guild.name}({ctx.guild.id}), チャンネル={channel.name}({channel.id})")
         self.channel = channel
@@ -113,6 +120,9 @@ class CountryBasedWelcome(commands.Cog):
         logger.info(f"ウェルカムチャンネル設定完了: {channel.name}({channel.id})")
         
     @welcome.command(name="test_welcom_message")
+    @is_guild()
+    @is_owner()
+    @log_commands()
     async def test_welcom_message(self, ctx):
         logger.info(f"新メンバー参加イベント: {ctx.author.display_name}({ctx.author.id}) がギルド {ctx.guild.name}({ctx.guild.id}) に参加")
         # ユーザーの表示名とグローバル名（バイオは取得不可）
@@ -180,6 +190,9 @@ class CountryBasedWelcome(commands.Cog):
             logger.error(f"{channel.name} へのウェルカムメッセージ送信に失敗: {e}\n{traceback.format_exc()}")
     
     @welcome.command(name="test_cv2_welcome")
+    @is_guild()
+    @is_owner()
+    @log_commands()
     async def test_cv2_welcome(self, ctx):
         """CV2形式のウェルカムメッセージをテスト送信します"""
         logger.info(f"CV2ウェルカムメッセージテスト: {ctx.author.display_name}({ctx.author.id}) がギルド {ctx.guild.name}({ctx.guild.id}) に参加")
@@ -250,6 +263,9 @@ class CountryBasedWelcome(commands.Cog):
             await ctx.send("CV2形式のウェルカムメッセージの送信に失敗しました。ログを確認してください。")
     
     @welcome.command(name="cv2")
+    @is_guild()
+    @is_owner()
+    @log_commands()
     async def welcome_cv2(self, ctx):
         """シンプルなCV2形式のウェルカムメッセージをテスト送信します"""
         await ctx.send("CV2形式のウェルカムメッセージをテスト送信中...")
@@ -288,6 +304,9 @@ class CountryBasedWelcome(commands.Cog):
             await ctx.send("CV2形式のウェルカムメッセージの送信に失敗しました。")
             
     @welcome.command(name="cv2_file")
+    @is_guild()
+    @is_owner()
+    @log_commands()
     async def welcome_cv2_file(self, ctx, file_path: str = None):
         """指定したファイルパスの画像を使ってCV2形式ウェルカムメッセージをテスト送信します"""
         if not file_path:
@@ -340,6 +359,9 @@ class CountryBasedWelcome(commands.Cog):
             await ctx.send("CV2形式ウェルカムメッセージの送信に失敗しました。ログを確認してください。")
 
     @welcome.command(name="cv2_attach")
+    @is_guild()
+    @is_owner()
+    @log_commands()
     async def welcome_cv2_attach(self, ctx):
         """添付した画像を使ってCV2形式ウェルカムメッセージをテスト送信します"""
         if not ctx.message.attachments:
