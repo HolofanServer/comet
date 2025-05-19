@@ -1700,4 +1700,4 @@ async def setup(bot):
         await bot.add_cog(OshiRolePanel(bot))
         logger.info("OshiRolePanel Cogの登録が完了しました")
     except Exception as e:
-        logger.error(f"OshiRolePanel Cogの登録に失敗しました: {e}\n{traceback.format_exc()}") 
+        logger.error(f"OshiRolePanel Cogの登録に失敗しました: {e}\n{traceback.format_exc()}")

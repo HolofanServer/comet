@@ -9,6 +9,7 @@ from typing import Optional, List
 from openai import AsyncOpenAI
 from config.setting import get_settings
 from utils.logging import setup_logging
+from utils.commands_help import is_guild_app, is_owner_app, log_commands
 
 # 設定を取得
 settings = get_settings()
@@ -36,6 +37,9 @@ class UserAnalyzer(commands.Cog):
         channel_limit="検索するチャンネル数の上限（指定しない場合はすべて）",
         message_limit="収集するメッセージ数の上限（大きな値は処理に時間がかかります）"
     )
+    @is_guild_app()
+    @is_owner_app()
+    @log_commands()
     async def analyze_user(
         self, 
         interaction: discord.Interaction, 

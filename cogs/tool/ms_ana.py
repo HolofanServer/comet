@@ -7,6 +7,7 @@ from datetime import datetime
 from openai import OpenAI, AsyncOpenAI
 from config.setting import get_settings
 from utils.logging import setup_logging
+from utils.commands_help import is_guild, is_owner, log_commands
 
 # 設定を取得
 settings = get_settings()
@@ -26,6 +27,9 @@ class MessageAnalyzer(commands.Cog):
         self.bot = bot
 
     @commands.command(name="analyze")
+    @is_guild()
+    @is_owner()
+    @log_commands()
     async def analyze_messages(self, ctx):
         logger.info(f"メッセージ分析コマンドが実行されました: 使用者 {ctx.author.name} (ID: {ctx.author.id})")
         
@@ -201,6 +205,9 @@ class MessageAnalyzer(commands.Cog):
         await ctx.author.send(files=files)
 
     @commands.command(name="analyze_file")
+    @is_guild()
+    @is_owner()
+    @log_commands()
     async def analyze_file(self, ctx, file_path: str = None):
         """既存のJSONファイルをGPT-4.1モデルで解析するコマンド"""
         logger.info(f"JSONファイル分析コマンドが実行されました: 使用者 {ctx.author.name} (ID: {ctx.author.id})")
