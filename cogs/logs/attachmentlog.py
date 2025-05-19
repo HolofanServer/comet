@@ -34,7 +34,7 @@ class AttachmentLogCog(commands.Cog):
                 if channel_id is None:
                     return None
                 return channel_id
-        logger.warning("設定ファイルが存在しません。")
+        #logger.warning("設定ファイルが存在しません。")
         return None
 
     async def save_image(self, image_url, attachment):

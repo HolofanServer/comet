@@ -74,7 +74,7 @@ class RoleLoggingCog(commands.Cog):
 
         if new_roles or removed_roles:
             embed = discord.Embed(title=f"{after.display_name} のロール変更", timestamp=now)
-            if after.avatar.url:
+            if after.avatar is not None:
                 embed.set_thumbnail(url=after.avatar.url)
                 embed.set_author(name=after.display_name, icon_url=after.avatar.url)
             else:
