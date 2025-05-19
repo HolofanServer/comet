@@ -1,5 +1,5 @@
 # 環境設定ファイル
-/.env
+.env
 
 # Mac OS のシステムファイル
 .DS_Store
@@ -26,3 +26,10 @@ bot.json
 spam_blocker.json
 sudo.json
 auth.json
+
+# ログファイル
+*.log
+
+# テストファイル
+
+cache/

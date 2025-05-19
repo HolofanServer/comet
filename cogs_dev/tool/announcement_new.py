@@ -204,7 +204,7 @@ class Announcement(commands.Cog):
     async def send_announcement(self, interaction: discord.Interaction, channel: discord.TextChannel):
         view_id = f"announcement_{interaction.user.id}_{int(time.time())}"
         view = SimpleAnnouncementView(self.bot, channel, view_id)
-        message = await interaction.response.send_message(content="編集するとここにそのメッセージが表示されます", view=view)
+        await interaction.response.send_message(content="編集するとここにそのメッセージが表示されます", view=view)
         self._announcement_views[view_id] = view
         logger.info(f"Simple announcement prepared for channel: {channel.name} with view_id: {view_id}")
 
