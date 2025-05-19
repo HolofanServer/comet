@@ -11,9 +11,7 @@ settings = get_settings()
 main_guild_id = settings.admin_main_guild_id
 
 presences = [
-    {"type": "Playing", "name": "/omikuji", "state": "1日一回運試し！"},
-    {"type": "Playing", "name": "サーバーブースター限定コマンドで画像を生成しよう！", "state": "DellE3を使ったAI画像生成コマンド"},
-    {"type": "Playing", "name": "/help", "state": "わからないことがあれば使ってみてね！"},
+    {"type": "Playing", "name": "hfs", "state": ""}
 ]
 
 async def update_presence(bot):
@@ -28,7 +26,7 @@ async def update_presence(bot):
 
             member_count = sum(1 for _ in guild.members)
             
-            custom_presence = {"type": "Playing", "name": f"{member_count}人が参加中...", "state": "iPhoneだけだよ！"}
+            custom_presence = {"type": "Playing", "name": f"{member_count}人が参加中...", "state": "とまらないホロライブ！"}
             presences.insert(0, custom_presence)
             
             presence = presences[index]
