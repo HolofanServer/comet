@@ -405,12 +405,13 @@ class OshiRolePanel(commands.Cog):
             return
             
         custom_id = interaction.data.get("custom_id", "")
+        logger.debug(f"インタラクション受信: custom_id={custom_id}")
         
         # セレクトメニューの処理
         if custom_id == "oshi_select":
             await self.cv2_sender.handle_oshi_select(interaction)
         # メンバーロール選択セレクトメニューの処理
-        elif custom_id == "member_select":
+        elif custom_id == "member_select" or custom_id.startswith("member_select:"):
             await self.cv2_sender.handle_member_select(interaction)
         # ロールボタンの処理
         elif custom_id.startswith("role_"):
@@ -1097,13 +1098,16 @@ class CV2MessageSender:
                     member_options.append(option)
             
             # メンバーロール選択セレクトメニュー（複数選択可能）
+            # カスタムIDにカテゴリ情報を埋め込む
+            member_select_custom_id = f"member_select:{selected_category['value']}"
+            
             if member_options:
                 container_components.append({
                     "type": 1,  # Action Row
                     "components": [
                         {
                             "type": 3,  # Select Menu
-                            "custom_id": "member_select",
+                            "custom_id": member_select_custom_id,
                             "placeholder": "推しメンバーを選択（複数可）",
                             "options": member_options,
                             "min_values": 0,  # 選択解除も可能
@@ -1484,38 +1488,145 @@ class CV2MessageSender:
         
         # 選択中のカテゴリを特定
         selected_category = None
-        message_components = interaction.message.components
-        if message_components and len(message_components) > 0:
-            # カテゴリ選択メニューを探す
-            for component in message_components:
-                if component.type == 1:  # ActionRow
-                    for child in component.components:
-                        if child.type == 3 and child.custom_id == "oshi_select":  # SelectMenu
-                            # デフォルト値（現在選択中のカテゴリ）を取得
-                            for option in child.options:
-                                if option.default:
-                                    for category in self.oshi_categories:
-                                        if category["value"] == option.value:
-                                            selected_category = category
+        selected_role_ids = [int(value.split("_")[1]) for value in selected_values if value.startswith("role_")]
+        
+        logger.debug(f"デバッグ: インタラクションデータ={interaction.data}")
+        logger.debug(f"デバッグ: 選択されたロールID={selected_role_ids}")
+        
+        # 新方式: カスタムIDから直接カテゴリ情報を取得
+        custom_id = interaction.data.get("custom_id", "")
+        logger.debug(f"デバッグ: カスタムID={custom_id}")
+        
+        # カスタムIDが新しい形式（member_select:カテゴリ値）かチェック
+        if ":" in custom_id:
+            try:
+                category_value = custom_id.split(":")[1]
+                logger.debug(f"デバッグ: 埋め込まれたカテゴリ値={category_value}")
+                
+                for category in self.oshi_categories:
+                    if category["value"] == category_value:
+                        selected_category = category
+                        logger.info(f"埋め込みカテゴリ値からカテゴリを特定: {category['name']}")
+                        break
+            except Exception as e:
+                logger.error(f"埋め込みカテゴリ値からのカテゴリ特定中にエラー: {e}", exc_info=True)
+                
+        # 方法1: メッセージコンポーネントからカテゴリを特定（既存の方法）
+        if not selected_category:
+            try:
+                logger.debug("デバッグ: 方法1開始 - メッセージコンポーネントからカテゴリを特定")
+                message_components = interaction.message.components
+                logger.debug(f"デバッグ: メッセージコンポーネント数={len(message_components) if message_components else 0}")
+                
+                if message_components and len(message_components) > 0:
+                    # カテゴリ選択メニューを探す
+                    for i, component in enumerate(message_components):
+                        logger.debug(f"デバッグ: コンポーネント[{i}].type={component.type}")
+                        if component.type == 1:  # ActionRow
+                            for j, child in enumerate(component.components):
+                                logger.debug(f"デバッグ: 子コンポーネント[{j}].type={child.type}, custom_id={getattr(child, 'custom_id', 'なし')}")
+                                if child.type == 3 and child.custom_id == "oshi_select":  # SelectMenu
+                                    # デフォルト値（現在選択中のカテゴリ）を取得
+                                    logger.debug(f"デバッグ: oshi_selectメニュー発見、オプション数={len(child.options)}")
+                                    for option in child.options:
+                                        logger.debug(f"デバッグ: オプション={option.label}, default={getattr(option, 'default', False)}")
+                                        if getattr(option, 'default', False):
+                                            for category in self.oshi_categories:
+                                                if category["value"] == option.value:
+                                                    selected_category = category
+                                                    logger.info(f"メッセージコンポーネントからカテゴリを特定: {category['name']}")
+                                                    break
                                             break
                                     break
-                            break
-                    if selected_category:
+                            if selected_category:
+                                break
+            except Exception as e:
+                logger.error(f"メッセージコンポーネントからのカテゴリ特定中にエラー: {e}", exc_info=True)
+        
+        # 方法2: 選択されたロールIDから所属カテゴリを逆引き
+        if not selected_category and selected_role_ids:
+            logger.debug("デバッグ: 方法2開始 - ロールIDからカテゴリを逆引き")
+            first_role_id = selected_role_ids[0]
+            logger.debug(f"デバッグ: 最初のロールID={first_role_id}")
+            
+            # すべてのカテゴリとそのロールを確認
+            for category in self.oshi_categories:
+                logger.debug(f"デバッグ: カテゴリ '{category['name']}' のロール数={len(category['roles'])}")
+                for role_name, role_id in category["roles"].items():
+                    logger.debug(f"デバッグ: 比較 {role_id} == {first_role_id}")
+                    if role_id == first_role_id:
+                        selected_category = category
+                        logger.info(f"ロールIDからカテゴリを逆引き: {category['name']}")
                         break
-        
+                if selected_category:
+                    break
+                    
+        # 方法3: インタラクションデータから直接カテゴリ値を取得
         if not selected_category:
-            await interaction.response.send_message("カテゴリの特定に失敗しました。もう一度お試しください。", ephemeral=True)
-            logger.error(f"カテゴリの特定に失敗: ユーザー={interaction.user.name}")
-            return
+            try:
+                logger.debug("デバッグ: 方法3開始 - インタラクションデータから直接カテゴリを取得")
+                custom_id = interaction.data.get("custom_id", "")
+                logger.debug(f"デバッグ: カスタムID={custom_id}")
+                
+                # カスタムIDに含まれるカテゴリを特定（例: member_select_oshi_jp_0_2 のような形式の場合）
+                if "member_select_" in custom_id:
+                    category_value = custom_id.split("member_select_")[1]
+                    logger.debug(f"デバッグ: 抽出されたカテゴリ値={category_value}")
+                    for category in self.oshi_categories:
+                        if category["value"] == category_value:
+                            selected_category = category
+                            logger.info(f"カスタムIDからカテゴリを特定: {category['name']}")
+                            break
+            except Exception as e:
+                logger.error(f"カスタムIDからのカテゴリ特定中にエラー: {e}", exc_info=True)
         
-        logger.info(f"対象カテゴリ: {selected_category['name']}")
+        # カテゴリが特定できない場合、メッセージから全ロールを取得してマッチング
+        if not selected_category:
+            try:
+                logger.debug("デバッグ: 方法4開始 - 選択ロールの頻度からカテゴリを特定")
+                # 現在表示中のロール一覧を収集
+                displayed_roles = {}
+                for role_id in selected_role_ids:
+                    for category in self.oshi_categories:
+                        for role_name, cat_role_id in category["roles"].items():
+                            if cat_role_id == role_id:
+                                displayed_roles[role_id] = category
+                                logger.debug(f"デバッグ: ロールID {role_id} はカテゴリ '{category['name']}' に属しています")
+                                break
+                
+                # 最も多く選択されているカテゴリを選択
+                if displayed_roles:
+                    category_counts = {}
+                    for role_id, category in displayed_roles.items():
+                        category_name = category["name"]
+                        category_counts[category_name] = category_counts.get(category_name, 0) + 1
+                    
+                    logger.debug(f"デバッグ: カテゴリ出現回数={category_counts}")
+                    most_common_category = max(category_counts.items(), key=lambda x: x[1])[0]
+                    logger.debug(f"デバッグ: 最も多いカテゴリ={most_common_category}")
+                    
+                    for category in self.oshi_categories:
+                        if category["name"] == most_common_category:
+                            selected_category = category
+                            logger.info(f"最も多く選択されているカテゴリから特定: {category['name']}")
+                            break
+            except Exception as e:
+                logger.error(f"最も一般的なカテゴリ特定中にエラー: {e}", exc_info=True)
+        
+        # どの方法でもカテゴリが特定できない場合
+        if not selected_category:
+            # フォールバック: 最初のカテゴリを使用
+            selected_category = self.oshi_categories[0]
+            logger.warning(f"カテゴリ特定失敗、フォールバックを使用: {selected_category['name']}")
+            # 応答を送る代わりにメッセージリストに追加
+            messages = ["⚠️ カテゴリの特定に失敗しましたが、処理を続行します。"]
+        else:
+            logger.info(f"対象カテゴリ: {selected_category['name']}")
+            messages = []
         
         # ユーザーとギルドを取得
         user = interaction.user
         guild = interaction.guild
-        
-        # 選択されたロールIDを抽出
-        selected_role_ids = [int(value.split("_")[1]) for value in selected_values if value.startswith("role_")]
         
         # ユーザーが現在持っているロールのIDリスト
         current_role_ids = [role.id for role in user.roles]
@@ -1541,8 +1652,6 @@ class CV2MessageSender:
                 if role:
                     roles_to_remove.append(role)
         
-        messages = []
-        
         # ロールの付与処理
         try:
             if roles_to_add:
@@ -1566,11 +1675,19 @@ class CV2MessageSender:
             messages.append("❌ ロールの解除中にエラーが発生しました")
         
         # 何も変更がない場合
-        if not messages:
+        if len(messages) == 0 or (len(messages) == 1 and messages[0].startswith("⚠️")):
             messages.append("ロールの変更はありませんでした")
         
-        # ユーザーに結果を通知
-        await interaction.response.send_message("\n".join(messages), ephemeral=True)
+        # ユーザーに結果を通知（一度だけ）
+        try:
+            await interaction.response.send_message("\n".join(messages), ephemeral=True)
+        except discord.errors.InteractionResponded:
+            logger.warning(f"インタラクションは既に応答済み: ユーザー={user.name}")
+            # 既に応答済みの場合はフォローアップメッセージを送信
+            try:
+                await interaction.followup.send("\n".join(messages), ephemeral=True)
+            except Exception as e:
+                logger.error(f"フォローアップメッセージ送信中にエラー: {e}")
 
     async def __del__(self):
         # クライアントのクローズ処理
