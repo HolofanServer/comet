@@ -12,7 +12,6 @@ from datetime import datetime
 from config.setting import get_settings
 
 from utils.logging import setup_logging
-from utils.github_issue import create_github_issue
 from utils.stats import update_stats
 
 logger = setup_logging("E")
@@ -98,18 +97,6 @@ async def handle_command_error(ctx, error, error_log_channel_id):
     error_id = uuid.uuid4()
     error_message = str(error)
     traceback_text = "".join(traceback.format_exception(type(error), error, error.__traceback__))
-    issue_title = f"エラー発生: {ctx.command.qualified_name if ctx.command else 'N/A'}"
-    issue_body = (
-        f"**サーバー**: {ctx.guild.name if ctx.guild else 'DM'}\n"
-        f"**BOT**: {ctx.bot.user.display_name}\n"
-        f"**チャンネル**: <#{ctx.channel.name}>\n"
-        f"**コマンド**: /{ctx.command.qualified_name if ctx.command else 'N/A'}\n"
-        f"**エラーID**: `{error_id}`\n"
-        f"**ユーザー**: {ctx.author.display_name}\n"
-        f"**エラーメッセージ**: {error_message}\n"
-        f"**トレースバック**:\n```python\n{traceback_text}\n```"
-    )
-    await create_github_issue(issue_title, issue_body)
     
     if error_message == "You must own this bot to use Jishaku.":
         logger.warning(f"someone try to use jishaku commands: {ctx.author.name}")
@@ -164,7 +151,7 @@ async def handle_command_error(ctx, error, error_log_channel_id):
             f"**エラーID**: `{error_id}`\n"
             f"**コマンド**: {ctx.command.qualified_name if ctx.command else 'N/A'}\n"
             f"**ユーザー**: {ctx.author.mention}\n"
-            f"**エラーメッセージ**: {error}\n"
+            f"**エラーメッセージ**: ```{error}```\n"
             f"**トレースバック**:\n```python\n{traceback_text[:1000]}```\n"
         ),
         color=discord.Color.red(),
@@ -182,7 +169,7 @@ async def handle_command_error(ctx, error, error_log_channel_id):
             f"ユーザー: {ctx.author.mention}\n"
             f"チャンネル: {channel_mention}\n"
             f"サーバー: `{server_name}`\n\n"
-            f"エラーメッセージ: {traceback_text[:1000]}\n"
+            f"エラーメッセージ: ```{error}```\n"
             "__下のボタンを押してバグを報告してください。__\n参考となるスクリーンショットがある場合は**__事前に画像URL__**を準備してください。"
         ),
         color=discord.Color.red(),
