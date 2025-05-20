@@ -9,6 +9,8 @@ from config.setting import get_settings
 import httpx
 import uuid
 import random
+import asyncio
+import time
 from utils.commands_help import is_guild, is_owner, log_commands
 
 logger = setup_logging("D")
@@ -19,6 +21,116 @@ OPENAI_API_KEY = settings.etc_api_openai_api_key
 logger.info(f"OpenAI APIキー設定状況: {'設定済み' if OPENAI_API_KEY else '未設定'}")
 client_ai = OpenAI(api_key=OPENAI_API_KEY)
 
+class UserJoinQueue:
+    def __init__(self, bot):
+        self.bot = bot
+        self.queue = {}  # ユーザーID -> 参加情報のマッピング
+        self.processing = set()  # 処理中のユーザーID
+        self.lock = asyncio.Lock()  # 同時アクセス防止用ロック
+        
+    async def add_user(self, member, channel_id, welcome_text):
+        """ユーザーを待機キューに追加"""
+        async with self.lock:
+            user_id = str(member.id)
+            join_time = time.time()
+            self.queue[user_id] = {
+                'member': member,
+                'channel_id': channel_id,
+                'welcome_text': welcome_text,
+                'join_time': join_time,
+                'processed': False
+            }
+            logger.info(f"ユーザー {member.name}({member.id}) を参加キューに追加しました")
+            
+    async def process_queue(self):
+        """キューを処理（定期的に呼び出す）"""
+        async with self.lock:
+            current_time = time.time()
+            # キューに入っているがまだ処理されていないユーザーを処理
+            for user_id, data in list(self.queue.items()):
+                if data['processed'] or user_id in self.processing:
+                    continue
+                    
+                # 参加から3秒以上経過したユーザーを処理
+                if current_time - data['join_time'] >= 3:
+                    self.processing.add(user_id)
+                    # ロックの外で非同期処理を実行
+                    asyncio.create_task(self._process_user(user_id, data))
+    
+    async def _process_user(self, user_id, data):
+        """ユーザー個別の処理"""
+        try:
+            member = data['member']
+            channel_id = data['channel_id']
+            welcome_text = data['welcome_text']
+            
+            logger.info(f"ユーザー {member.name}({member.id}) の参加処理を開始します")
+            
+            # 画像取得処理
+            image_data = await self._get_user_image(member.name)
+            
+            # ウェルカムメッセージ送信処理
+            try:
+                cv2_sender = CV2MessageSender(self.bot)
+                await cv2_sender.send_welcome_message(
+                    channel_id=channel_id,
+                    member_mention=member.mention,
+                    welcome_text=welcome_text,
+                    image_data=image_data
+                )
+                logger.info(f"ユーザー {member.name}({member.id}) へのウェルカムメッセージを送信しました")
+            except Exception as e:
+                logger.error(f"ウェルカムメッセージ送信中にエラー: {e}\n{traceback.format_exc()}")
+            
+            # 処理完了をマーク
+            async with self.lock:
+                self.queue[user_id]['processed'] = True
+                self.processing.remove(user_id)
+                
+            logger.info(f"ユーザー {member.name}({member.id}) の処理を完了しました")
+            
+        except Exception as e:
+            logger.error(f"ユーザー {user_id} の処理中にエラー: {e}\n{traceback.format_exc()}")
+            # エラーが発生しても処理完了をマークして次に進む
+            async with self.lock:
+                self.queue[user_id]['processed'] = True
+                if user_id in self.processing:
+                    self.processing.remove(user_id)
+    
+    async def _get_user_image(self, username, max_retries=2):
+        """ユーザー名に対応する画像を取得"""
+        image_channel_id = 1373853775235649639
+        image_channel = self.bot.get_channel(image_channel_id)
+        if not image_channel:
+            logger.warning(f"画像チャンネル(ID:{image_channel_id})が見つかりません")
+            return None
+            
+        for retry in range(max_retries):
+            if retry > 0:
+                await asyncio.sleep(1)
+                
+            try:
+                async for msg in image_channel.history(limit=30):
+                    msg_content = (msg.content or '').strip()
+                    if msg_content == username and msg.attachments:
+                        for att in msg.attachments:
+                            if self._is_image(att):
+                                image_data = await att.read()
+                                logger.info(f"ユーザー {username} の画像 {att.filename} を取得しました")
+                                return image_data
+            except Exception as e:
+                logger.warning(f"画像取得時にエラー（試行 {retry+1}/{max_retries}）: {e}")
+        
+        logger.info(f"ユーザー {username} の画像が見つかりませんでした")
+        return None
+    
+    def _is_image(self, attachment):
+        """添付ファイルが画像かどうかを判定"""
+        return (
+            (attachment.content_type and attachment.content_type.startswith('image')) or
+            attachment.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))
+        )
+
 class CountryBasedWelcome(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -28,6 +140,21 @@ class CountryBasedWelcome(commands.Cog):
         self.load_all_configs()
         logger.info(f"ウェルカムチャンネル設定: {self.welcome_channels}")
         self.cv2_sender = CV2MessageSender(bot)
+        # 参加キューの初期化
+        self.join_queue = UserJoinQueue(bot)
+        # 定期的にキューを処理するタスクを開始
+        self.queue_task = bot.loop.create_task(self._process_queue_periodically())
+        logger.info("参加キューシステムを初期化しました")
+
+    async def _process_queue_periodically(self):
+        """定期的にキューを処理"""
+        logger.info("参加キュー処理タスクを開始しました")
+        while not self.bot.is_closed():
+            try:
+                await self.join_queue.process_queue()
+            except Exception as e:
+                logger.error(f"キュー処理中にエラー: {e}\n{traceback.format_exc()}")
+            await asyncio.sleep(1)  # 1秒ごとに処理
 
     def save_config(self, guild_id, channel_id):
         logger.info(f"設定保存: ギルドID={guild_id}, チャンネルID={channel_id}")
@@ -119,11 +246,11 @@ class CountryBasedWelcome(commands.Cog):
         await ctx.send(f"ウェルカムチャンネルは{channel.mention}に設定されました。")
         logger.info(f"ウェルカムチャンネル設定完了: {channel.name}({channel.id})")
         
-    @welcome.command(name="test_welcom_message")
+    @welcome.command(name="test_welcome_message")
     @is_guild()
     @is_owner()
     @log_commands()
-    async def test_welcom_message(self, ctx):
+    async def test_welcome_message(self, ctx):
         logger.info(f"新メンバー参加イベント: {ctx.author.display_name}({ctx.author.id}) がギルド {ctx.guild.name}({ctx.guild.id}) に参加")
         # ユーザーの表示名とグローバル名（バイオは取得不可）
         name = ctx.author.display_name
@@ -134,11 +261,13 @@ class CountryBasedWelcome(commands.Cog):
         channel_id = self.load_config(ctx.guild.id)
         if not channel_id:
             logger.warning(f"ギルド {ctx.guild.id} のウェルカムチャンネルが設定されていません")
+            await ctx.send("ウェルカムチャンネルが設定されていません。`/welcome set_channel`で設定してください。")
             return
 
         channel = self.bot.get_channel(channel_id)
         if not channel:
             logger.error(f"設定されたチャンネル(ID:{channel_id})が見つかりません")
+            await ctx.send("設定されたチャンネルが見つかりません。チャンネルが削除された可能性があります。")
             return
         
         logger.info(f"ウェルカムチャンネルが見つかりました: {channel.name}({channel_id})")
@@ -153,41 +282,9 @@ class CountryBasedWelcome(commands.Cog):
             "🗨️ ホロライブの話や好きなメンバーについては <#1092138493582520355> で気軽にどうぞ！"
         )
 
-        # 画像の取得処理
-        image_data = None
-        image_channel_id = 1373853775235649639
-        image_channel = self.bot.get_channel(image_channel_id)
-        if image_channel:
-            try:
-                async for msg in image_channel.history(limit=20):
-                    # 「userNameしか書かれていない」かどうか判定
-                    msg_content = (msg.content or '').strip()
-                    if (msg_content == ctx.author.name) and msg.attachments:
-                        for att in msg.attachments:
-                            is_image = (
-                                (att.content_type and att.content_type.startswith('image')) or
-                                att.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))
-                            )
-                            if is_image:
-                                image_data = await att.read()
-                                logger.info(f"userName一致＋画像 {att.filename} を取得")
-                                break
-                    if image_data:
-                        break
-            except Exception as e:
-                logger.warning(f"画像取得時にエラー: {e}")
-
-        # CV2形式のウェルカムメッセージを送信
-        try:
-            logger.info(f"{channel.name} にCV2形式のウェルカムメッセージを送信します")
-            await self.cv2_sender.send_welcome_message(
-                channel_id=channel_id,
-                member_mention=ctx.author.mention,
-                welcome_text=welcome_message,
-                image_data=image_data
-            )
-        except Exception as e:
-            logger.error(f"{channel.name} へのウェルカムメッセージ送信に失敗: {e}\n{traceback.format_exc()}")
+        # キューに追加して待機メッセージを表示
+        await self.join_queue.add_user(ctx.author, channel_id, welcome_message)
+        await ctx.send(f"テスト: {ctx.author.mention} のウェルカムメッセージを3秒後に {channel.mention} に送信します...")
     
     @welcome.command(name="test_cv2_welcome")
     @is_guild()
@@ -224,43 +321,9 @@ class CountryBasedWelcome(commands.Cog):
             "━━━━━━━━━━━━━\n"
         )
 
-        # 画像取得処理
-        image_data = None
-        image_channel_id = 1373853775235649639
-        image_channel = self.bot.get_channel(image_channel_id)
-        if image_channel:
-            try:
-                async for msg in image_channel.history(limit=20):
-                    # 「userNameしか書かれていない」かどうか判定
-                    msg_content = (msg.content or '').strip()
-                    if (msg_content == ctx.author.name) and msg.attachments:
-                        for att in msg.attachments:
-                            is_image = (
-                                (att.content_type and att.content_type.startswith('image')) or
-                                att.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))
-                            )
-                            if is_image:
-                                image_data = await att.read()
-                                logger.info(f"userName一致＋画像 {att.filename} を取得")
-                                break
-                    if image_data:
-                        break
-            except Exception as e:
-                logger.warning(f"画像取得時にエラー: {e}")
-
-        # CV2形式のメッセージを送信
-        await ctx.send(f"CV2形式のウェルカムメッセージを{channel.mention}に送信します...")
-        result = await self.cv2_sender.send_welcome_message(
-            channel_id=channel_id,
-            member_mention=ctx.author.mention,
-            welcome_text=welcome_message,
-            image_data=image_data
-        )
-        
-        if result:
-            await ctx.send("CV2形式のウェルカムメッセージを送信しました。")
-        else:
-            await ctx.send("CV2形式のウェルカムメッセージの送信に失敗しました。ログを確認してください。")
+        # キューに追加して待機メッセージを表示
+        await self.join_queue.add_user(ctx.author, channel_id, welcome_message)
+        await ctx.send(f"テスト: CV2形式のウェルカムメッセージを3秒後に {channel.mention} に送信します...")
     
     @welcome.command(name="cv2")
     @is_guild()
@@ -291,17 +354,9 @@ class CountryBasedWelcome(commands.Cog):
             "🗨️ ホロライブの話や好きなメンバーについては <#1092138493582520355> で気軽にどうぞ！"
         )
 
-        # CV2形式のメッセージを送信
-        result = await self.cv2_sender.send_welcome_message(
-            channel_id=channel_id,
-            member_mention=ctx.author.mention,
-            welcome_text=welcome_message
-        )
-        
-        if result:
-            await ctx.send(f"CV2形式のウェルカムメッセージを {channel.mention} に送信しました。")
-        else:
-            await ctx.send("CV2形式のウェルカムメッセージの送信に失敗しました。")
+        # キューに追加
+        await self.join_queue.add_user(ctx.author, channel_id, welcome_message)
+        await ctx.send(f"テスト: シンプルなCV2形式のウェルカムメッセージを3秒後に {channel.mention} に送信します...")
             
     @welcome.command(name="cv2_file")
     @is_guild()
@@ -449,41 +504,9 @@ class CountryBasedWelcome(commands.Cog):
             "🗨️ ホロライブの話や好きなメンバーについては <#1092138493582520355> で気軽にどうぞ！"
         )
 
-        # 画像の取得処理
-        image_data = None
-        image_channel_id = 1373853775235649639
-        image_channel = self.bot.get_channel(image_channel_id)
-        if image_channel:
-            try:
-                async for msg in image_channel.history(limit=20):
-                    # 「userNameしか書かれていない」かどうか判定
-                    msg_content = (msg.content or '').strip()
-                    if (msg_content == member.name) and msg.attachments:
-                        for att in msg.attachments:
-                            is_image = (
-                                (att.content_type and att.content_type.startswith('image')) or
-                                att.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))
-                            )
-                            if is_image:
-                                image_data = await att.read()
-                                logger.info(f"userName一致＋画像 {att.filename} を取得")
-                                break
-                    if image_data:
-                        break
-            except Exception as e:
-                logger.warning(f"画像取得時にエラー: {e}")
-
-        # CV2形式のウェルカムメッセージを送信
-        try:
-            logger.info(f"{channel.name} にCV2形式のウェルカムメッセージを送信します")
-            await self.cv2_sender.send_welcome_message(
-                channel_id=channel_id,
-                member_mention=member.mention,
-                welcome_text=welcome_message,
-                image_data=image_data
-            )
-        except Exception as e:
-            logger.error(f"{channel.name} へのウェルカムメッセージ送信に失敗: {e}\n{traceback.format_exc()}")
+        # キューにユーザーを追加（3秒後に処理される）
+        await self.join_queue.add_user(member, channel_id, welcome_message)
+        logger.info(f"ユーザー {member.name}({member.id}) をウェルカムキューに追加しました")
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction):
@@ -495,6 +518,12 @@ class CountryBasedWelcome(commands.Cog):
         if custom_id.startswith("welcome_"):
             logger.info(f"ウェルカムボタン押下: {custom_id}, ユーザー={interaction.user.display_name}({interaction.user.id})")
             await self.cv2_sender.handle_welcome_button(interaction)
+
+    def cog_unload(self):
+        """Cogがアンロードされる際にタスクをキャンセル"""
+        if hasattr(self, 'queue_task') and self.queue_task:
+            self.queue_task.cancel()
+            logger.info("参加キュー処理タスクを停止しました")
 
 # --- 多言語案内ボタンViewクラス ---
 class WelcomeLanguageView(discord.ui.View):
@@ -1094,10 +1123,17 @@ class CV2MessageSender:
         except Exception as e:
             logger.error(f"CV2インタラクション応答中にエラー: {e}\n{traceback.format_exc()}")
             
-    async def __del__(self):
+    def __del__(self):
         # クライアントのクローズ処理
+        # 非同期操作はデストラクタで直接実行できないため、ログだけ出しておく
+        if hasattr(self, 'client'):
+            logger.info("CV2MessageSender instance is being destroyed, but client.aclose() cannot be awaited in __del__")
+            
+    async def close(self):
+        """リソースを明示的に解放するための非同期メソッド"""
         if hasattr(self, 'client'):
             await self.client.aclose()
+            logger.info("CV2MessageSender client closed successfully")
 
 async def setup(bot):
     logger.info("CountryBasedWelcome Cogをセットアップ中...")
