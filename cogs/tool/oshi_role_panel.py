@@ -388,6 +388,35 @@ class OshiRolePanel(commands.Cog):
             await self.cv2_sender.handle_role_button(interaction)
         elif custom_id in ["oshi_english", "oshi_korean", "oshi_chinese", "oshi_japanese"]:
             await self.cv2_sender.handle_oshi_language_button(interaction)
+        elif custom_id == "close_analytics":
+            try:
+                # メッセージを削除
+                await interaction.response.defer()
+                if hasattr(interaction, "message") and interaction.message:
+                    await interaction.message.delete()
+                    logger.info(f"アナリティクスメッセージを削除しました: ユーザー={interaction.user.name}")
+            except Exception as e:
+                logger.error(f"アナリティクスメッセージの削除中にエラー: {e}")
+                await interaction.followup.send("メッセージを削除できませんでした。", ephemeral=True)
+        elif custom_id.startswith("analytics_switch:"):
+            # アナリティクス切り替え処理
+            try:
+                # custom_id から パラメータを取得
+                parts = custom_id.split(":")[1:]
+                if len(parts) >= 3:
+                    switch_type = parts[0]
+                    switch_count = int(parts[1])
+                    switch_sort_by = parts[2]
+                    
+                    await interaction.response.defer(ephemeral=True)
+                    await self._show_analytics_cv2(interaction, switch_type, switch_count, switch_sort_by)
+                    logger.info(f"アナリティクス切り替え: {switch_type}, ソート={switch_sort_by}, ユーザー={interaction.user.name}")
+                else:
+                    logger.error(f"不正なアナリティクス切り替えパラメータ: {custom_id}")
+                    await interaction.response.send_message("パラメータエラー。もう一度試してください。", ephemeral=True)
+            except Exception as e:
+                logger.error(f"アナリティクス切り替え中にエラー: {e}")
+                await interaction.response.send_message(f"エラーが発生しました: {e}", ephemeral=True)
 
     async def scan_roles_for_icons(self, guild):
         """サーバー内のロールをスキャンして、「m_」で始まる絵文字を関連付ける"""
@@ -695,14 +724,21 @@ class OshiRolePanel(commands.Cog):
     @app_commands.command(name="analytics", description="ロールアナリティクスデータを表示します")
     @app_commands.describe(
         type="表示するデータの種類",
-        count="表示するデータの数"
+        count="表示するデータの数",
+        sort_by="ソート順（人気/非アクティブロールの場合のみ有効）"
     )
     @app_commands.choices(type=[
+        app_commands.Choice(name="サマリー", value="summary"),
         app_commands.Choice(name="人気ロール", value="popular"),
         app_commands.Choice(name="非アクティブロール", value="inactive"),
-        app_commands.Choice(name="アクティブユーザー", value="users")
+        app_commands.Choice(name="アクティブユーザー", value="users"),
+        app_commands.Choice(name="最近のアクティビティ", value="recent")
     ])
-    async def show_analytics(self, interaction: discord.Interaction, type: str = "popular", count: int = 10):
+    @app_commands.choices(sort_by=[
+        app_commands.Choice(name="選択回数順", value="count"),
+        app_commands.Choice(name="メンバー数順", value="members")
+    ])
+    async def show_analytics(self, interaction: discord.Interaction, type: str = "popular", count: int = 10, sort_by: str = "count"):
         """ロールアナリティクスデータを表示します"""
         # 管理者権限の確認
         if not interaction.user.guild_permissions.administrator:
@@ -721,12 +757,14 @@ class OshiRolePanel(commands.Cog):
         await interaction.response.defer(thinking=True)
         
         # CV2形式でアナリティクスデータを表示
-        await self._show_analytics_cv2(interaction, type, count)
+        await self._show_analytics_cv2(interaction, type, count, sort_by)
         
-    async def _show_analytics_cv2(self, interaction: discord.Interaction, type: str, count: int):
+    async def _show_analytics_cv2(self, interaction: discord.Interaction, type: str, count: int, sort_by: str = "count"):
         """
 CV2形式でアナリティクスデータを表示する
         """
+        # ソート方法に応じたテキストを設定
+        sort_text = "選択回数順" if sort_by == "count" else "メンバー数順"
         title = "推しロールアナリティクス"
         description = ""
         
@@ -909,13 +947,19 @@ CV2形式でアナリティクスデータを表示する
             
             # アナリティクスタイプに応じたデータを表示
             if type == "popular":
+                # sort_byパラメータに応じてソート関数を定義
+                def get_sort_key(x):
+                    if sort_by == "members":
+                        return x[1].get("current_members", 0)
+                    else:  # sort_by == "count"
+                        return x[1].get("count", 0)
                 top_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                                  key=lambda x: x[1].get("count", 0), 
-                                  reverse=True)[:count]
+                                   key=get_sort_key, 
+                                   reverse=True)[:count]
                 
                 container_components.append({
                     "type": 10,  # TEXT_DISPLAY
-                    "content": f"## 人気ロールランキング (トップ{len(top_roles)})"
+                    "content": f"## 人気ロールランキング (トップ{len(top_roles)}) - {sort_text}"
                 })
                 
                 for i, (role_name, stats) in enumerate(top_roles):
@@ -935,12 +979,19 @@ CV2形式でアナリティクスデータを表示する
                         })
             
             elif type == "inactive":
+                # sort_byパラメータに応じてソート関数を定義
+                def get_sort_key(x):
+                    if sort_by == "members":
+                        return x[1].get("current_members", 0)
+                    else:  # sort_by == "count"
+                        return x[1].get("count", 0)
+                        
                 bottom_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                                     key=lambda x: x[1].get("count", 0))[:count]
+                                      key=get_sort_key)[:count]
                 
                 container_components.append({
                     "type": 10,  # TEXT_DISPLAY
-                    "content": f"## 非アクティブロールランキング (下位{len(bottom_roles)})"
+                    "content": f"## 非アクティブロールランキング (下位{len(bottom_roles)}) - {sort_text}"
                 })
                 
                 for i, (role_name, stats) in enumerate(bottom_roles):
@@ -1031,6 +1082,70 @@ CV2形式でアナリティクスデータを表示する
                 "content": f"*最終更新: {last_updated}*"
             })
             
+            # カテゴリー切り替えボタンを追加
+            category_buttons = [
+                {
+                    "type": 2,  # BUTTON
+                    "style": 2,  # SECONDARY
+                    "label": "サマリー",
+                    "custom_id": f"analytics_switch:summary:{count}:{sort_by}"
+                },
+                {
+                    "type": 2,  # BUTTON
+                    "style": 2,  # SECONDARY
+                    "label": "人気ロール",
+                    "custom_id": f"analytics_switch:popular:{count}:{sort_by}"
+                },
+                {
+                    "type": 2,  # BUTTON
+                    "style": 2,  # SECONDARY
+                    "label": "非アクティブロール",
+                    "custom_id": f"analytics_switch:inactive:{count}:{sort_by}"
+                },
+                {
+                    "type": 2,  # BUTTON
+                    "style": 2,  # SECONDARY
+                    "label": "アクティブユーザー",
+                    "custom_id": f"analytics_switch:users:{count}:{sort_by}"
+                }
+            ]
+            
+            # 現在のタイプのボタンをハイライト
+            for button in category_buttons:
+                if ("サマリー" in button["label"] and type == "summary") or \
+                   ("人気ロール" in button["label"] and type == "popular") or \
+                   ("非アクティブロール" in button["label"] and type == "inactive") or \
+                   ("アクティブユーザー" in button["label"] and type == "users"):
+                    button["style"] = 1  # PRIMARY
+
+            # ソート切り替えボタン（人気と非アクティブロールのみ表示）
+            sort_row = None
+            if type in ["popular", "inactive"]:
+                sort_buttons = [
+                    {
+                        "type": 2,  # BUTTON
+                        "style": 2 if sort_by != "count" else 1,  # SECONDARY or PRIMARY
+                        "label": "選択回数順",
+                        "custom_id": f"analytics_switch:{type}:{count}:count"
+                    },
+                    {
+                        "type": 2,  # BUTTON
+                        "style": 2 if sort_by != "members" else 1,  # SECONDARY or PRIMARY
+                        "label": "メンバー数順",
+                        "custom_id": f"analytics_switch:{type}:{count}:members"
+                    }
+                ]
+                sort_row = {
+                    "type": 1,  # ACTION_ROW
+                    "components": sort_buttons
+                }
+            
+            # カテゴリーボタン行
+            category_row = {
+                "type": 1,  # ACTION_ROW
+                "components": category_buttons
+            }
+            
             # CV2コンテナを作成
             container = {
                 "type": 17,  # CONTAINER
@@ -1040,6 +1155,11 @@ CV2形式でアナリティクスデータを表示する
             
             # ペイロードにコンテナを追加
             components = [container]
+            
+            # ボタン行を追加
+            if sort_row:
+                components.append(sort_row)
+            components.append(category_row)
             
             # httpxを使用して直接APIにリクエストを送信
             url = f"https://discord.com/api/v10/webhooks/{self.bot.user.id}/{interaction.token}/messages/@original"
