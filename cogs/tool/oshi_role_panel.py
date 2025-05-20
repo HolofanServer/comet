@@ -178,47 +178,76 @@ class OshiRolePanel(commands.Cog):
     @oshirole.command(name="scanroles")
     @commands.has_permissions(administrator=True)
     async def scan_all_roles(self, ctx):
-        """全てのロールを走査して、各ロールの絵文字を取得し、初期人数も記録する"""
+        """推しロールを走査して、各ロールの絵文字を取得し、初期人数も記録する"""
         guild = ctx.guild
-        roles = guild.roles
+        
+        # oshi_categories に含まれるロールIDのセットを作成
+        oshi_role_ids = set()
+        oshi_role_names = {}
+        
+        logger.info(f"推しロールカテゴリ数: {len(self.cv2_sender.oshi_categories)}個")
+        for category in self.cv2_sender.oshi_categories:
+            category_name = category.get("name", "不明")
+            roles_count = len(category.get("roles", {}))
+            logger.info(f"カテゴリ '{category_name}' にロール {roles_count}個")
+            
+            for role_name, role_id in category.get("roles", {}).items():
+                oshi_role_ids.add(role_id)
+                oshi_role_names[role_id] = role_name
+                logger.debug(f"推しロールID登録: {role_name} -> {role_id}")
+        
+        logger.info(f"対象の推しロール数: {len(oshi_role_ids)}個")
         
         role_emoji_mapping = {}
         initial_counts = {}
         role_counts = {}
+        scanned_roles = 0
         
-        for role in roles:
-            emoji_match = re.search(r'([\u00a9\u00ae\u2000-\u3300\ud83c\ud000-\ud83e\udfff\ufe0f]+)', role.name)
-            if emoji_match:
-                emoji = emoji_match.group(1)
-                if emoji.startswith('<') and emoji.endswith('>'):
-                    emoji_parts = emoji.strip('<>').split(':')
-                    if len(emoji_parts) == 3:
-                        role_emoji_mapping[str(role.id)] = {
-                            "name": role.name,
-                            "emoji_id": emoji_parts[2],
-                            "emoji_name": emoji_parts[1],
-                            "animated": emoji_parts[0] == "a"
-                        }
+        # 全ロールから推しロールだけをフィルタリング
+        for role in guild.roles:
+            if role.id in oshi_role_ids:
+                scanned_roles += 1
+                role_name = oshi_role_names[role.id]
+                
+                emoji_match = re.search(r'([\u00a9\u00ae\u2000-\u3300\ud83c\ud000-\ud83e\udfff\ufe0f]+)', role.name)
+                if emoji_match:
+                    emoji = emoji_match.group(1)
+                    if emoji.startswith('<') and emoji.endswith('>'):
+                        emoji_parts = emoji.strip('<>').split(':')
+                        if len(emoji_parts) == 3:
+                            role_emoji_mapping[str(role.id)] = {
+                                "name": role.name,
+                                "emoji_id": emoji_parts[2],
+                                "emoji_name": emoji_parts[1],
+                                "animated": emoji_parts[0] == "a"
+                            }
+                        else:
+                            role_emoji_mapping[str(role.id)] = {
+                                "name": role.name
+                            }
                     else:
                         role_emoji_mapping[str(role.id)] = {
-                            "name": role.name
+                            "name": role.name,
+                            "unicode_emoji": emoji
                         }
-                else:
-                    role_emoji_mapping[str(role.id)] = {
-                        "name": role.name,
-                        "unicode_emoji": emoji
-                    }
                 
                 member_count = len(role.members)
-                role_counts[role.name] = member_count
+                role_counts[role_name] = member_count
                 
                 if "initial_counts" not in self.analytics_data:
                     self.analytics_data["initial_counts"] = {}
                 
-                if role.name not in self.analytics_data["initial_counts"]:
-                    initial_counts[role.name] = member_count
+                if role_name not in self.analytics_data["initial_counts"]:
+                    initial_counts[role_name] = member_count
+                    
+                logger.info(f"推しロール '{role_name}' をスキャン: メンバー数 {member_count}人")
                 
-        self.role_emoji_mapping = role_emoji_mapping
+        # 既存のロール絵文字マッピングを上書きしないように、新しいマッピングだけを追加する
+        for role_id, emoji_data in role_emoji_mapping.items():
+            if role_id not in self.role_emoji_mapping:
+                self.role_emoji_mapping[role_id] = emoji_data
+                logger.info(f"新しいロール絵文字マッピングを追加: {role_id} -> {emoji_data}")
+        
         self.save_role_emoji_mapping()
         
         if initial_counts:
@@ -227,6 +256,23 @@ class OshiRolePanel(commands.Cog):
             self.analytics_data["initial_counts"].update(initial_counts)
             
         self.analytics_data["role_counts"] = role_counts
+        
+        # ロール統計データを更新して初期メンバー数と現在のメンバー数を追加する
+        for role_name, member_count in role_counts.items():
+            initial_count = initial_counts.get(role_name, member_count)
+            
+            if role_name not in self.analytics_data["role_stats"]:
+                self.analytics_data["role_stats"][role_name] = {
+                    "count": 0,
+                    "last_selected": None,
+                    "initial_members": initial_count,
+                    "current_members": member_count
+                }
+            else:
+                # 既存のロール統計に初期メンバー数と現在のメンバー数を追加
+                self.analytics_data["role_stats"][role_name]["initial_members"] = initial_count
+                self.analytics_data["role_stats"][role_name]["current_members"] = member_count
+        
         self.save_analytics_data()
         
         await ctx.send(f"{len(role_emoji_mapping)}個のロールと絵文字のマッピング、および各ロールの現在の所持人数を保存しました。", ephemeral=True)
@@ -597,9 +643,16 @@ class OshiRolePanel(commands.Cog):
             role_name = role.get("name", "不明")
             
             if role_name not in self.analytics_data["role_stats"]:
+                # 初期メンバー数を取得（存在しない場合は0）
+                initial_count = self.analytics_data.get("initial_counts", {}).get(role_name, 0)
+                # 現在のメンバー数を取得（存在しない場合は初期カウント）
+                current_count = self.analytics_data.get("role_counts", {}).get(role_name, initial_count)
+                
                 self.analytics_data["role_stats"][role_name] = {
                     "count": 0,
-                    "last_selected": None
+                    "last_selected": None,
+                    "initial_members": initial_count,
+                    "current_members": current_count
                 }
             
             if event_type == "add":
@@ -610,8 +663,14 @@ class OshiRolePanel(commands.Cog):
             if role_name in self.analytics_data["role_counts"]:
                 if event_type == "add":
                     self.analytics_data["role_counts"][role_name] += 1
+                    # 現在のメンバー数も更新
+                    if "current_members" in self.analytics_data["role_stats"][role_name]:
+                        self.analytics_data["role_stats"][role_name]["current_members"] += 1
                 elif event_type == "remove" and self.analytics_data["role_counts"][role_name] > 0:
                     self.analytics_data["role_counts"][role_name] -= 1
+                    # 現在のメンバー数も更新
+                    if "current_members" in self.analytics_data["role_stats"][role_name] and self.analytics_data["role_stats"][role_name]["current_members"] > 0:
+                        self.analytics_data["role_stats"][role_name]["current_members"] -= 1
         
         user_id_str = str(user_id)
         if user_id_str not in self.analytics_data["user_stats"]:
@@ -633,153 +692,82 @@ class OshiRolePanel(commands.Cog):
         if len(self.analytics_data["role_assignments"]) % 10 == 0:
             self.save_analytics_data()
     
-    @oshirole.command(name="analytics", description="ロールアナリティクスデータを表示します")
+    @app_commands.command(name="analytics", description="ロールアナリティクスデータを表示します")
     @app_commands.describe(
         type="表示するデータの種類",
-        count="表示するアイテム数",
-        cv2="CV2形式で表示する（推しロールパネルと同じUI）"
+        count="表示するデータの数"
     )
     @app_commands.choices(type=[
-        app_commands.Choice(name="サマリー", value="summary"),
         app_commands.Choice(name="人気ロール", value="popular"),
-        app_commands.Choice(name="最近のアクティビティ", value="recent"),
-        app_commands.Choice(name="ユーザーアクティビティ", value="users"),
-        app_commands.Choice(name="非アクティブロール", value="inactive")
+        app_commands.Choice(name="非アクティブロール", value="inactive"),
+        app_commands.Choice(name="アクティブユーザー", value="users")
     ])
-    async def show_analytics(self, ctx_or_interaction, type: str = "summary", count: int = 5, cv2: bool = False):
+    async def show_analytics(self, interaction: discord.Interaction, type: str = "popular", count: int = 10):
         """ロールアナリティクスデータを表示します"""
-        is_interaction = isinstance(ctx_or_interaction, discord.Interaction)
-        
-        if is_interaction:
-            user = ctx_or_interaction.user
-            has_admin = user.guild_permissions.administrator
-        else:
-            user = ctx_or_interaction.author
-            has_admin = user.guild_permissions.administrator
-            
-        if not has_admin:
-            if is_interaction:
-                await ctx_or_interaction.response.send_message("このコマンドは管理者のみ使用できます。", ephemeral=True)
-            else:
-                await ctx_or_interaction.send("このコマンドは管理者のみ使用できます。")
+        # 管理者権限の確認
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("このコマンドは管理者のみ使用できます。", ephemeral=True)
             return
         
+        # データが存在するか確認
         if not self.analytics_data.get("role_assignments") and not self.analytics_data.get("role_stats"):
-            if is_interaction:
-                await ctx_or_interaction.response.send_message("アナリティクスデータがまだ収集されていません。", ephemeral=True)
-            else:
-                await ctx_or_interaction.send("アナリティクスデータがまだ収集されていません。")
+            await interaction.response.send_message("アナリティクスデータがまだ収集されていません。", ephemeral=True)
             return
             
+        # 表示件数を制限
         count = max(1, min(count, 25))
         
-        if cv2:
-            if is_interaction:
-                await ctx_or_interaction.response.defer(thinking=True, ephemeral=True)
-                await self._show_analytics_cv2(ctx_or_interaction, type, count)
-            else:
-                await ctx_or_interaction.send("CV2形式の表示はスラッシュコマンドでのみサポートされています。")
-            return
+        # 応答を遅延する（重要！）
+        await interaction.response.defer(thinking=True)
         
-        embed = discord.Embed(title="推しロールアナリティクス", color=discord.Color.blue())
-        embed.set_footer(text=f"最終更新: {self.analytics_data.get('last_updated', '不明')}")
+        # CV2形式でアナリティクスデータを表示
+        await self._show_analytics_cv2(interaction, type, count)
         
-        if type == "summary":
-            total_assignments = len(self.analytics_data.get("role_assignments", []))
-            total_roles = len(self.analytics_data.get("role_stats", {}))
-            total_users = len(self.analytics_data.get("user_stats", {}))
-            
-            embed.description = "**全体サマリー**\n"
-            embed.add_field(name="総ロール変更回数", value=str(total_assignments), inline=True)
-            embed.add_field(name="アクティブロール数", value=str(total_roles), inline=True)
-            embed.add_field(name="アクティブユーザー数", value=str(total_users), inline=True)
-            
-            top_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                               key=lambda x: x[1].get("count", 0), 
-                               reverse=True)[:3]
-            
-            if top_roles:
-                embed.add_field(name="人気トップ3ロール", value="\n".join(
-                    [f"**{i+1}.** {role_name}: {stats.get('count', 0)}回" 
-                     for i, (role_name, stats) in enumerate(top_roles)]
-                ), inline=False)
-            
-            recent_events = self.analytics_data.get("role_assignments", [])[-3:]
-            recent_events.reverse()
-            
-            if recent_events:
-                embed.add_field(name="最近のアクティビティ", value="\n".join(
-                    [f"**{event.get('timestamp', '不明')}**: {event.get('user_name', '不明')} が {event.get('event_type', '不明')} **{', '.join([r.get('name', '不明') for r in event.get('roles', [])])}**" 
-                     for event in recent_events]
-                ), inline=False)
-                
-        elif type == "popular":
-            top_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                               key=lambda x: x[1].get("count", 0), 
-                               reverse=True)[:count]
-            
-            embed.description = f"**人気ロールランキング (トップ{len(top_roles)})**\n"
-            for i, (role_name, stats) in enumerate(top_roles):
-                embed.add_field(
-                    name=f"{i+1}. {role_name}", 
-                    value=f"選択回数: {stats.get('count', 0)}回\n最終選択: {stats.get('last_selected', '不明')}", 
-                    inline=True
-                )
-                
-        elif type == "recent":
-            recent_events = self.analytics_data.get("role_assignments", [])[-count:]
-            recent_events.reverse()
-            
-            embed.description = f"**最近の{len(recent_events)}件のアクティビティ**\n"
-            for event in recent_events:
-                event_time = event.get("timestamp", "不明")
-                user_name = event.get("user_name", "不明")
-                event_type = event.get("event_type", "不明")
-                roles_text = ", ".join([r.get("name", "不明") for r in event.get("roles", [])])
-                
-                embed.add_field(
-                    name=f"{event_time}", 
-                    value=f"**{user_name}** が {event_type} **{roles_text}**", 
-                    inline=False
-                )
-                
-        elif type == "users":
-            top_users = sorted(self.analytics_data.get("user_stats", {}).items(), 
-                               key=lambda x: x[1].get("total_changes", 0), 
-                               reverse=True)[:count]
-            
-            embed.description = f"**アクティブユーザーランキング (トップ{len(top_users)})**\n"
-            for i, (user_id, stats) in enumerate(top_users):
-                user_name = stats.get("name", "不明")
-                embed.add_field(
-                    name=f"{i+1}. {user_name}", 
-                    value=f"変更回数: {stats.get('total_changes', 0)}回\n最終変更: {stats.get('last_change', '不明')}", 
-                    inline=True
-                )
-                
-        elif type == "inactive":
-            bottom_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                                  key=lambda x: x[1].get("count", 0))[:count]
-            
-            embed.description = f"**非アクティブロールランキング (下位{len(bottom_roles)})**\n"
-            for i, (role_name, stats) in enumerate(bottom_roles):
-                embed.add_field(
-                    name=f"{i+1}. {role_name}", 
-                    value=f"選択回数: {stats.get('count', 0)}回\n最終選択: {stats.get('last_selected', '不明')}", 
-                    inline=True
-                )
-        
-        if isinstance(ctx_or_interaction, discord.Interaction):
-            await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
-        else:
-            await ctx_or_interaction.send(embed=embed)
-        
-    async def _show_analytics_cv2(self, ctx_or_interaction, type: str, count: int):
+    async def _show_analytics_cv2(self, interaction: discord.Interaction, type: str, count: int):
         """
 CV2形式でアナリティクスデータを表示する
         """
         title = "推しロールアナリティクス"
         description = ""
+        
+        if type == "popular":
+            top_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
+                              key=lambda x: x[1].get("count", 0), 
+                              reverse=True)[:count]
+            
+            description = f"**人気ロールランキング (トップ{len(top_roles)})**\n\n"
+            
+            for i, (role_name, stats) in enumerate(top_roles):
+                count_value = stats.get('count', 0)
+                current_members = stats.get('current_members', 0)
+                description += f"**{i+1}.** {role_name}\n"
+                description += f"　　選択回数: {count_value}回 | 現在のメンバー数: {current_members}人\n\n"
+                
+        elif type == "inactive":
+            bottom_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
+                                 key=lambda x: x[1].get("count", 0))[:count]
+            
+            description = f"**非アクティブロールランキング (下位{len(bottom_roles)})**\n\n"
+            
+            for i, (role_name, stats) in enumerate(bottom_roles):
+                count_value = stats.get('count', 0)
+                current_members = stats.get('current_members', 0)
+                description += f"**{i+1}.** {role_name}\n"
+                description += f"　　選択回数: {count_value}回 | 現在のメンバー数: {current_members}人\n\n"
+                
+        elif type == "users":
+            top_users = sorted(self.analytics_data.get("user_stats", {}).items(), 
+                              key=lambda x: x[1].get("total_changes", 0), 
+                              reverse=True)[:count]
+            
+            description = f"**アクティブユーザーランキング (トップ{len(top_users)})**\n\n"
+            
+            for i, (user_id, stats) in enumerate(top_users):
+                user_name = stats.get("name", "不明")
+                total_changes = stats.get("total_changes", 0)
+                last_change = stats.get("last_change", "不明")
+                description += f"**{i+1}.** {user_name}\n"
+                description += f"　　変更回数: {total_changes}回 | 最終変更: {last_change}\n\n"
         
         if type == "summary":
             title = "推しロールアナリティクス - サマリー"
@@ -885,30 +873,212 @@ CV2形式でアナリティクスデータを表示する
                 description += f"**選択回数**: {stats.get('count', 0)}回\n"
                 description += f"**最終選択**: {stats.get('last_selected', '不明')}\n\n"
         
-        if isinstance(ctx_or_interaction, discord.Interaction):
-            ctx_or_interaction.channel.id
+        if isinstance(interaction, discord.Interaction):
+            # CV2形式のコンポーネントを作成
+            rainbow_colors = [
+                0xE74C3C,  # 赤
+                0xFFA726,  # オレンジ
+                0xF1C40F,  # 黄色
+                0x57F287,  # 緑
+                0x3498DB,  # 青
+                0x7289DA,  # ブルーパープル
+                0x9B59B6,  # 紫
+            ]
+            accent_color = random.choice(rainbow_colors)
             
-            text_content = f"# {title}\n\n{description}\n\n*最終更新: {self.analytics_data.get('last_updated', '不明')}*"
+            # APIリクエスト用のコンポーネント用意
+            container_components = []
             
-            await ctx_or_interaction.followup.send(
-                content=text_content,
-                ephemeral=True,
-                components=[
+            # タイトルと説明を追加
+            container_components.append({
+                "type": 10,  # TEXT_DISPLAY
+                "content": f"# {title}"
+            })
+            
+            container_components.append({
+                "type": 10,  # TEXT_DISPLAY
+                "content": "推しロールのアナリティクスデータです。"
+            })
+            
+            # 区切り線を追加
+            container_components.append({
+                "type": 14,  # SEPARATOR
+                "divider": True,
+                "spacing": 1
+            })
+            
+            # アナリティクスタイプに応じたデータを表示
+            if type == "popular":
+                top_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
+                                  key=lambda x: x[1].get("count", 0), 
+                                  reverse=True)[:count]
+                
+                container_components.append({
+                    "type": 10,  # TEXT_DISPLAY
+                    "content": f"## 人気ロールランキング (トップ{len(top_roles)})"
+                })
+                
+                for i, (role_name, stats) in enumerate(top_roles):
+                    count_value = stats.get('count', 0)
+                    current_members = stats.get('current_members', 0)
+                    container_components.append({
+                        "type": 10,  # TEXT_DISPLAY
+                        "content": f"{i+1}. {role_name}\n**選択回数**: {count_value}回 | **現在のメンバー数**: {current_members}人"
+                    })
+                    
+                    # 各エントリ間に適切なスペースを設定
+                    if i < len(top_roles) - 1:
+                        container_components.append({
+                            "type": 14,  # SEPARATOR
+                            "divider": False,
+                            "spacing": 1
+                        })
+            
+            elif type == "inactive":
+                bottom_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
+                                     key=lambda x: x[1].get("count", 0))[:count]
+                
+                container_components.append({
+                    "type": 10,  # TEXT_DISPLAY
+                    "content": f"## 非アクティブロールランキング (下位{len(bottom_roles)})"
+                })
+                
+                for i, (role_name, stats) in enumerate(bottom_roles):
+                    count_value = stats.get('count', 0)
+                    current_members = stats.get('current_members', 0)
+                    container_components.append({
+                        "type": 10,  # TEXT_DISPLAY
+                        "content": f"{i+1}. {role_name}\n**選択回数**: {count_value}回 | **現在のメンバー数**: {current_members}人"
+                    })
+                    
+                    if i < len(bottom_roles) - 1:
+                        container_components.append({
+                            "type": 14,  # SEPARATOR
+                            "divider": False,
+                            "spacing": 1
+                        })
+            
+            elif type == "users":
+                top_users = sorted(self.analytics_data.get("user_stats", {}).items(), 
+                                  key=lambda x: x[1].get("total_changes", 0), 
+                                  reverse=True)[:count]
+                
+                container_components.append({
+                    "type": 10,  # TEXT_DISPLAY
+                    "content": f"## アクティブユーザーランキング (トップ{len(top_users)})"
+                })
+                
+                for i, (user_id, stats) in enumerate(top_users):
+                    user_name = stats.get("name", "不明")
+                    total_changes = stats.get("total_changes", 0)
+                    last_change = stats.get("last_change", "不明")
+                    container_components.append({
+                        "type": 10,  # TEXT_DISPLAY
+                        "content": f"{i+1}. {user_name}\n**変更回数**: {total_changes}回 | **最終変更**: {last_change}"
+                    })
+                    
+                    if i < len(top_users) - 1:
+                        container_components.append({
+                            "type": 14,  # SEPARATOR
+                            "divider": False,
+                            "spacing": 1
+                        })
+            
+            # ここにボタンを追加
+            container_components.append({
+                "type": 14,  # SEPARATOR
+                "divider": True,
+                "spacing": 2
+            })
+            
+            container_components.append({
+                "type": 1,  # ACTION_ROW
+                "components": [
                     {
-                        "type": 1,
-                        "components": [
-                            {
-                                "type": 2,
-                                "style": 2,
-                                "label": "閉じる",
-                                "custom_id": "close_analytics"
-                            }
-                        ]
+                        "type": 2,  # BUTTON
+                        "style": 2,  # SECONDARY
+                        "label": "閉じる",
+                        "custom_id": "close_analytics"
                     }
                 ]
-            )
+            })
+            
+            # 最終更新時間を整形して表示
+            last_updated = self.analytics_data.get('last_updated', '不明')
+            
+            # ISO形式の日付を日本語形式に整形
+            if last_updated != '不明' and 'T' in last_updated:
+                try:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
+                    # 日本時間に変換 (9時間追加)
+                    dt = dt.astimezone()
+                    formatted_date = dt.strftime('%Y年%m月%d日 %H:%M:%S')
+                    last_updated = formatted_date
+                except Exception as e:
+                    logger.error(f"日付変換エラー: {e}")
+            
+            # 区切り線
+            container_components.append({
+                "type": 14,  # SEPARATOR
+                "divider": True,
+                "spacing": 1
+            })
+            
+            # フッターを追加
+            container_components.append({
+                "type": 10,  # TEXT_DISPLAY
+                "content": f"*最終更新: {last_updated}*"
+            })
+            
+            # CV2コンテナを作成
+            container = {
+                "type": 17,  # CONTAINER
+                "accent_color": accent_color,
+                "components": container_components
+            }
+            
+            # ペイロードにコンテナを追加
+            components = [container]
+            
+            # httpxを使用して直接APIにリクエストを送信
+            url = f"https://discord.com/api/v10/webhooks/{self.bot.user.id}/{interaction.token}/messages/@original"
+            
+            headers = {
+                "Authorization": f"Bot {self.bot.http.token}",
+                "Content-Type": "application/json"
+            }
+            
+            # CV2フラグを含むペイロード
+            payload = {
+                "components": components,
+                "flags": 32768 | 64  # IS_COMPONENTS_V2 | EPHEMERAL
+            }
+            
+            try:
+                # 一時的なhttpx.AsyncClientを使用
+                async with httpx.AsyncClient() as client:
+                    response = await client.patch(url, json=payload, headers=headers)
+                    response.raise_for_status()
+                    logger.info(f"アナリティクスデータのCV2表示に成功: {type}")
+            except Exception as e:
+                logger.error(f"CV2形式での表示中にエラー発生: {e}")
+                # エラー時の代替手段を試みる
+                
+                # エラーハンドリング：よりシンプルな方法で再試行
+                try:
+                    # 簡素なメッセージで再試行
+                    simple_view = discord.ui.View()
+                    simple_view.add_item(discord.ui.Button(style=discord.ButtonStyle.secondary, label="閉じる", custom_id="close_analytics"))
+                    simple_message = f"# {title}\n\nアナリティクスデータを取得しました。\n詳細はコマンドを実行し直してご確認ください。"
+                    await interaction.followup.send(content=simple_message, ephemeral=True, view=simple_view)
+                    logger.info(f"アナリティクスデータのシンプル表示に成功: {type}")
+                except Exception as final_e:
+                    logger.error(f"最終的なフォールバックでもエラー発生: {final_e}")
+                    # 最終的なフォールバックとして、エラーメッセージだけを送信
+                    await interaction.followup.send("アナリティクスデータの表示中にエラーが発生しました。", ephemeral=True)
         else:
-            await ctx_or_interaction.send(f"# {title}\n\n{description}")
+            await interaction.channel.send(f"# {title}\n\n{description}")
         
 # --- CV2形式のメッセージ送信ユーティリティ ---
 class CV2MessageSender:
