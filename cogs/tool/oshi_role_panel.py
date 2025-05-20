@@ -545,7 +545,7 @@ class CV2MessageSender:
             {
                 "name": "JP 0期〜2期生",
                 "emoji": "🌟",
-                "description": "ときのそら、AZKi、ロボ子、さくらみこ、星街すいせい、白上フブキなど",
+                "description": "0期〜2期生の推しロールはこちら",
                 "value": "oshi_jp_0_2",
                 "roles": {
                     "そらとも🐻‍💿": 1092330136617107476,
@@ -568,7 +568,7 @@ class CV2MessageSender:
             {
                 "name": "JP Gamers〜3期生",
                 "emoji": "🎮",
-                "description": "白上フブキ、大神ミオ、猫又おかゆ、戌神ころね、不知火フレア、白銀ノエル、宝鐘マリン、兎田ぺこらなど",
+                "description": "ゲーマーズ〜3期生の推しロールはこちら",
                 "value": "oshi_jp_gamer_3",
                 "roles": {
                     "ミオファ🌲": 1092334904827719770,
@@ -584,7 +584,7 @@ class CV2MessageSender:
             {
                 "name": "JP 4期〜5期生",
                 "emoji": "✨",
-                "description": "天音かなた、角巻わため、常闇トワ、姫森ルーナ、雪花ラミィ、獅白ぼたんなど",
+                "description": "4期生〜5期生の推しロールはこちら",
                 "value": "oshi_jp_4_5",
                 "roles": {
                     "へい民💫": 1092345135444000869,
@@ -601,7 +601,7 @@ class CV2MessageSender:
             {
                 "name": "JP 秘密結社holoX",
                 "emoji": "🦊",
-                "description": "ラプラス・ダークネス、鷹嶺ルイ、博衣こより、風真いろは、沙花叉クロヱ",
+                "description": "holoXの推しロールはこちら",
                 "value": "oshi_jp_holox",
                 "roles": {
                     "ぷらすめいと🛸💜": 1092345928813400135,
@@ -612,9 +612,33 @@ class CV2MessageSender:
                 }
             },
             {
+                "name": "ReGLOSS",
+                "emoji": "🎭",
+                "description": "ReGLOSSの推しロールはこちら",
+                "value": "oshi_regloss",
+                "roles": {
+                    "読者🖋️": 1148152861830692894,
+                    "でん同士🐚": 1148152923260473384,
+                    "音の勢🎹✨": 1148152983234822216,
+                    "秘書見習い🌃": 1148153052705067028,
+                    "真っす組🐧⚡️": 1148153107407192084
+                }
+            },
+            {
+                "name": "その他",
+                "emoji": "👑",
+                "description": "スタッフやその他の特別なロール",
+                "value": "oshi_others",
+                "roles": {
+                    "YAGOO👨‍🎓": 1093018532519870534,
+                    "えーちゃん👓": 1093019394172522517,
+                    "春先のどか📝": 1093020217757671507
+                }
+            },
+            {
                 "name": "hololive EN",
                 "emoji": "🌎",
-                "description": "Myth、Council、Adventureのメンバー",
+                "description": "hololive ENの推しロールはこちら",
                 "value": "oshi_en",
                 "roles": {
                     "Dead Beats💀": 1116480201229090956,
@@ -636,7 +660,7 @@ class CV2MessageSender:
             {
                 "name": "hololive ID",
                 "emoji": "🌺",
-                "description": "ID1期、ID2期、ID3期のメンバー",
+                "description": "IDの推しロールはこちら",
                 "value": "oshi_id",
                 "roles": {
                     "Risuners🐿": 1116481367501447288,
@@ -648,30 +672,6 @@ class CV2MessageSender:
                     "Zecretary📜": 1116481901415374928,
                     "Pemaloe🔨": 1116481903864844408,
                     "Kobokerz☔": 1116481906356261115
-                }
-            },
-            {
-                "name": "ReGLOSS",
-                "emoji": "🎭",
-                "description": "つぐみ、いぶちゃん、みけたん、ねね、ゆびたん",
-                "value": "oshi_regloss",
-                "roles": {
-                    "読者🖋️": 1148152861830692894,
-                    "でん同士🐚": 1148152923260473384,
-                    "音の勢🎹✨": 1148152983234822216,
-                    "秘書見習い🌃": 1148153052705067028,
-                    "真っす組🐧⚡️": 1148153107407192084
-                }
-            },
-            {
-                "name": "その他",
-                "emoji": "👑",
-                "description": "スタッフやその他の特別なロール",
-                "value": "oshi_others",
-                "roles": {
-                    "YAGOO👨‍🎓": 1093018532519870534,
-                    "えーちゃん👓": 1093019394172522517,
-                    "春先のどか📝": 1093020217757671507
                 }
             }
         ]
