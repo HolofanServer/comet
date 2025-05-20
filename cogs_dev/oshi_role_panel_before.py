@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 import traceback
 from utils.logging import setup_logging
 import httpx
@@ -18,17 +17,8 @@ class OshiRolePanel(commands.Cog):
         self.bot = bot
         self.cv2_sender = CV2MessageSender(bot)
         self.role_emoji_mapping = {}
-        self.analytics_data = {
-            "role_assignments": [],
-            "role_stats": {},
-            "user_stats": {},
-            "role_counts": {},
-            "initial_counts": {},
-            "last_updated": None
-        }
         self.load_role_emoji_mapping()
-        self.load_analytics_data()
-        self.cv2_sender.analytics_callback = self.record_role_event
+        # タレント名とファンネームのマッピングテーブル
         self.talent_to_fanname = {
             # JP 0期
             "jp0_sora": "そらとも",
@@ -162,8 +152,10 @@ class OshiRolePanel(commands.Cog):
         if channel is None:
             channel = ctx.channel
             
+        # ロールアイコンの自動スキャン
         await self.scan_roles_for_icons(ctx.guild)
             
+        # 添付画像があるか確認
         image_url = "https://images.frwi.net/data/images/31dd6e9b-25e3-4a15-a783-1c7b0054b10f.png"
         
         await ctx.send(f"{channel.mention}に推しロールパネルを作成します...")
@@ -175,62 +167,6 @@ class OshiRolePanel(commands.Cog):
         else:
             await ctx.send("推しロールパネルの作成に失敗しました")
     
-    @oshirole.command(name="scanroles")
-    @commands.has_permissions(administrator=True)
-    async def scan_all_roles(self, ctx):
-        """全てのロールを走査して、各ロールの絵文字を取得し、初期人数も記録する"""
-        guild = ctx.guild
-        roles = guild.roles
-        
-        role_emoji_mapping = {}
-        initial_counts = {}
-        role_counts = {}
-        
-        for role in roles:
-            emoji_match = re.search(r'([\u00a9\u00ae\u2000-\u3300\ud83c\ud000-\ud83e\udfff\ufe0f]+)', role.name)
-            if emoji_match:
-                emoji = emoji_match.group(1)
-                if emoji.startswith('<') and emoji.endswith('>'):
-                    emoji_parts = emoji.strip('<>').split(':')
-                    if len(emoji_parts) == 3:
-                        role_emoji_mapping[str(role.id)] = {
-                            "name": role.name,
-                            "emoji_id": emoji_parts[2],
-                            "emoji_name": emoji_parts[1],
-                            "animated": emoji_parts[0] == "a"
-                        }
-                    else:
-                        role_emoji_mapping[str(role.id)] = {
-                            "name": role.name
-                        }
-                else:
-                    role_emoji_mapping[str(role.id)] = {
-                        "name": role.name,
-                        "unicode_emoji": emoji
-                    }
-                
-                member_count = len(role.members)
-                role_counts[role.name] = member_count
-                
-                if "initial_counts" not in self.analytics_data:
-                    self.analytics_data["initial_counts"] = {}
-                
-                if role.name not in self.analytics_data["initial_counts"]:
-                    initial_counts[role.name] = member_count
-                
-        self.role_emoji_mapping = role_emoji_mapping
-        self.save_role_emoji_mapping()
-        
-        if initial_counts:
-            if "initial_counts" not in self.analytics_data:
-                self.analytics_data["initial_counts"] = {}
-            self.analytics_data["initial_counts"].update(initial_counts)
-            
-        self.analytics_data["role_counts"] = role_counts
-        self.save_analytics_data()
-        
-        await ctx.send(f"{len(role_emoji_mapping)}個のロールと絵文字のマッピング、および各ロールの現在の所持人数を保存しました。", ephemeral=True)
-    
     @oshirole.command(name="listroles")
     @commands.has_permissions(administrator=True)
     async def list_roles(self, ctx):
@@ -238,6 +174,7 @@ class OshiRolePanel(commands.Cog):
         guild = ctx.guild
         roles_data = {}
         
+        # @everyone ロールを除外し、残りのロールを取得
         for role in guild.roles:
             if role.name != "@everyone":
                 roles_data[role.name] = {
@@ -245,10 +182,11 @@ class OshiRolePanel(commands.Cog):
                     "color": role.color.value if role.color.value else 0,
                     "position": role.position,
                     "mentionable": role.mentionable,
-                    "hoist": role.hoist,
-                    "icon_url": role.icon.url if role.icon else None
+                    "hoist": role.hoist,  # サーバーメンバーリストで別々に表示するか
+                    "icon_url": role.icon.url if role.icon else None  # ロールアイコンのURL
                 }
         
+        # JSONファイルにロールデータを保存
         data_dir = os.path.join(os.getcwd(), "data")
         os.makedirs(data_dir, exist_ok=True)
         
@@ -256,13 +194,140 @@ class OshiRolePanel(commands.Cog):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(roles_data, f, indent=4, ensure_ascii=False)
         
+        # ファイルを添付して送信
         with open(file_path, 'rb') as f:
             file = discord.File(f, filename=f"roles_{guild.id}.json")
             await ctx.send("ロール一覧を取得しました（アイコンURL含む）：", file=file)
             
         logger.info(f"ロール一覧を保存しました: {file_path}")
         
-
+    @oshirole.command(name="exportconfig")
+    @commands.has_permissions(administrator=True)
+    async def export_config(self, ctx):
+        """現在の推しロール設定をJSON形式でエクスポートします"""
+        config_data = {
+            "categories": self.cv2_sender.oshi_categories
+        }
+        
+        # JSONファイルに設定データを保存
+        data_dir = os.path.join(os.getcwd(), "data")
+        os.makedirs(data_dir, exist_ok=True)
+        
+        file_path = os.path.join(data_dir, f"oshi_config_{ctx.guild.id}.json")
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=4, ensure_ascii=False)
+        
+        # ファイルを添付して送信
+        with open(file_path, 'rb') as f:
+            file = discord.File(f, filename=f"oshi_config_{ctx.guild.id}.json")
+            await ctx.send("推しロール設定をエクスポートしました：", file=file)
+            
+        logger.info(f"推しロール設定をエクスポートしました: {file_path}")
+        
+    @oshirole.command(name="importconfig")
+    @commands.has_permissions(administrator=True)
+    async def import_config(self, ctx):
+        """添付されたJSONファイルから推しロール設定をインポートします"""
+        if not ctx.message.attachments:
+            await ctx.send("設定ファイル（JSON）を添付してください")
+            return
+            
+        attachment = ctx.message.attachments[0]
+        if not attachment.filename.endswith('.json'):
+            await ctx.send("JSONファイルを添付してください")
+            return
+            
+        try:
+            # ファイルをダウンロードして読み込む
+            config_bytes = await attachment.read()
+            config_data = json.loads(config_bytes.decode('utf-8'))
+            
+            # 設定をバリデーション
+            if "categories" not in config_data:
+                await ctx.send("無効な設定ファイルです：'categories'フィールドがありません")
+                return
+                
+            # 設定を適用
+            self.cv2_sender.oshi_categories = config_data["categories"]
+            
+            # 設定を保存（永続化する場合）
+            data_dir = os.path.join(os.getcwd(), "data")
+            os.makedirs(data_dir, exist_ok=True)
+            
+            file_path = os.path.join(data_dir, "oshi_config.json")
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(config_data, f, indent=4, ensure_ascii=False)
+            
+            await ctx.send("推しロール設定をインポートしました")
+            logger.info(f"推しロール設定をインポートしました: {attachment.filename}")
+        except Exception as e:
+            await ctx.send(f"設定のインポート中にエラーが発生しました: {e}")
+            logger.error(f"設定インポート中にエラー: {e}\n{traceback.format_exc()}")
+    
+    @oshirole.command(name="setemoji")
+    @commands.has_permissions(administrator=True)
+    async def set_role_emoji(self, ctx, role: discord.Role, emoji: str):
+        """ロールに絵文字を関連付けます"""
+        # 絵文字として有効かどうかの簡易チェック（完璧ではない）
+        # unicodeの絵文字または Discord カスタム絵文字の形式チェック
+        if not re.match(r'[\u2600-\u27BF\U0001F300-\U0001F64F\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U000E0020-\U000E007F]|<:[a-zA-Z0-9_]+:[0-9]+>$', emoji):
+            await ctx.send("有効な絵文字を指定してください")
+            return
+            
+        # ロールID（文字列）をキーとして絵文字を保存
+        self.role_emoji_mapping[str(role.id)] = emoji
+        self.save_role_emoji_mapping()
+        
+        await ctx.send(f"ロール「{role.name}」に絵文字 {emoji} を設定しました")
+        
+    @oshirole.command(name="removeemoji")
+    @commands.has_permissions(administrator=True)
+    async def remove_role_emoji(self, ctx, role: discord.Role):
+        """ロールから絵文字の関連付けを削除します"""
+        role_id = str(role.id)
+        
+        if role_id in self.role_emoji_mapping:
+            emoji = self.role_emoji_mapping[role_id]
+            del self.role_emoji_mapping[role_id]
+            self.save_role_emoji_mapping()
+            await ctx.send(f"ロール「{role.name}」から絵文字 {emoji} の関連付けを削除しました")
+        else:
+            await ctx.send(f"ロール「{role.name}」に関連付けられた絵文字はありません")
+            
+    @oshirole.command(name="listemojis")
+    @commands.has_permissions(administrator=True)
+    async def list_role_emojis(self, ctx):
+        """ロールと絵文字のマッピング一覧を表示します"""
+        if not self.role_emoji_mapping:
+            await ctx.send("ロールに関連付けられた絵文字はありません")
+            return
+            
+        guild = ctx.guild
+        embed = discord.Embed(title="ロール絵文字マッピング", color=discord.Color.blue())
+        
+        for role_id, emoji in self.role_emoji_mapping.items():
+            role = guild.get_role(int(role_id))
+            if role:
+                embed.add_field(name=role.name, value=f"{emoji} (ID: {role_id})", inline=True)
+                
+        await ctx.send(embed=embed)
+        
+    @oshirole.command(name="exportemojis")
+    @commands.has_permissions(administrator=True)
+    async def export_role_emojis(self, ctx):
+        """ロールと絵文字のマッピングをJSONファイルでエクスポートします"""
+        if not self.role_emoji_mapping:
+            await ctx.send("エクスポートするデータがありません")
+            return
+            
+        data_dir = os.path.join(os.getcwd(), "data")
+        os.makedirs(data_dir, exist_ok=True)
+        file_path = os.path.join(data_dir, "role_emoji_mapping.json")
+        
+        with open(file_path, 'rb') as f:
+            file = discord.File(f, filename="role_emoji_mapping.json")
+            await ctx.send("ロール絵文字マッピングをエクスポートしました：", file=file)
+    
     @oshirole.command(name="listemoji")
     @commands.has_permissions(administrator=True)
     async def list_emoji(self, ctx, prefix: str = "m_", as_json: bool = False):
@@ -274,7 +339,9 @@ class OshiRolePanel(commands.Cog):
             await ctx.send(f"サーバー内に '{prefix}' から始まる絵文字は見つかりませんでした。")
             return
         
+        # JSON形式での出力が要求された場合
         if as_json:
+            # 絵文字情報をJSON形式のデータに変換
             emoji_data = []
             for emoji in matching_emojis:
                 emoji_data.append({
@@ -286,19 +353,24 @@ class OshiRolePanel(commands.Cog):
                     "animated": emoji.animated
                 })
             
+            # JSONファイルの保存先を設定
             data_dir = os.path.join(os.getcwd(), "data")
             os.makedirs(data_dir, exist_ok=True)
             file_path = os.path.join(data_dir, f"{prefix}_emojis.json")
             
+            # データをJSONファイルに保存
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(emoji_data, f, indent=4, ensure_ascii=False)
             
+            # ファイルを添付して送信
             with open(file_path, 'rb') as f:
                 file = discord.File(f, filename=f"{prefix}_emojis.json")
                 await ctx.send(f"'{prefix}'から始まる絵文字一覧 (合計: {len(matching_emojis)}個):", file=file)
             
             return
         
+        # 通常のEmbedでの表示（既存の処理）
+        # ページごとに表示する絵文字の数
         emojis_per_page = 10
         total_pages = (len(matching_emojis) + emojis_per_page - 1) // emojis_per_page
         
@@ -314,6 +386,7 @@ class OshiRolePanel(commands.Cog):
             )
             
             for emoji in page_emojis:
+                # 絵文字の情報を追加
                 emoji_display = f"<:{emoji.name}:{emoji.id}>"
                 emoji_copy = f"`<:{emoji.name}:{emoji.id}>`"
                 embed.add_field(
@@ -334,12 +407,16 @@ class OshiRolePanel(commands.Cog):
         custom_id = interaction.data.get("custom_id", "")
         logger.debug(f"インタラクション受信: custom_id={custom_id}")
         
+        # セレクトメニューの処理
         if custom_id == "oshi_select":
             await self.cv2_sender.handle_oshi_select(interaction)
+        # メンバーロール選択セレクトメニューの処理
         elif custom_id == "member_select" or custom_id.startswith("member_select:"):
             await self.cv2_sender.handle_member_select(interaction)
+        # ロールボタンの処理
         elif custom_id.startswith("role_"):
             await self.cv2_sender.handle_role_button(interaction)
+        # 言語選択ボタンの処理（英語、韓国語、中国語、日本語）
         elif custom_id in ["oshi_english", "oshi_korean", "oshi_chinese", "oshi_japanese"]:
             await self.cv2_sender.handle_oshi_language_button(interaction)
 
@@ -349,15 +426,18 @@ class OshiRolePanel(commands.Cog):
         roles_total = 0
         emojis_mapped = 0
         
+        # サーバー内の「m_」で始まる絵文字を取得
         member_emojis = {}
         for emoji in guild.emojis:
             if emoji.name.startswith("m_"):
+                # 「m_」の後の部分がタレント識別子と仮定
                 talent_id = emoji.name[2:]
                 member_emojis[talent_id] = emoji
                 logger.info(f"ロール絵文字候補: {emoji.name} -> {talent_id}")
                     
         logger.info(f"'m_'で始まる絵文字を {len(member_emojis)} 個見つけました")
         
+        # 各カテゴリのロールをチェック
         for category in self.cv2_sender.oshi_categories:
             for role_name, role_id in category["roles"].items():
                 roles_total += 1
@@ -367,6 +447,7 @@ class OshiRolePanel(commands.Cog):
                     logger.warning(f"ロールが見つかりません: {role_name} (ID: {role_id})")
                     continue
                     
+                # ロール名から絵文字部分を削除して比較
                 clean_role_name = role_name
                 for emoji_marker in ["🐻‍💿", "🤖", "☄️", "🌸", "🌽", "🏮", "❤", "🍎", "🌟", "⚒️", 
                                      "🌲", "🍙", "🥐", "🔥", "⚔️", "🏴‍☠️", "👯‍♀️", "🚑", "⚓", "💋", 
@@ -378,12 +459,16 @@ class OshiRolePanel(commands.Cog):
                     if emoji_marker in clean_role_name:
                         clean_role_name = clean_role_name.replace(emoji_marker, "").strip()
                 
+                # このロール名に対応する絵文字を探す
                 best_match = None
                 best_match_path = None
                 
+                # 方法1: タレント名→ファンネーム変換マッピングを使用
                 for talent_id, emoji in member_emojis.items():
+                    # タレント名からファンネームへの変換を試みる
                     fanname = self.talent_to_fanname.get(talent_id, "")
                     
+                    # ファンネームが取得できた場合
                     if fanname and (fanname.lower() == clean_role_name.lower() or 
                                    fanname.lower() in clean_role_name.lower() or 
                                    clean_role_name.lower() in fanname.lower()):
@@ -391,17 +476,21 @@ class OshiRolePanel(commands.Cog):
                         best_match_path = f"{talent_id} → {fanname} ≈ {clean_role_name}"
                         break
                 
+                # 方法2: 従来のマッチング方法（バックアップとして残す）
                 if not best_match:
+                    # 完全一致
                     if clean_role_name in member_emojis:
                         best_match = member_emojis[clean_role_name]
                         best_match_path = f"直接マッチ: {clean_role_name}"
                     else:
+                        # 接頭辞一致
                         for emoji_name, emoji in member_emojis.items():
                             if clean_role_name.lower().startswith(emoji_name.lower()) or emoji_name.lower().startswith(clean_role_name.lower()):
                                 best_match = emoji
                                 best_match_path = f"接頭辞マッチ: {emoji_name} ≈ {clean_role_name}"
                                 break
                         
+                        # まだ見つからない場合は部分一致
                         if not best_match:
                             for emoji_name, emoji in member_emojis.items():
                                 if emoji_name.lower() in clean_role_name.lower() or clean_role_name.lower() in emoji_name.lower():
@@ -409,12 +498,14 @@ class OshiRolePanel(commands.Cog):
                                     best_match_path = f"部分マッチ: {emoji_name} ≈ {clean_role_name}"
                                     break
                 
+                # 一致する絵文字が見つかった場合
                 if best_match:
                     emoji_str = f"<:{best_match.name}:{best_match.id}>"
                     self.role_emoji_mapping[str(role_id)] = emoji_str
                     emojis_mapped += 1
                     logger.info(f"ロール「{role_name}」に絵文字 {emoji_str} をマッピングしました (マッチ: {best_match_path})")
         
+        # 結果をログに記録し保存
         self.save_role_emoji_mapping()
         logger.info(f"ロール絵文字スキャン完了: {roles_total}個のロール、{emojis_mapped}個の絵文字をマッピング")
         
@@ -440,476 +531,7 @@ class OshiRolePanel(commands.Cog):
         embed.set_footer(text="絵文字の命名規則: m_[メンバー名] (例: m_そらとも)")
         
         await ctx.send(embed=embed)
-        
-    def load_analytics_data(self):
-        """アナリティクスデータをJSONファイルから読み込む"""
-        base_dir = os.path.join(os.getcwd(), "data", "analytics", "oshi_roles")
-        os.makedirs(base_dir, exist_ok=True)
-        
-        events_path = os.path.join(base_dir, "events.json")
-        roles_path = os.path.join(base_dir, "roles.json")
-        users_path = os.path.join(base_dir, "users.json")
-        summary_path = os.path.join(base_dir, "summary.json")
-        
-        legacy_path = os.path.join(os.getcwd(), "data", "role_analytics.json")
-        
-        self.analytics_data = {
-            "role_assignments": [],
-            "role_stats": {},
-            "user_stats": {},
-            "initial_counts": {},
-            "role_counts": {},
-            "last_updated": None
-        }
-        
-        if os.path.exists(legacy_path) and not os.path.exists(events_path):
-            try:
-                with open(legacy_path, 'r', encoding='utf-8') as f:
-                    legacy_data = json.load(f)
-                self.analytics_data = legacy_data
-                logger.info("従来のアナリティクスデータを読み込みました。新形式に移行します。")
-                self.save_analytics_data()
-                logger.info("データ移行が完了しました。")
-                return
-            except Exception as e:
-                logger.error(f"従来のデータ移行中にエラー: {e}")
-        
-        if os.path.exists(events_path):
-            try:
-                with open(events_path, 'r', encoding='utf-8') as f:
-                    self.analytics_data["role_assignments"] = json.load(f)
-                logger.info(f"イベントデータを読み込みました: {len(self.analytics_data['role_assignments'])}件")
-            except Exception as e:
-                logger.error(f"イベントデータの読み込みに失敗: {e}")
-        
-        if os.path.exists(roles_path):
-            try:
-                with open(roles_path, 'r', encoding='utf-8') as f:
-                    self.analytics_data["role_stats"] = json.load(f)
-                logger.info(f"ロール統計データを読み込みました: {len(self.analytics_data['role_stats'])}件")
-            except Exception as e:
-                logger.error(f"ロール統計データの読み込みに失敗: {e}")
-        
-        if os.path.exists(users_path):
-            try:
-                with open(users_path, 'r', encoding='utf-8') as f:
-                    self.analytics_data["user_stats"] = json.load(f)
-                logger.info(f"ユーザー統計データを読み込みました: {len(self.analytics_data['user_stats'])}件")
-            except Exception as e:
-                logger.error(f"ユーザー統計データの読み込みに失敗: {e}")
-        
-        if os.path.exists(summary_path):
-            try:
-                with open(summary_path, 'r', encoding='utf-8') as f:
-                    summary_data = json.load(f)
-                    self.analytics_data["last_updated"] = summary_data.get("last_updated")
-                logger.info("サマリーデータを読み込みました")
-            except Exception as e:
-                logger.error(f"サマリーデータの読み込みに失敗: {e}")
-        
-    def save_analytics_data(self):
-        """アナリティクスデータをJSON形式で種類ごとに保存"""
-        base_dir = os.path.join(os.getcwd(), "data", "analytics", "oshi_roles")
-        os.makedirs(base_dir, exist_ok=True)
-        
-        events_path = os.path.join(base_dir, "events.json")
-        roles_path = os.path.join(base_dir, "roles.json")
-        users_path = os.path.join(base_dir, "users.json")
-        summary_path = os.path.join(base_dir, "summary.json")
-        
-        current_time = discord.utils.utcnow().isoformat()
-        self.analytics_data["last_updated"] = current_time
-        
-        success = True
-        
-        try:
-            with open(events_path, 'w', encoding='utf-8') as f:
-                json.dump(self.analytics_data["role_assignments"], f, indent=4, ensure_ascii=False)
-            logger.info(f"イベントデータを保存しました: {len(self.analytics_data['role_assignments'])}件")
-        except Exception as e:
-            logger.error(f"イベントデータの保存に失敗: {e}")
-            success = False
-        
-        try:
-            with open(roles_path, 'w', encoding='utf-8') as f:
-                json.dump(self.analytics_data["role_stats"], f, indent=4, ensure_ascii=False)
-            logger.info(f"ロール統計データを保存しました: {len(self.analytics_data['role_stats'])}件")
-        except Exception as e:
-            logger.error(f"ロール統計データの保存に失敗: {e}")
-            success = False
-        
-        try:
-            with open(users_path, 'w', encoding='utf-8') as f:
-                json.dump(self.analytics_data["user_stats"], f, indent=4, ensure_ascii=False)
-            logger.info(f"ユーザー統計データを保存しました: {len(self.analytics_data['user_stats'])}件")
-        except Exception as e:
-            logger.error(f"ユーザー統計データの保存に失敗: {e}")
-            success = False
-        
-        try:
-            summary_data = {
-                "last_updated": current_time,
-                "total_events": len(self.analytics_data["role_assignments"]),
-                "total_roles": len(self.analytics_data["role_stats"]),
-                "total_users": len(self.analytics_data["user_stats"])
-            }
-            with open(summary_path, 'w', encoding='utf-8') as f:
-                json.dump(summary_data, f, indent=4, ensure_ascii=False)
-            logger.info("サマリーデータを保存しました")
-        except Exception as e:
-            logger.error(f"サマリーデータの保存に失敗: {e}")
-            success = False
-            
-        return success
-            
-    def record_role_event(self, event_type, user_id, user_name, roles, category=""):
-        """ロールの付与または解除イベントを記録する
-        
-        Parameters:
-        -----------
-        event_type : str
-            イベントタイプ（"add" または "remove"）
-        user_id : int
-            ユーザーID
-        user_name : str
-            ユーザー名
-        roles : List[Dict]
-            対象のロールのリスト（各ロールは {id, name} の辞書）
-        category : str, optional
-            ロールのカテゴリ名
-        """
-        import datetime
-        from zoneinfo import ZoneInfo
-        
-        now = datetime.datetime.now(ZoneInfo("Asia/Tokyo"))
-        timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
-        
-        event_data = {
-            "user_id": str(user_id),
-            "user_name": user_name,
-            "event_type": "追加しました" if event_type == "add" else "解除しました",
-            "roles": roles,
-            "category": category,
-            "timestamp": timestamp
-        }
-        
-        for role in roles:
-            role_name = role.get("name", "不明")
-            
-            if role_name not in self.analytics_data["role_stats"]:
-                self.analytics_data["role_stats"][role_name] = {
-                    "count": 0,
-                    "last_selected": None
-                }
-            
-            if event_type == "add":
-                self.analytics_data["role_stats"][role_name]["count"] += 1
-            
-            self.analytics_data["role_stats"][role_name]["last_selected"] = timestamp
-            
-            if role_name in self.analytics_data["role_counts"]:
-                if event_type == "add":
-                    self.analytics_data["role_counts"][role_name] += 1
-                elif event_type == "remove" and self.analytics_data["role_counts"][role_name] > 0:
-                    self.analytics_data["role_counts"][role_name] -= 1
-        
-        user_id_str = str(user_id)
-        if user_id_str not in self.analytics_data["user_stats"]:
-            self.analytics_data["user_stats"][user_id_str] = {
-                "name": user_name,
-                "total_changes": 0,
-                "last_change": None
-            }
-        
-        self.analytics_data["user_stats"][user_id_str]["total_changes"] += 1
-        self.analytics_data["user_stats"][user_id_str]["last_change"] = timestamp
-        
-        self.analytics_data["role_assignments"].append(event_data)
-        
-        self.analytics_data["last_updated"] = timestamp
-        
-        self.save_analytics_data()
-        
-        if len(self.analytics_data["role_assignments"]) % 10 == 0:
-            self.save_analytics_data()
-    
-    @oshirole.command(name="analytics", description="ロールアナリティクスデータを表示します")
-    @app_commands.describe(
-        type="表示するデータの種類",
-        count="表示するアイテム数",
-        cv2="CV2形式で表示する（推しロールパネルと同じUI）"
-    )
-    @app_commands.choices(type=[
-        app_commands.Choice(name="サマリー", value="summary"),
-        app_commands.Choice(name="人気ロール", value="popular"),
-        app_commands.Choice(name="最近のアクティビティ", value="recent"),
-        app_commands.Choice(name="ユーザーアクティビティ", value="users"),
-        app_commands.Choice(name="非アクティブロール", value="inactive")
-    ])
-    async def show_analytics(self, ctx_or_interaction, type: str = "summary", count: int = 5, cv2: bool = False):
-        """ロールアナリティクスデータを表示します"""
-        is_interaction = isinstance(ctx_or_interaction, discord.Interaction)
-        
-        if is_interaction:
-            user = ctx_or_interaction.user
-            has_admin = user.guild_permissions.administrator
-        else:
-            user = ctx_or_interaction.author
-            has_admin = user.guild_permissions.administrator
-            
-        if not has_admin:
-            if is_interaction:
-                await ctx_or_interaction.response.send_message("このコマンドは管理者のみ使用できます。", ephemeral=True)
-            else:
-                await ctx_or_interaction.send("このコマンドは管理者のみ使用できます。")
-            return
-        
-        if not self.analytics_data.get("role_assignments") and not self.analytics_data.get("role_stats"):
-            if is_interaction:
-                await ctx_or_interaction.response.send_message("アナリティクスデータがまだ収集されていません。", ephemeral=True)
-            else:
-                await ctx_or_interaction.send("アナリティクスデータがまだ収集されていません。")
-            return
-            
-        count = max(1, min(count, 25))
-        
-        if cv2:
-            if is_interaction:
-                await ctx_or_interaction.response.defer(thinking=True, ephemeral=True)
-                await self._show_analytics_cv2(ctx_or_interaction, type, count)
-            else:
-                await ctx_or_interaction.send("CV2形式の表示はスラッシュコマンドでのみサポートされています。")
-            return
-        
-        embed = discord.Embed(title="推しロールアナリティクス", color=discord.Color.blue())
-        embed.set_footer(text=f"最終更新: {self.analytics_data.get('last_updated', '不明')}")
-        
-        if type == "summary":
-            total_assignments = len(self.analytics_data.get("role_assignments", []))
-            total_roles = len(self.analytics_data.get("role_stats", {}))
-            total_users = len(self.analytics_data.get("user_stats", {}))
-            
-            embed.description = "**全体サマリー**\n"
-            embed.add_field(name="総ロール変更回数", value=str(total_assignments), inline=True)
-            embed.add_field(name="アクティブロール数", value=str(total_roles), inline=True)
-            embed.add_field(name="アクティブユーザー数", value=str(total_users), inline=True)
-            
-            top_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                               key=lambda x: x[1].get("count", 0), 
-                               reverse=True)[:3]
-            
-            if top_roles:
-                embed.add_field(name="人気トップ3ロール", value="\n".join(
-                    [f"**{i+1}.** {role_name}: {stats.get('count', 0)}回" 
-                     for i, (role_name, stats) in enumerate(top_roles)]
-                ), inline=False)
-            
-            recent_events = self.analytics_data.get("role_assignments", [])[-3:]
-            recent_events.reverse()
-            
-            if recent_events:
-                embed.add_field(name="最近のアクティビティ", value="\n".join(
-                    [f"**{event.get('timestamp', '不明')}**: {event.get('user_name', '不明')} が {event.get('event_type', '不明')} **{', '.join([r.get('name', '不明') for r in event.get('roles', [])])}**" 
-                     for event in recent_events]
-                ), inline=False)
-                
-        elif type == "popular":
-            top_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                               key=lambda x: x[1].get("count", 0), 
-                               reverse=True)[:count]
-            
-            embed.description = f"**人気ロールランキング (トップ{len(top_roles)})**\n"
-            for i, (role_name, stats) in enumerate(top_roles):
-                embed.add_field(
-                    name=f"{i+1}. {role_name}", 
-                    value=f"選択回数: {stats.get('count', 0)}回\n最終選択: {stats.get('last_selected', '不明')}", 
-                    inline=True
-                )
-                
-        elif type == "recent":
-            recent_events = self.analytics_data.get("role_assignments", [])[-count:]
-            recent_events.reverse()
-            
-            embed.description = f"**最近の{len(recent_events)}件のアクティビティ**\n"
-            for event in recent_events:
-                event_time = event.get("timestamp", "不明")
-                user_name = event.get("user_name", "不明")
-                event_type = event.get("event_type", "不明")
-                roles_text = ", ".join([r.get("name", "不明") for r in event.get("roles", [])])
-                
-                embed.add_field(
-                    name=f"{event_time}", 
-                    value=f"**{user_name}** が {event_type} **{roles_text}**", 
-                    inline=False
-                )
-                
-        elif type == "users":
-            top_users = sorted(self.analytics_data.get("user_stats", {}).items(), 
-                               key=lambda x: x[1].get("total_changes", 0), 
-                               reverse=True)[:count]
-            
-            embed.description = f"**アクティブユーザーランキング (トップ{len(top_users)})**\n"
-            for i, (user_id, stats) in enumerate(top_users):
-                user_name = stats.get("name", "不明")
-                embed.add_field(
-                    name=f"{i+1}. {user_name}", 
-                    value=f"変更回数: {stats.get('total_changes', 0)}回\n最終変更: {stats.get('last_change', '不明')}", 
-                    inline=True
-                )
-                
-        elif type == "inactive":
-            bottom_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                                  key=lambda x: x[1].get("count", 0))[:count]
-            
-            embed.description = f"**非アクティブロールランキング (下位{len(bottom_roles)})**\n"
-            for i, (role_name, stats) in enumerate(bottom_roles):
-                embed.add_field(
-                    name=f"{i+1}. {role_name}", 
-                    value=f"選択回数: {stats.get('count', 0)}回\n最終選択: {stats.get('last_selected', '不明')}", 
-                    inline=True
-                )
-        
-        if isinstance(ctx_or_interaction, discord.Interaction):
-            await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
-        else:
-            await ctx_or_interaction.send(embed=embed)
-        
-    async def _show_analytics_cv2(self, ctx_or_interaction, type: str, count: int):
-        """
-CV2形式でアナリティクスデータを表示する
-        """
-        title = "推しロールアナリティクス"
-        description = ""
-        
-        if type == "summary":
-            title = "推しロールアナリティクス - サマリー"
-            
-            total_assignments = len(self.analytics_data.get("role_assignments", []))
-            total_roles = len(self.analytics_data.get("role_stats", {}))
-            total_users = len(self.analytics_data.get("user_stats", {}))
-            
-            description = "### 全体サマリー\n\n"
-            description += f"**総ロール変更回数**: {total_assignments}\n"
-            description += f"**アクティブロール数**: {total_roles}\n"
-            description += f"**アクティブユーザー数**: {total_users}\n"
-            
-            if self.analytics_data.get("initial_counts") and self.analytics_data.get("role_counts"):
-                description += "\n### ロール所持人数の変化\n\n"
-                sorted_roles = sorted(self.analytics_data["role_counts"].items(), 
-                                     key=lambda x: x[1],
-                                     reverse=True)[:5]
-                
-                for role_name, current_count in sorted_roles:
-                    initial = self.analytics_data["initial_counts"].get(role_name, 0)
-                    change = current_count - initial
-                    change_str = f"+{change}" if change > 0 else str(change)
-                    description += f"**{role_name}**: {current_count}人 ({change_str})\n"
-                
-                description += "\n"
-            
-            top_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                              key=lambda x: x[1].get("count", 0), 
-                              reverse=True)[:3]
-            
-            if top_roles:
-                description += "### 人気トップ3ロール\n\n"
-                for i, (role_name, stats) in enumerate(top_roles):
-                    description += f"**{i+1}. {role_name}**: {stats.get('count', 0)}回\n"
-                description += "\n"
-            
-            recent_events = self.analytics_data.get("role_assignments", [])[-3:]
-            recent_events.reverse()
-            
-            if recent_events:
-                description += "### 最近のアクティビティ\n\n"
-                for event in recent_events:
-                    event_time = event.get("timestamp", "不明")
-                    user_name = event.get("user_name", "不明")
-                    event_type = event.get("event_type", "不明")
-                    roles_text = ", ".join([r.get("name", "不明") for r in event.get("roles", [])])
-                    
-                    description += f"**{event_time}**: {user_name} が {event_type} **{roles_text}**\n"
-            
-        elif type == "popular":
-            title = "推しロールアナリティクス - 人気ロールランキング"
-            
-            top_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                              key=lambda x: x[1].get("count", 0), 
-                              reverse=True)[:count]
-            
-            description = f"### 人気ロールランキング (トップ{len(top_roles)})\n\n"
-            for i, (role_name, stats) in enumerate(top_roles):
-                description += f"### {i+1}. {role_name}\n"
-                description += f"**選択回数**: {stats.get('count', 0)}回\n"
-                description += f"**最終選択**: {stats.get('last_selected', '不明')}\n\n"
-                
-        elif type == "recent":
-            title = "推しロールアナリティクス - 最近のアクティビティ"
-            
-            recent_events = self.analytics_data.get("role_assignments", [])[-count:]
-            recent_events.reverse()
-            
-            description = f"### 最近の{len(recent_events)}件のアクティビティ\n\n"
-            for event in recent_events:
-                event_time = event.get("timestamp", "不明")
-                user_name = event.get("user_name", "不明")
-                event_type = event.get("event_type", "不明")
-                roles_text = ", ".join([r.get("name", "不明") for r in event.get("roles", [])])
-                
-                description += f"### {event_time}\n"
-                description += f"**{user_name}** が {event_type} **{roles_text}**\n\n"
-                
-        elif type == "users":
-            title = "推しロールアナリティクス - アクティブユーザー"
-            
-            top_users = sorted(self.analytics_data.get("user_stats", {}).items(), 
-                              key=lambda x: x[1].get("total_changes", 0), 
-                              reverse=True)[:count]
-            
-            description = f"### アクティブユーザーランキング (トップ{len(top_users)})\n\n"
-            for i, (user_id, stats) in enumerate(top_users):
-                user_name = stats.get("name", "不明")
-                description += f"### {i+1}. {user_name}\n"
-                description += f"**変更回数**: {stats.get('total_changes', 0)}回\n"
-                description += f"**最終変更**: {stats.get('last_change', '不明')}\n\n"
-                
-        elif type == "inactive":
-            title = "推しロールアナリティクス - 非アクティブロール"
-            
-            bottom_roles = sorted(self.analytics_data.get("role_stats", {}).items(), 
-                                 key=lambda x: x[1].get("count", 0))[:count]
-            
-            description = f"### 非アクティブロールランキング (下位{len(bottom_roles)})\n\n"
-            for i, (role_name, stats) in enumerate(bottom_roles):
-                description += f"### {i+1}. {role_name}\n"
-                description += f"**選択回数**: {stats.get('count', 0)}回\n"
-                description += f"**最終選択**: {stats.get('last_selected', '不明')}\n\n"
-        
-        if isinstance(ctx_or_interaction, discord.Interaction):
-            ctx_or_interaction.channel.id
-            
-            text_content = f"# {title}\n\n{description}\n\n*最終更新: {self.analytics_data.get('last_updated', '不明')}*"
-            
-            await ctx_or_interaction.followup.send(
-                content=text_content,
-                ephemeral=True,
-                components=[
-                    {
-                        "type": 1,
-                        "components": [
-                            {
-                                "type": 2,
-                                "style": 2,
-                                "label": "閉じる",
-                                "custom_id": "close_analytics"
-                            }
-                        ]
-                    }
-                ]
-            )
-        else:
-            await ctx_or_interaction.send(f"# {title}\n\n{description}")
-        
+
 # --- CV2形式のメッセージ送信ユーティリティ ---
 class CV2MessageSender:
     def __init__(self, bot):
@@ -917,8 +539,8 @@ class CV2MessageSender:
         self.api_version = "v10"
         self.base_url = f"https://discord.com/api/{self.api_version}"
         self.client = httpx.AsyncClient(timeout=30.0)
-        self.analytics_callback = None
         
+        # 簡単に編集できる設定部分
         self.oshi_categories = [
             {
                 "name": "JP 0期〜2期生",
@@ -1073,49 +695,59 @@ class CV2MessageSender:
         
         endpoint = f"{self.base_url}/channels/{channel_id}/messages"
         
+        # 虹色のカラーコード（Discord用の整数値）
         rainbow_colors = [
-            15158332,
-            16754470,
-            15844367,
-            5763719,
-            3447003,
-            7506394,
-            10181046
+            15158332,  # 赤色 (0xE74C3C)
+            16754470,  # オレンジ色 (0xFFA726) 
+            15844367,  # 黄色 (0xF1C40F)
+            5763719,   # 緑色 (0x57F287)
+            3447003,   # 青色 (0x3498DB)
+            7506394,   # 藍色 (0x7289DA)
+            10181046   # 紫色 (0x9B59B6)
         ]
         
+        # ランダムに色を選択
         accent_color = random.choice(rainbow_colors)
         
+        # テキスト用の独立したコンポーネント
         text_component = None
         if text:
             text_component = {
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": text
             }
         
+        # Container内のコンポーネント構築
         container_components = []
         
+        # 画像の処理
         attachments = []
         
+        # 添付画像がある場合
         if image_data:
+            # 一意のIDを生成
             attachment_id = str(uuid.uuid4())
             filename = f"oshi_panel_{attachment_id}.png"
             
+            # attachmentsを追加
             attachments = [{
                 "id": "0",
                 "filename": filename
             }]
             
+            # Media Galleryをcontainer_componentsに追加
             container_components.append({
-                "type": 12,
+                "type": 12,  # Media Gallery
                 "items": [
                     {
                         "media": {"url": f"attachment://{filename}"}
                     }
                 ]
             })
+        # 外部画像URLがある場合は直接参照
         elif image_url:
             container_components.append({
-                "type": 12,
+                "type": 12,  # Media Gallery
                 "items": [
                     {
                         "media": {"url": image_url}
@@ -1123,25 +755,29 @@ class CV2MessageSender:
                 ]
             })
         
+        # タイトル
         container_components.append({
-            "type": 10,
+            "type": 10,  # Text Display
             "content": "## 🎭 推しメンバーロール選択"
         })
         
+        # 説明
         description_text = "応援しているメンバーのロールを選択して、あなたの推しをアピールしましょう！\n"\
                           "以下のドロップダウンメニューからカテゴリを選ぶと、そのカテゴリ内のメンバーロールが表示されます。"
             
         container_components.append({
-            "type": 10,
+            "type": 10,  # Text Display
             "content": description_text
         })
         
+        # 区切り線
         container_components.append({
-            "type": 14,
+            "type": 14,  # Separator
             "divider": True,
             "spacing": 1
         })
         
+        # セレクトメニュー用オプション作成
         options = []
         for category in self.oshi_categories:
             options.append({
@@ -1151,11 +787,12 @@ class CV2MessageSender:
                 "emoji": {"name": category["emoji"]}
             })
         
+        # セレクトメニュー
         container_components.append({
-            "type": 1,
+            "type": 1,  # Action Row
             "components": [
                 {
-                    "type": 3,
+                    "type": 3,  # Select Menu
                     "custom_id": "oshi_select",
                     "placeholder": "カテゴリを選択",
                     "options": options,
@@ -1165,48 +802,53 @@ class CV2MessageSender:
             ]
         })
         
+        # 注意書き
         container_components.append({
-            "type": 10,
+            "type": 10,  # Text Display
             "content": "*※カテゴリを選択すると、詳細なメンバー選択画面が表示されます*"
         })
         
+        # 言語選択部分の前の区切り線
         container_components.append({
-            "type": 14,
+            "type": 14,  # Separator
             "divider": True,
-            "spacing": 2
+            "spacing": 2  # 大きめの余白
         })
         
+        # 言語選択の見出し
         container_components.append({
-            "type": 10,
+            "type": 10,  # Text Display
             "content": "### 言語選択 / Language / 언어 / 语言"
         })
         
+        # 言語選択の説明
         container_components.append({
-            "type": 10,
+            "type": 10,  # Text Display
             "content": "If you need a language other than Japanese, please click one of the buttons below👇\n" +
                      "한국어/중국어 안내가 필요하신 분은 아래 버튼을 눌러주세요👇\n" +
                      "如需其他语言的说明，请点击下方按钮👇"
         })
         
+        # 言語選択ボタンを横並びに配置
         container_components.append({
-            "type": 1,
+            "type": 1,  # Action Row
             "components": [
                 {
-                    "type": 2,
+                    "type": 2,  # Button
                     "style": 1,
                     "label": "English",
                     "custom_id": "oshi_english",
                     "emoji": {"name": "🇬🇧"}
                 },
                 {
-                    "type": 2,
+                    "type": 2,  # Button
                     "style": 1,
                     "label": "한국어",
                     "custom_id": "oshi_korean",
                     "emoji": {"name": "🇰🇷"}
                 },
                 {
-                    "type": 2,
+                    "type": 2,  # Button
                     "style": 1,
                     "label": "中文",
                     "custom_id": "oshi_chinese",
@@ -1215,45 +857,56 @@ class CV2MessageSender:
             ]
         })
         
+        # Containerコンポーネント
         container = {
-            "type": 17,
+            "type": 17,  # Container
             "accent_color": accent_color,
             "components": container_components
         }
         
+        # CV2形式の構造化されたコンポーネント
         components = []
         if text_component:
             components.append(text_component)
         components.append(container)
         
+        # リクエストのベースとなるJSONデータ
         payload = {
-            "flags": 32768,
+            "flags": 32768,  # IS_COMPONENTS_V2 フラグ
             "components": components
         }
         
+        # 添付ファイルがある場合に追加
         if attachments:
             payload["attachments"] = attachments
         
+        # 共通のヘッダー
         headers = {
             "Authorization": f"Bot {self.bot.http.token}",
             "Content-Type": "application/json"
         }
         
         try:
+            # HTTP POSTリクエスト送信
             if image_data:
+                # 画像を含む場合はmultipart/form-dataリクエストを使用
                 files = {
                     "files[0]": (attachments[0]["filename"], image_data, "image/png")
                 }
                 
+                # multipart/form-dataリクエスト
                 form = {"payload_json": json.dumps(payload)}
                 
+                # Authorizationヘッダーのみを設定し、Content-Typeはhttpxに自動設定させる
                 custom_headers = {
                     "Authorization": f"Bot {self.bot.http.token}"
                 }
                 
+                # デバッグ用ログ出力
                 logger.debug(f"送信するフォームデータ: {form}")
                 logger.debug(f"送信するファイル: {attachments[0]['filename']}")
                 
+                # HTTP POSTリクエスト送信
                 response = await self.client.post(
                     endpoint,
                     headers=custom_headers,
@@ -1261,6 +914,7 @@ class CV2MessageSender:
                     files=files
                 )
             else:
+                # 画像がない場合は通常のJSONリクエスト
                 response = await self.client.post(
                     endpoint,
                     headers=headers,
@@ -1286,12 +940,14 @@ class CV2MessageSender:
         interaction : discord.Interaction
             セレクトメニュー選択時のインタラクション
         """
+        # 選択されたカテゴリの値を取得
         values = interaction.data.get("values", [])
         if not values:
             return
             
         category_value = values[0]
         
+        # 選択されたカテゴリの情報を取得
         selected_category = None
         for category in self.oshi_categories:
             if category["value"] == category_value:
@@ -1302,55 +958,64 @@ class CV2MessageSender:
             await interaction.response.send_message("カテゴリが見つかりませんでした", ephemeral=True)
             return
         
+        # 虹色のカラーコード（Discord用の整数値）
         rainbow_colors = [
-            15158332,
-            16754470,
-            15844367,
-            5763719,
-            3447003,
-            7506394,
-            10181046
+            15158332,  # 赤色 (0xE74C3C)
+            16754470,  # オレンジ色 (0xFFA726) 
+            15844367,  # 黄色 (0xF1C40F)
+            5763719,   # 緑色 (0x57F287)
+            3447003,   # 青色 (0x3498DB)
+            7506394,   # 藍色 (0x7289DA)
+            10181046   # 紫色 (0x9B59B6)
         ]
         
+        # ランダムに色を選択
         accent_color = random.choice(rainbow_colors)
         
         try:
             endpoint = f"{self.base_url}/interactions/{interaction.id}/{interaction.token}/callback"
             
+            # Container内のコンポーネント
             container_components = []
             
+            # タイトルとカテゴリ
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": f"## {selected_category['emoji']} {selected_category['name']}のメンバーロール"
             })
             
+            # 説明
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": f"**{selected_category['description']}**\n\n推しメンバーのロールを選択してください："
             })
             
+            # 区切り線
             container_components.append({
-                "type": 14,
+                "type": 14,  # Separator
                 "divider": True,
                 "spacing": 1
             })
             
+            # カテゴリ選択セレクトメニュー用オプション作成
             category_options = []
             for category in self.oshi_categories:
+                # 現在選択中のカテゴリを表示
                 is_selected = category["value"] == category_value
                 category_options.append({
                     "label": category["name"],
                     "value": category["value"],
                     "description": category["description"],
                     "emoji": {"name": category["emoji"]},
-                    "default": is_selected
+                    "default": is_selected  # 選択中のカテゴリをデフォルト表示
                 })
             
+            # カテゴリ選択セレクトメニュー
             container_components.append({
-                "type": 1,
+                "type": 1,  # Action Row
                 "components": [
                     {
-                        "type": 3,
+                        "type": 3,  # Select Menu
                         "custom_id": "oshi_select",
                         "placeholder": "カテゴリを選択",
                         "options": category_options,
@@ -1360,146 +1025,154 @@ class CV2MessageSender:
                 ]
             })
             
+            # メンバーロールセレクトメニュー用オプション作成
             member_options = []
-            user_roles = [role.id for role in interaction.user.roles]
+            user_roles = [role.id for role in interaction.user.roles]  # ユーザーが持っているロールのID一覧
             
             for member_name, role_id in selected_category["roles"].items():
+                # ロールを取得
                 role = interaction.guild.get_role(role_id)
                 
+                # ロールが存在する場合のみ追加
                 if role:
+                    # ユーザーが既にロールを持っているかチェック
                     has_role = role_id in user_roles
                     
+                    # 絵文字オブジェクト初期化
                     emoji_obj = None
                     
+                    # 優先順位: 1.ロールアイコン 2.ロール絵文字マッピング
                     if role.icon:
+                        # ロールアイコンがある場合の処理
                         logger.info(f"ロール {role.name} のアイコンURL: {role.icon.url}")
                         
-                        emoji_data = self.bot.get_cog("OshiRolePanel").role_emoji_mapping.get(str(role_id), "")
-                        
-                        if emoji_data:
-                            if isinstance(emoji_data, dict) and "emoji" in emoji_data:
-                                emoji_str = emoji_data["emoji"]
-                            else:
-                                emoji_str = emoji_data
-                        
-                        if isinstance(emoji_str, str) and emoji_str:
-                            if emoji_str.startswith("<") and emoji_str.endswith(">"): 
+                        # ロール絵文字マッピングからの取得を試みる（サーバー上のカスタム絵文字マッピング）
+                        emoji_str = self.bot.get_cog("OshiRolePanel").role_emoji_mapping.get(str(role_id), "")
+                        if emoji_str:
+                            # カスタム絵文字かUnicode絵文字かを判断
+                            if emoji_str.startswith("<") and emoji_str.endswith(">"):
+                                # カスタム絵文字の場合、IDを抽出
                                 emoji_parts = emoji_str.strip("<>").split(":")
                                 if len(emoji_parts) == 3:
                                     emoji_obj = {
                                         "id": emoji_parts[2],
-                                        "name": emoji_parts[1]
+                                        "name": emoji_parts[1],
+                                        "animated": emoji_parts[0] == "a"
                                     }
-                                    if emoji_parts[0] == "a":
-                                        emoji_obj["animated"] = True
                             else:
-                                emoji_obj = None
+                                # Unicode絵文字の場合
+                                emoji_obj = {"name": emoji_str}
                     else:
-                        emoji_data = self.bot.get_cog("OshiRolePanel").role_emoji_mapping.get(str(role_id), "")
-                        emoji_str = ""
-                        
-                        if emoji_data:
-                            if isinstance(emoji_data, dict) and "emoji" in emoji_data:
-                                emoji_str = emoji_data["emoji"]
-                            else:
-                                emoji_str = emoji_data
-                        
-                        if isinstance(emoji_str, str) and emoji_str:
-                            if emoji_str.startswith("<") and emoji_str.endswith(">"): 
+                        # ロールアイコンがない場合、ロール絵文字マッピングを使用
+                        emoji_str = self.bot.get_cog("OshiRolePanel").role_emoji_mapping.get(str(role_id), "")
+                        if emoji_str:
+                            # カスタム絵文字かUnicode絵文字かを判断
+                            if emoji_str.startswith("<") and emoji_str.endswith(">"):
+                                # カスタム絵文字の場合、IDを抽出
                                 emoji_parts = emoji_str.strip("<>").split(":")
                                 if len(emoji_parts) == 3:
                                     emoji_obj = {
                                         "id": emoji_parts[2],
-                                        "name": emoji_parts[1]
+                                        "name": emoji_parts[1],
+                                        "animated": emoji_parts[0] == "a"
                                     }
-                                    if emoji_parts[0] == "a":
-                                        emoji_obj["animated"] = True
                             else:
-                                emoji_obj = None
+                                # Unicode絵文字の場合
+                                emoji_obj = {"name": emoji_str}
                     
+                    # メンバーオプションを追加
                     option = {
                         "label": member_name,
                         "value": f"role_{role_id}",
-                        "default": has_role
+                        "default": has_role  # 既に持っているロールは選択済みとして表示
                     }
                     
+                    # アイコン/絵文字の情報をdescriptionに追加
                     if role.icon:
                         option["description"] = "左のアイコンがつきます"
                     
-                    if emoji_obj and "id" in emoji_obj:
+                    # 絵文字があれば追加
+                    if emoji_obj:
                         option["emoji"] = emoji_obj
                     
                     member_options.append(option)
             
+            # メンバーロール選択セレクトメニュー（複数選択可能）
+            # カスタムIDにカテゴリ情報を埋め込む
             member_select_custom_id = f"member_select:{selected_category['value']}"
             
             if member_options:
                 container_components.append({
-                    "type": 1,
+                    "type": 1,  # Action Row
                     "components": [
                         {
-                            "type": 3,
+                            "type": 3,  # Select Menu
                             "custom_id": member_select_custom_id,
                             "placeholder": "推しメンバーを選択（複数可）",
                             "options": member_options,
-                            "min_values": 0,
-                            "max_values": len(member_options)
+                            "min_values": 0,  # 選択解除も可能
+                            "max_values": len(member_options)  # 全選択も可能
                         }
                     ]
                 })
             else:
                 container_components.append({
-                    "type": 10,
+                    "type": 10,  # Text Display
                     "content": "*このカテゴリには選択可能なロールがありません*"
                 })
             
+            # 注意書き
             container_components.append({
-                "type": 14,
+                "type": 14,  # Separator
                 "divider": True,
                 "spacing": 1
             })
             
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": "*※セレクトメニューから推しメンバーを選択すると、対応するロールが付与または解除されます。\n複数選択が可能です。選択済みのものを外すと解除されます。*"
             })
             
+            # 言語選択部分の区切り線
             container_components.append({
-                "type": 14,
+                "type": 14,  # Separator
                 "divider": True,
-                "spacing": 2
+                "spacing": 2  # 大きめの余白
             })
             
+            # 言語選択の見出し
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": "### 言語選択 / Language / 언어 / 语言"
             })
             
+            # 言語選択の説明
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": "If you need a language other than Japanese, please click one of the buttons below👇\n" +
                          "한국어/중국어 안내가 필요하신 분은 아래 버튼 중에서 선택해주세요👇"
             })
             
+            # 言語選択ボタンを横並びに配置
             container_components.append({
-                "type": 1,
+                "type": 1,  # Action Row
                 "components": [
                     {
-                        "type": 2,
+                        "type": 2,  # Button
                         "style": 1,
                         "label": "English",
                         "custom_id": "oshi_english",
                         "emoji": {"name": "🇬🇧"}
                     },
                     {
-                        "type": 2,
+                        "type": 2,  # Button
                         "style": 1,
                         "label": "한국어",
                         "custom_id": "oshi_korean",
                         "emoji": {"name": "🇰🇷"}
                     },
                     {
-                        "type": 2,
+                        "type": 2,  # Button
                         "style": 1,
                         "label": "中文",
                         "custom_id": "oshi_chinese",
@@ -1508,18 +1181,20 @@ class CV2MessageSender:
                 ]
             })
             
+            # Containerコンポーネント
             container = {
-                "type": 17,
+                "type": 17,  # Container
                 "accent_color": accent_color,
                 "components": container_components
             }
             
+            # CV2形式の構造化されたコンポーネント
             components = [container]
             
             response_data = {
-                "type": 4,
+                "type": 4,  # CHANNEL_MESSAGE_WITH_SOURCE
                 "data": {
-                    "flags": 32768 | 64,
+                    "flags": 32768 | 64,  # IS_COMPONENTS_V2 | EPHEMERAL
                     "components": components
                 }
             }
@@ -1529,6 +1204,7 @@ class CV2MessageSender:
                 "Content-Type": "application/json"
             }
             
+            # HTTP POSTリクエスト送信
             response = await self.client.post(
                 endpoint,
                 headers=headers,
@@ -1549,6 +1225,7 @@ class CV2MessageSender:
         custom_id = interaction.data.get("custom_id", "")
         role_id = int(custom_id.split("_")[1])
         
+        # ユーザーとロールを取得
         user = interaction.user
         guild = interaction.guild
         role = guild.get_role(role_id)
@@ -1559,14 +1236,17 @@ class CV2MessageSender:
             return
             
         try:
+            # ロールの付与または解除
             if role in user.roles:
                 await user.remove_roles(role)
+                # ロール絵文字マッピングを使用
                 emoji = self.bot.get_cog("OshiRolePanel").role_emoji_mapping.get(str(role_id), "")
                 emoji_display = f"{emoji} " if emoji else ""
                 await interaction.response.send_message(f"{emoji_display}**{role.name}**のロールを解除しました", ephemeral=True)
                 logger.info(f"ロール解除: {role.name}, ユーザー: {user.name}")
             else:
                 await user.add_roles(role)
+                # ロール絵文字マッピングを使用
                 emoji = self.bot.get_cog("OshiRolePanel").role_emoji_mapping.get(str(role_id), "")
                 emoji_display = f"{emoji} " if emoji else ""
                 await interaction.response.send_message(f"{emoji_display}**{role.name}**のロールを付与しました", ephemeral=True)
@@ -1590,18 +1270,21 @@ class CV2MessageSender:
         custom_id = interaction.data.get("custom_id", "")
         logger.info(f"言語選択ボタン押下: {custom_id}, ユーザー={interaction.user.display_name}({interaction.user.id})")
         
+        # 虹色のカラーコード（Discord用の整数値）
         rainbow_colors = [
-            15158332,
-            16754470,
-            15844367,
-            5763719,
-            3447003,
-            7506394,
-            10181046
+            15158332,  # 赤色 (0xE74C3C)
+            16754470,  # オレンジ色 (0xFFA726) 
+            15844367,  # 黄色 (0xF1C40F)
+            5763719,   # 緑色 (0x57F287)
+            3447003,   # 青色 (0x3498DB)
+            7506394,   # 藍色 (0x7289DA)
+            10181046   # 紫色 (0x9B59B6)
         ]
         
+        # ランダムに色を選択
         accent_color = random.choice(rainbow_colors)
         
+        # 言語に応じたタイトルと説明を取得
         if custom_id == "oshi_english":
             title = "🎭 Oshi Member Role Selection"
             description = "Select the roles of the members you support to show off your oshi!\n"\
@@ -1610,7 +1293,6 @@ class CV2MessageSender:
             category_placeholder = "Select a category"
             language_header = "### Language Selection / 言語選択 / 언어 / 语言"
             language_description = "If you prefer a different language, please select from the buttons below👇"
-            
         elif custom_id == "oshi_korean":
             title = "🎭 추천 멤버 역할 선택"
             description = "응원하는 멤버의 역할을 선택하여 당신의 추천을 어필하세요!\n"\
@@ -1619,7 +1301,6 @@ class CV2MessageSender:
             category_placeholder = "카테고리 선택"
             language_header = "### 언어 선택 / Language / 言語選択 / 语言"
             language_description = "다른 언어를 원하시면 아래 버튼 중에서 선택해주세요👇"
-            
         elif custom_id == "oshi_chinese":
             title = "🎭 推成员角色选择"
             description = "选择你支持的成员角色来展示你的推!\n"\
@@ -1628,7 +1309,6 @@ class CV2MessageSender:
             category_placeholder = "选择类别"
             language_header = "### 语言选择 / Language / 言語選択 / 언어"
             language_description = "如果您需要其他语言，请点击下方按钮👇"
-            
         elif custom_id == "oshi_japanese":
             title = "🎭 推しメンバーロール選択"
             description = "応援しているメンバーのロールを選択して、あなたの推しをアピールしましょう！\n"\
@@ -1638,32 +1318,37 @@ class CV2MessageSender:
             language_header = "### 言語選択 / Language / 언어 / 语言"
             language_description = "他の言語が必要な場合は、以下のボタンから選択してください👇"
         else:
+            # 未知のカスタムIDの場合
             logger.warning(f"未知の言語ボタンID: {custom_id}")
             return
             
-        self.analytics_callback = None
-        
+        # インタラクションに応答
         try:
             endpoint = f"{self.base_url}/interactions/{interaction.id}/{interaction.token}/callback"
             
+            # Container内のコンポーネント
             container_components = []
             
+            # タイトル
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": f"## {title}"
             })
             
+            # 説明
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": description
             })
             
+            # 区切り線
             container_components.append({
-                "type": 14,
+                "type": 14,  # Separator
                 "divider": True,
                 "spacing": 1
             })
             
+            # セレクトメニュー用オプション作成
             options = []
             for category in self.oshi_categories:
                 options.append({
@@ -1673,11 +1358,12 @@ class CV2MessageSender:
                     "emoji": {"name": category["emoji"]}
                 })
             
+            # セレクトメニュー
             container_components.append({
-                "type": 1,
+                "type": 1,  # Action Row
                 "components": [
                     {
-                        "type": 3,
+                        "type": 3,  # Select Menu
                         "custom_id": "oshi_select",
                         "placeholder": category_placeholder,
                         "options": options,
@@ -1687,39 +1373,44 @@ class CV2MessageSender:
                 ]
             })
             
+            # 注意書き
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": notice
             })
             
+            # 言語選択部分の前の区切り線
             container_components.append({
-                "type": 14,
+                "type": 14,  # Separator
                 "divider": True,
-                "spacing": 2
+                "spacing": 2  # 大きめの余白
             })
             
+            # 言語選択の見出し
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": language_header
             })
             
+            # 言語選択の説明
             container_components.append({
-                "type": 10,
+                "type": 10,  # Text Display
                 "content": language_description
             })
             
+            # 言語選択ボタンを横並びに配置
             container_components.append({
-                "type": 1,
+                "type": 1,  # Action Row
                 "components": [
                     {
-                        "type": 2,
+                        "type": 2,  # Button
                         "style": 1,
                         "label": "日本語",
                         "custom_id": "oshi_japanese",
                         "emoji": {"name": "🇯🇵"}
                     },
                     {
-                        "type": 2,
+                        "type": 2,  # Button
                         "style": 1,
                         "label": "English",
                         "custom_id": "oshi_english",
@@ -1727,7 +1418,7 @@ class CV2MessageSender:
                         "disabled": custom_id == "oshi_english"
                     },
                     {
-                        "type": 2,
+                        "type": 2,  # Button
                         "style": 1,
                         "label": "한국어",
                         "custom_id": "oshi_korean",
@@ -1735,7 +1426,7 @@ class CV2MessageSender:
                         "disabled": custom_id == "oshi_korean"
                     },
                     {
-                        "type": 2,
+                        "type": 2,  # Button
                         "style": 1,
                         "label": "中文",
                         "custom_id": "oshi_chinese",
@@ -1745,18 +1436,20 @@ class CV2MessageSender:
                 ]
             })
             
+            # Containerコンポーネント
             container = {
-                "type": 17,
+                "type": 17,  # Container
                 "accent_color": accent_color,
                 "components": container_components
             }
             
+            # CV2形式の構造化されたコンポーネント
             components = [container]
             
             response_data = {
-                "type": 4,
+                "type": 4,  # CHANNEL_MESSAGE_WITH_SOURCE
                 "data": {
-                    "flags": 32768 | 64,
+                    "flags": 32768 | 64,  # IS_COMPONENTS_V2 | EPHEMERAL
                     "components": components
                 }
             }
@@ -1766,6 +1459,7 @@ class CV2MessageSender:
                 "Content-Type": "application/json"
             }
             
+            # HTTP POSTリクエスト送信
             response = await self.client.post(
                 endpoint,
                 headers=headers,
@@ -1788,18 +1482,22 @@ class CV2MessageSender:
         interaction : discord.Interaction
             セレクトメニュー選択時のインタラクション
         """
+        # 選択されたロール値を取得
         selected_values = interaction.data.get("values", [])
         logger.info(f"メンバーロール選択: ユーザー={interaction.user.name}, 選択値={selected_values}")
         
+        # 選択中のカテゴリを特定
         selected_category = None
         selected_role_ids = [int(value.split("_")[1]) for value in selected_values if value.startswith("role_")]
         
         logger.debug(f"デバッグ: インタラクションデータ={interaction.data}")
         logger.debug(f"デバッグ: 選択されたロールID={selected_role_ids}")
         
+        # 新方式: カスタムIDから直接カテゴリ情報を取得
         custom_id = interaction.data.get("custom_id", "")
         logger.debug(f"デバッグ: カスタムID={custom_id}")
         
+        # カスタムIDが新しい形式（member_select:カテゴリ値）かチェック
         if ":" in custom_id:
             try:
                 category_value = custom_id.split(":")[1]
@@ -1813,6 +1511,7 @@ class CV2MessageSender:
             except Exception as e:
                 logger.error(f"埋め込みカテゴリ値からのカテゴリ特定中にエラー: {e}", exc_info=True)
                 
+        # 方法1: メッセージコンポーネントからカテゴリを特定（既存の方法）
         if not selected_category:
             try:
                 logger.debug("デバッグ: 方法1開始 - メッセージコンポーネントからカテゴリを特定")
@@ -1820,12 +1519,14 @@ class CV2MessageSender:
                 logger.debug(f"デバッグ: メッセージコンポーネント数={len(message_components) if message_components else 0}")
                 
                 if message_components and len(message_components) > 0:
+                    # カテゴリ選択メニューを探す
                     for i, component in enumerate(message_components):
                         logger.debug(f"デバッグ: コンポーネント[{i}].type={component.type}")
-                        if component.type == 1:
+                        if component.type == 1:  # ActionRow
                             for j, child in enumerate(component.components):
                                 logger.debug(f"デバッグ: 子コンポーネント[{j}].type={child.type}, custom_id={getattr(child, 'custom_id', 'なし')}")
-                                if child.type == 3 and child.custom_id == "oshi_select":
+                                if child.type == 3 and child.custom_id == "oshi_select":  # SelectMenu
+                                    # デフォルト値（現在選択中のカテゴリ）を取得
                                     logger.debug(f"デバッグ: oshi_selectメニュー発見、オプション数={len(child.options)}")
                                     for option in child.options:
                                         logger.debug(f"デバッグ: オプション={option.label}, default={getattr(option, 'default', False)}")
@@ -1842,11 +1543,13 @@ class CV2MessageSender:
             except Exception as e:
                 logger.error(f"メッセージコンポーネントからのカテゴリ特定中にエラー: {e}", exc_info=True)
         
+        # 方法2: 選択されたロールIDから所属カテゴリを逆引き
         if not selected_category and selected_role_ids:
             logger.debug("デバッグ: 方法2開始 - ロールIDからカテゴリを逆引き")
             first_role_id = selected_role_ids[0]
             logger.debug(f"デバッグ: 最初のロールID={first_role_id}")
             
+            # すべてのカテゴリとそのロールを確認
             for category in self.oshi_categories:
                 logger.debug(f"デバッグ: カテゴリ '{category['name']}' のロール数={len(category['roles'])}")
                 for role_name, role_id in category["roles"].items():
@@ -1858,12 +1561,14 @@ class CV2MessageSender:
                 if selected_category:
                     break
                     
+        # 方法3: インタラクションデータから直接カテゴリ値を取得
         if not selected_category:
             try:
                 logger.debug("デバッグ: 方法3開始 - インタラクションデータから直接カテゴリを取得")
                 custom_id = interaction.data.get("custom_id", "")
                 logger.debug(f"デバッグ: カスタムID={custom_id}")
                 
+                # カスタムIDに含まれるカテゴリを特定（例: member_select_oshi_jp_0_2 のような形式の場合）
                 if "member_select_" in custom_id:
                     category_value = custom_id.split("member_select_")[1]
                     logger.debug(f"デバッグ: 抽出されたカテゴリ値={category_value}")
@@ -1875,9 +1580,11 @@ class CV2MessageSender:
             except Exception as e:
                 logger.error(f"カスタムIDからのカテゴリ特定中にエラー: {e}", exc_info=True)
         
+        # カテゴリが特定できない場合、メッセージから全ロールを取得してマッチング
         if not selected_category:
             try:
                 logger.debug("デバッグ: 方法4開始 - 選択ロールの頻度からカテゴリを特定")
+                # 現在表示中のロール一覧を収集
                 displayed_roles = {}
                 for role_id in selected_role_ids:
                     for category in self.oshi_categories:
@@ -1887,6 +1594,7 @@ class CV2MessageSender:
                                 logger.debug(f"デバッグ: ロールID {role_id} はカテゴリ '{category['name']}' に属しています")
                                 break
                 
+                # 最も多く選択されているカテゴリを選択
                 if displayed_roles:
                     category_counts = {}
                     for role_id, category in displayed_roles.items():
@@ -1905,99 +1613,91 @@ class CV2MessageSender:
             except Exception as e:
                 logger.error(f"最も一般的なカテゴリ特定中にエラー: {e}", exc_info=True)
         
+        # どの方法でもカテゴリが特定できない場合
         if not selected_category:
+            # フォールバック: 最初のカテゴリを使用
             selected_category = self.oshi_categories[0]
             logger.warning(f"カテゴリ特定失敗、フォールバックを使用: {selected_category['name']}")
+            # 応答を送る代わりにメッセージリストに追加
             messages = ["⚠️ カテゴリの特定に失敗しましたが、処理を続行します。"]
         else:
             logger.info(f"対象カテゴリ: {selected_category['name']}")
             messages = []
         
+        # ユーザーとギルドを取得
         user = interaction.user
         guild = interaction.guild
         
+        # ユーザーが現在持っているロールのIDリスト
         current_role_ids = [role.id for role in user.roles]
         
+        # 現在選択中のカテゴリのロールIDを取得
         category_role_ids = set(selected_category["roles"].values())
         
+        # 付与すべきロールと解除すべきロールを決定
         roles_to_add = []
         roles_to_remove = []
         
+        # 選択されたロールを付与リストに追加
         for role_id in selected_role_ids:
-            if role_id not in current_role_ids:
+            if role_id not in current_role_ids:  # まだ持っていないロールのみ
                 role = guild.get_role(role_id)
                 if role:
                     roles_to_add.append(role)
         
+        # 現在のカテゴリの中で、選択されていないロールを解除リストに追加
         for role_id in category_role_ids:
             if role_id in current_role_ids and role_id not in selected_role_ids:
                 role = guild.get_role(role_id)
                 if role:
                     roles_to_remove.append(role)
         
+        # ロールの付与処理
         try:
             if roles_to_add:
                 await user.add_roles(*roles_to_add)
                 add_names = [f"**{role.name}**" for role in roles_to_add]
                 messages.append(f"付与したロール: {', '.join(add_names)}")
                 logger.info(f"ロール付与: {[role.name for role in roles_to_add]}, ユーザー: {user.name}")
-                
-                if self.analytics_callback:
-                    role_data = [
-                        {"id": role.id, "name": role.name} 
-                        for role in roles_to_add
-                    ]
-                    self.analytics_callback(
-                        "add", user.id, user.name, role_data, 
-                        selected_category.get("name", "不明")
-                    )
         except Exception as e:
             logger.error(f"ロール付与中にエラー: {e}")
             messages.append("❌ ロールの付与中にエラーが発生しました")
         
+        # ロールの解除処理
         try:
             if roles_to_remove:
                 await user.remove_roles(*roles_to_remove)
                 remove_names = [f"**{role.name}**" for role in roles_to_remove]
                 messages.append(f"解除したロール: {', '.join(remove_names)}")
                 logger.info(f"ロール解除: {[role.name for role in roles_to_remove]}, ユーザー: {user.name}")
-                
-                if self.analytics_callback:
-                    role_data = [
-                        {"id": role.id, "name": role.name} 
-                        for role in roles_to_remove
-                    ]
-                    self.analytics_callback(
-                        "remove", user.id, user.name, role_data, 
-                        selected_category.get("name", "不明")
-                    )
         except Exception as e:
             logger.error(f"ロール解除中にエラー: {e}")
             messages.append("❌ ロールの解除中にエラーが発生しました")
         
+        # 何も変更がない場合
         if len(messages) == 0 or (len(messages) == 1 and messages[0].startswith("⚠️")):
             messages.append("ロールの変更はありませんでした")
         
+        # ユーザーに結果を通知（一度だけ）
         try:
             await interaction.response.send_message("\n".join(messages), ephemeral=True)
         except discord.errors.InteractionResponded:
             logger.warning(f"インタラクションは既に応答済み: ユーザー={user.name}")
+            # 既に応答済みの場合はフォローアップメッセージを送信
             try:
                 await interaction.followup.send("\n".join(messages), ephemeral=True)
             except Exception as e:
                 logger.error(f"フォローアップメッセージ送信中にエラー: {e}")
 
-    def __del__(self):
-        if hasattr(self, 'client'):
-            logger.info("CV2MessageSender instance is being destroyed, but client.aclose() cannot be awaited in __del__")
-            
-    async def close(self):
+    async def __del__(self):
+        # クライアントのクローズ処理
         if hasattr(self, 'client'):
             await self.client.aclose()
-            logger.info("CV2MessageSender client closed successfully")
 
 async def setup(bot):
+    logger.info("OshiRolePanel Cogをセットアップ中...")
     try:
         await bot.add_cog(OshiRolePanel(bot))
+        logger.info("OshiRolePanel Cogの登録が完了しました")
     except Exception as e:
         logger.error(f"OshiRolePanel Cogの登録に失敗しました: {e}\n{traceback.format_exc()}")
