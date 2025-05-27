@@ -17,6 +17,7 @@ requirements-dev.txt
 # キャッシュファイル
 __pycache__/
 .ruff_cache/
+cache/
 
 # 仮想環境
 .venv/
