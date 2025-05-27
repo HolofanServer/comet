@@ -1,6 +1,8 @@
 import discord
 
 import asyncio
+import datetime
+import pytz
 
 from utils.logging import setup_logging
 from config.setting import get_settings
@@ -11,10 +13,21 @@ settings = get_settings()
 main_guild_id = settings.admin_main_guild_id
 
 presences = [
-    {"type": "Playing", "name": "/omikuji", "state": "1日一回運試し！"},
-    {"type": "Playing", "name": "サーバーブースター限定コマンドで画像を生成しよう！", "state": "DellE3を使ったAI画像生成コマンド"},
-    {"type": "Playing", "name": "/help", "state": "わからないことがあれば使ってみてね！"},
+    {"type": "Playing", "name": "HFS Manager", "state": "つながる絆、ひろがる推し活"}
 ]
+
+def get_greeting():
+    # 現在のJST時間を取得
+    jst_now = datetime.datetime.now(pytz.timezone('Asia/Tokyo'))
+    hour = jst_now.hour
+    
+    # 時間帯によって挨拶を変更
+    if 5 <= hour < 10:
+        return "おはようございます！"
+    elif 10 <= hour < 18:
+        return "こんにちは！"
+    else:
+        return "こんばんは！"
 
 async def update_presence(bot):
     index = 0
@@ -26,22 +39,38 @@ async def update_presence(bot):
                 await asyncio.sleep(5)
                 continue
 
+            # サーバーメンバー数を取得
             member_count = sum(1 for _ in guild.members)
             
-            custom_presence = {"type": "Playing", "name": f"{member_count}人が参加中...", "state": "iPhoneだけだよ！"}
-            presences.insert(0, custom_presence)
+            # 現在のJST時間を取得
+            jst_now = datetime.datetime.now(pytz.timezone('Asia/Tokyo'))
+            jst_time_str = jst_now.strftime('%H:%M')
             
-            presence = presences[index]
-            if presence["type"] == "Playing":
-                activity_type = getattr(discord.ActivityType, presence["type"].lower(), discord.ActivityType.playing)
-                activity = discord.Activity(type=activity_type, name=presence["name"], state=presence.get("state", None), status=discord.Status.online)
+            # 時間帯に応じた挨拶
+            greeting = get_greeting()
+            
+            # 動的なプレゼンスリスト
+            dynamic_presences = [
+                {"type": "Playing", "name": f"{member_count}人が参加中...", "state": "とまらないホロライブ！"},
+                {"type": "Playing", "name": f"{jst_time_str} JST", "state": greeting}
+            ]
+            
+            # すべてのプレゼンスを結合
+            all_presences = dynamic_presences + presences
+            
+            # 現在のインデックスのプレゼンスを選択
+            presence = all_presences[index % len(all_presences)]
+            
+            # アクティビティの種類を設定
+            activity_type = getattr(discord.ActivityType, presence["type"].lower(), discord.ActivityType.playing)
+            activity = discord.Activity(type=activity_type, name=presence["name"], state=presence.get("state", None), status=discord.Status.online)
 
             await bot.change_presence(activity=activity)
             
             await asyncio.sleep(60)
 
-            index = (index + 1) % len(presences)
-            presences.pop(0)
+            # 次のプレゼンスに進む
+            index = (index + 1) % len(all_presences)
 
         except discord.ConnectionClosed as e:
             logger.error(f"Connection closed: {e}")
