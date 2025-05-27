@@ -1,0 +1,316 @@
+{
+  "staff": [
+    {
+      "id": "707320830387814531",
+      "name": "FreeWiFi",
+      "role": "Administrator",
+      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/707320830387814531/avatars/2900565f66cf269b9e9ad71ddd99e1de.png?size=1024",
+      "message": "わいふぁいって呼んでください！困ったことがあったらいつでもご連絡してくださいね！",
+      "joinedAt": "2023-04-03",
+      "joinedAtJp": "2023年04月03日",
+      "roleColor": "#e91e63",
+      "socials": {}
+    },
+    {
+      "id": "941477228343070741",
+      "name": "あくる(永遠のあくあくるー)",
+      "role": "Staff",
+      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/598bbbf20b202e3f3a17ef5c12d4485e.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-02",
+      "joinedAtJp": "2023年04月02日",
+      "roleColor": "#2ecc71",
+      "socials": {}
+    },
+    {
+      "id": "395131142535249920",
+      "name": "ゆの",
+      "role": "Moderator",
+      "avatar": "https://cdn.discordapp.com/avatars/395131142535249920/4317d12b9fb13ae5b1ae408da22da9fd.png?size=1024",
+      "message": "",
+      "joinedAt": "2024-05-04",
+      "joinedAtJp": "2024年05月04日",
+      "roleColor": "#3498db",
+      "socials": {}
+    },
+    {
+      "id": "1029007505143124018",
+      "name": "みすたー18号",
+      "role": "Staff",
+      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/1029007505143124018/avatars/b2e20e10c9c6f201216dbe450ddf3dd1.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-03",
+      "joinedAtJp": "2023年04月03日",
+      "roleColor": "#2ecc71",
+      "socials": {}
+    }
+  ],
+  "specialThanks": [
+    {
+      "id": "707320830387814531",
+      "name": "FreeWiFi",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/707320830387814531/avatars/2900565f66cf269b9e9ad71ddd99e1de.png?size=1024",
+      "message": "わいふぁいって呼んでください！困ったことがあったらいつでもご連絡してくださいね！",
+      "joinedAt": "2023-04-03",
+      "joinedAtJp": "2023年04月03日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1027932870951583814",
+      "name": "かぷ",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/1027932870951583814/dfc3ca1f1cfe3baebd1c9a5ec34b5a19.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-14",
+      "joinedAtJp": "2023年04月14日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "941477228343070741",
+      "name": "あくる(永遠のあくあくるー)",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/598bbbf20b202e3f3a17ef5c12d4485e.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-02",
+      "joinedAtJp": "2023年04月02日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "788053238992863292",
+      "name": "ザクス🌽ゲマズ2両日参加",
+      "role": "常連1期生",
+      "avatar": "https://cdn.discordapp.com/avatars/788053238992863292/8e3b0f09325feb006ae52219b6cff406.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-04",
+      "joinedAtJp": "2023年04月04日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "395131142535249920",
+      "name": "ゆの",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/395131142535249920/4317d12b9fb13ae5b1ae408da22da9fd.png?size=1024",
+      "message": "",
+      "joinedAt": "2024-05-04",
+      "joinedAtJp": "2024年05月04日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1082947244661145640",
+      "name": "anteeksi",
+      "role": "常連1期生",
+      "avatar": "https://cdn.discordapp.com/avatars/1082947244661145640/6eaeae0cdb090a7b69fe326b872408ff.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-08-07",
+      "joinedAtJp": "2023年08月07日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1128320597437460641",
+      "name": "尾田しゅける",
+      "role": "常連1期生",
+      "avatar": "https://cdn.discordapp.com/avatars/1128320597437460641/e67b8a1221f43310d23816d15a18eaa5.png?size=1024",
+      "message": "こんにちは私は尾田しゅけるです",
+      "joinedAt": "2023-07-24",
+      "joinedAtJp": "2023年07月24日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "916849660759535676",
+      "name": "挨拶委員会🛸なつてと",
+      "role": "常連2期生",
+      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/916849660759535676/avatars/2d0fcae3b2b5cbee799e168a49f2606f.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-06-15",
+      "joinedAtJp": "2023年06月15日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "779271543515381770",
+      "name": "【酔生夢死】Deru",
+      "role": "常連1期生",
+      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/779271543515381770/avatars/7543352759c8f4811e62505d4d0f46d2.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-07-22",
+      "joinedAtJp": "2023年07月22日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1029007505143124018",
+      "name": "みすたー18号",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/1029007505143124018/avatars/b2e20e10c9c6f201216dbe450ddf3dd1.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-03",
+      "joinedAtJp": "2023年04月03日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1183337059398733834",
+      "name": "なつてと",
+      "role": "常連2期生",
+      "avatar": "https://cdn.discordapp.com/avatars/1183337059398733834/77cc7ff2a606c604a92fdc8abd6044e9.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-12-10",
+      "joinedAtJp": "2023年12月10日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1113104912922984479",
+      "name": "ほんさん",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/1113104912922984479/b52c2be8a2612a57b311ed26509a0c98.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-06-15",
+      "joinedAtJp": "2023年06月15日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "967334372514607104",
+      "name": "ぬちぃ&名のない怪物",
+      "role": "常連1期生",
+      "avatar": "https://cdn.discordapp.com/avatars/967334372514607104/3ee4b6ba529c9c55db3ca3261aba856f.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-06-10",
+      "joinedAtJp": "2023年06月10日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "959448930142269520",
+      "name": "るきお",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/959448930142269520/719d290f565353951ccb0594db604377.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-16",
+      "joinedAtJp": "2023年04月16日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1004634798033215568",
+      "name": "カヨコ教司祭まんもちゅ",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/1004634798033215568/4459df84bfc028034ca98ea194c8a238.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-03",
+      "joinedAtJp": "2023年04月03日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1113008430597279807",
+      "name": "ねこば(ゆのアンチ",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/1113008430597279807/476941637740acd9f9193d614672a0c0.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-05-30",
+      "joinedAtJp": "2023年05月30日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "999212456624787536",
+      "name": "すいかわ",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/999212456624787536/4c69f47fdc6815af67f5ef8005918399.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-04",
+      "joinedAtJp": "2023年04月04日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1029403469469192202",
+      "name": "🌸サロちん🎓",
+      "role": "常連2期生",
+      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/1029403469469192202/avatars/0bb3674593e7f54b6bfdb1e5f662d15c.png?size=1024",
+      "message": "サロちんです。このサーバーを盛り上げてます",
+      "joinedAt": "2023-09-26",
+      "joinedAtJp": "2023年09月26日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    }
+  ],
+  "testers": [
+    {
+      "id": "1355706337480278207",
+      "name": "からあげ/🦊🧪🐶",
+      "role": "テスター",
+      "avatar": "https://cdn.discordapp.com/avatars/1355706337480278207/d2da80c4a9770d8e4202746da944becb.png?size=1024",
+      "message": "",
+      "joinedAt": "2025-03-30",
+      "joinedAtJp": "2025年03月30日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1203337222514941954",
+      "name": "でんし　🌸🌽🐏(最推し)",
+      "role": "テスター",
+      "avatar": "https://cdn.discordapp.com/avatars/1203337222514941954/06f793ff9b793aa11677ca737755c35f.png?size=1024",
+      "message": "",
+      "joinedAt": "2025-01-23",
+      "joinedAtJp": "2025年01月23日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1346651342306938932",
+      "name": "浮気者キバ",
+      "role": "テスター",
+      "avatar": "https://cdn.discordapp.com/avatars/1346651342306938932/fee92cb9a5d14ec2ca2f9a285f1aa10c.png?size=1024",
+      "message": "",
+      "joinedAt": "2025-03-11",
+      "joinedAtJp": "2025年03月11日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1331949252867264516",
+      "name": "スティンガー/最後の見届人",
+      "role": "テスター",
+      "avatar": "https://cdn.discordapp.com/avatars/1331949252867264516/e790f78186019f7c75c9840c9c3f1dd2.png?size=1024",
+      "message": "",
+      "joinedAt": "2025-02-04",
+      "joinedAtJp": "2025年02月04日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1176273035230187523",
+      "name": "🍃混沌に呻くカザ・マガラ🧪",
+      "role": "テスター",
+      "avatar": "https://cdn.discordapp.com/avatars/1176273035230187523/c3c7b6e19c0a3500ee862d1ff41ffd1a.png?size=1024",
+      "message": "",
+      "joinedAt": "2025-03-20",
+      "joinedAtJp": "2025年03月20日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1071729729620688976",
+      "name": "V大好きの学生",
+      "role": "テスター",
+      "avatar": "https://cdn.discordapp.com/avatars/1071729729620688976/86b423e56336befeebf7f0fa5e3a63af.png?size=1024",
+      "message": "",
+      "joinedAt": "2025-02-12",
+      "joinedAtJp": "2025年02月12日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    }
+  ]
+}
