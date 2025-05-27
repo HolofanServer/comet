@@ -1,17 +1,17 @@
 import discord
 from discord.ext import commands
 from openai import OpenAI
-import json
-import os
 import traceback
 from utils.logging import setup_logging
 from config.setting import get_settings
 import httpx
+import json
 import uuid
 import random
 import asyncio
 import time
 from utils.commands_help import is_guild, is_owner, log_commands
+# データベース関連のインポートはinitialize_db内に移動しました
 
 logger = setup_logging("D")
 settings = get_settings()
@@ -136,15 +136,28 @@ class CountryBasedWelcome(commands.Cog):
         self.bot = bot
         self.channel = None
         self.welcome_channels = {}
+        self.db_manager = None
         logger.info("CountryBasedWelcome Cogを初期化中...")
-        self.load_all_configs()
-        logger.info(f"ウェルカムチャンネル設定: {self.welcome_channels}")
+        # 初期化時にDBを準備するタスクを作成
+        self.bot.loop.create_task(self.initialize_db())
         self.cv2_sender = CV2MessageSender(bot)
         # 参加キューの初期化
         self.join_queue = UserJoinQueue(bot)
         # 定期的にキューを処理するタスクを開始
         self.queue_task = bot.loop.create_task(self._process_queue_periodically())
         logger.info("参加キューシステムを初期化しました")
+        
+    async def initialize_db(self):
+        """データベース接続を初期化し、設定を読み込みます"""
+        try:
+            # シングルトンのdbインスタンスを使用
+            from utils.db_manager import db
+            await db.initialize()
+            self.db_manager = db
+            await self.load_all_configs()
+            logger.info(f"ウェルカムチャンネル設定をDBから読み込みました: {self.welcome_channels}")
+        except Exception as e:
+            logger.error(f"データベース初期化中にエラー: {e}\n{traceback.format_exc()}")
 
     async def _process_queue_periodically(self):
         """定期的にキューを処理"""
@@ -156,75 +169,109 @@ class CountryBasedWelcome(commands.Cog):
                 logger.error(f"キュー処理中にエラー: {e}\n{traceback.format_exc()}")
             await asyncio.sleep(1)  # 1秒ごとに処理
 
-    def save_config(self, guild_id, channel_id):
+    async def save_config(self, guild_id, channel_id):
+        """サーバー設定をデータベースに保存します"""
         logger.info(f"設定保存: ギルドID={guild_id}, チャンネルID={channel_id}")
-        config_file_path = os.path.join(os.getcwd(), "data", "config.json")
         
-        # dataディレクトリが存在しない場合は作成
-        os.makedirs(os.path.dirname(config_file_path), exist_ok=True)
+        if not self.db_manager:
+            logger.error("データベース接続が初期化されていません")
+            return False
         
         try:
-            if os.path.exists(config_file_path):
-                with open(config_file_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                    config[str(guild_id)] = {"welcome_channel": channel_id}
-                with open(config_file_path, 'w', encoding='utf-8') as f:
-                    json.dump(config, f, indent=4)
-                logger.info(f"既存の設定ファイルを更新しました: {config_file_path}")
-            else:
-                config = {str(guild_id): {"welcome_channel": channel_id}}
-                with open(config_file_path, 'w', encoding='utf-8') as f:
-                    json.dump(config, f, indent=4)
-                logger.info(f"新しい設定ファイルを作成しました: {config_file_path}")
+            # サーバー設定をデータベースに保存
+            async with self.db_manager.pool.acquire() as conn:
+                # 現在の設定を取得
+                config_json = {}
+                existing_record = await conn.fetchrow(
+                    "SELECT config_json FROM guild_configs WHERE guild_id = $1",
+                    guild_id
+                )
+                
+                if existing_record:
+                    config_json = existing_record['config_json']
+                
+                # welcome_channelの設定を更新
+                config_json['welcome_channel'] = channel_id
+                
+                # UPSERTで保存
+                await conn.execute(
+                    """
+                    INSERT INTO guild_configs (guild_id, welcome_channel_id, config_json, updated_at)
+                    VALUES ($1, $2, $3, NOW())
+                    ON CONFLICT (guild_id) DO UPDATE
+                    SET welcome_channel_id = $2, config_json = $3, updated_at = NOW()
+                    """,
+                    guild_id,
+                    channel_id,
+                    json.dumps(config_json)
+                )
             
             # メモリにも保存
             self.welcome_channels[str(guild_id)] = channel_id
+            logger.info(f"サーバー設定をデータベースに保存しました: ギルドID={guild_id}")
+            return True
         except Exception as e:
             logger.error(f"設定保存中にエラーが発生しました: {e}\n{traceback.format_exc()}")
+            return False
                 
-    def load_all_configs(self):
-        config_file_path = os.path.join(os.getcwd(), "data", "config.json")
-        logger.info(f"設定ファイルをロード: {config_file_path}")
+    async def load_all_configs(self):
+        """すべてのサーバー設定をデータベースから読み込みます"""
+        logger.info("データベースから設定を読み込みます")
         
-        if os.path.exists(config_file_path):
-            try:
-                with open(config_file_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                    logger.info(f"設定ファイルの内容: {config}")
-                    for guild_id, settings in config.items():
-                        if "welcome_channel" in settings:
-                            self.welcome_channels[guild_id] = settings["welcome_channel"]
-                            logger.info(f"ギルド {guild_id} のウェルカムチャンネルを設定: {settings['welcome_channel']}")
-            except Exception as e:
-                logger.error(f"設定ファイルの読み込みに失敗しました: {e}\n{traceback.format_exc()}")
-        else:
-            logger.warning(f"設定ファイルが見つかりませんでした: {config_file_path}")
+        if not self.db_manager:
+            logger.error("データベース接続が初期化されていません")
+            return False
+        
+        try:
+            # データベースからすべての設定を読み込む
+            async with self.db_manager.pool.acquire() as conn:
+                records = await conn.fetch("SELECT guild_id, welcome_channel_id, config_json FROM guild_configs")
+                
+                for record in records:
+                    guild_id = str(record['guild_id'])
+                    welcome_channel_id = record['welcome_channel_id']
+                    
+                    if welcome_channel_id:
+                        self.welcome_channels[guild_id] = welcome_channel_id
+                        logger.info(f"ギルド {guild_id} のウェルカムチャンネルを設定: {welcome_channel_id}")
+            
+            logger.info(f"データベースから {len(records)} 件の設定を読み込みました")
+            return True
+        except Exception as e:
+            logger.error(f"設定の読み込みに失敗しました: {e}\n{traceback.format_exc()}")
+            return False
 
-    def load_config(self, guild_id):
+    async def load_config(self, guild_id):
+        """ギルドの設定をデータベースからロードします"""
         logger.info(f"ギルド {guild_id} の設定をロード")
         
         # 既にキャッシュされている場合はそれを返す
         if str(guild_id) in self.welcome_channels:
             logger.info(f"キャッシュから設定を取得: ギルド {guild_id}, チャンネル {self.welcome_channels[str(guild_id)]}")
             return self.welcome_channels[str(guild_id)]
-            
-        config_file_path = os.path.join(os.getcwd(), "data", "config.json")
-        if os.path.exists(config_file_path):
-            try:
-                with open(config_file_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                    channel_id = config.get(str(guild_id), {}).get("welcome_channel", None)
-                    if channel_id:
-                        logger.info(f"ファイルから設定を取得: ギルド {guild_id}, チャンネル {channel_id}")
-                        self.welcome_channels[str(guild_id)] = channel_id
-                    else:
-                        logger.warning(f"ギルド {guild_id} の設定が見つかりませんでした")
+        
+        if not self.db_manager:
+            logger.error("データベース接続が初期化されていません")
+            return None
+        
+        try:
+            # データベースからギルドの設定を取得
+            async with self.db_manager.pool.acquire() as conn:
+                record = await conn.fetchrow(
+                    "SELECT welcome_channel_id FROM guild_configs WHERE guild_id = $1",
+                    guild_id
+                )
+                
+                if record and record['welcome_channel_id']:
+                    channel_id = record['welcome_channel_id']
+                    logger.info(f"データベースから設定を取得: ギルド {guild_id}, チャンネル {channel_id}")
+                    # キャッシュに保存
+                    self.welcome_channels[str(guild_id)] = channel_id
                     return channel_id
-            except Exception as e:
-                logger.error(f"設定ファイルの読み込み中にエラーが発生しました: {e}\n{traceback.format_exc()}")
-                return None
-        else:
-            logger.warning(f"設定ファイルが見つかりませんでした: {config_file_path}")
+                else:
+                    logger.warning(f"ギルド {guild_id} の設定がデータベースに見つかりませんでした")
+        except Exception as e:
+            logger.error(f"データベースからの設定読み込み中にエラー: {e}\n{traceback.format_exc()}")
         
         return None
 
@@ -235,15 +282,24 @@ class CountryBasedWelcome(commands.Cog):
     async def welcome(self, ctx):
         await ctx.send("Welcome to the server!")
         
-    @welcome.command(name="set_channel")
+    @commands.hybrid_command(name="set_welcome_channel")
     @is_guild()
     @is_owner()
     @log_commands()
-    async def set_channel(self, ctx, channel: discord.TextChannel):
-        logger.info(f"ウェルカムチャンネル設定コマンド実行: ユーザー={ctx.author}, ギルド={ctx.guild.name}({ctx.guild.id}), チャンネル={channel.name}({channel.id})")
-        self.channel = channel
-        self.save_config(ctx.guild.id, channel.id)
-        await ctx.send(f"ウェルカムチャンネルは{channel.mention}に設定されました。")
+    async def set_welcome_channel(self, ctx, channel: discord.TextChannel = None):
+        """ウェルカムメッセージを送信するチャンネルを設定します。"""
+        if channel is None:
+            channel = ctx.channel
+            
+        guild_id = ctx.guild.id
+        channel_id = channel.id
+        
+        success = await self.save_config(guild_id, channel_id)
+        
+        if success:
+            await ctx.send(f"ウェルカムチャンネルを {channel.mention} に設定しました。")
+        else:
+            await ctx.send("設定の保存中にエラーが発生しました。ログを確認してください。")
         logger.info(f"ウェルカムチャンネル設定完了: {channel.name}({channel.id})")
         
     @welcome.command(name="test_welcome_message")
@@ -258,7 +314,7 @@ class CountryBasedWelcome(commands.Cog):
         logger.info(f"ユーザー情報: 表示名={name}, グローバル名={global_name}")
 
         # 設定を取得
-        channel_id = self.load_config(ctx.guild.id)
+        channel_id = await self.load_config(ctx.guild.id)
         if not channel_id:
             logger.warning(f"ギルド {ctx.guild.id} のウェルカムチャンネルが設定されていません")
             await ctx.send("ウェルカムチャンネルが設定されていません。`/welcome set_channel`で設定してください。")
@@ -295,7 +351,7 @@ class CountryBasedWelcome(commands.Cog):
         logger.info(f"CV2ウェルカムメッセージテスト: {ctx.author.display_name}({ctx.author.id}) がギルド {ctx.guild.name}({ctx.guild.id}) に参加")
         
         # 設定を取得
-        channel_id = self.load_config(ctx.guild.id)
+        channel_id = await self.load_config(ctx.guild.id)
         if not channel_id:
             logger.warning(f"ギルド {ctx.guild.id} のウェルカムチャンネルが設定されていません")
             await ctx.send("ウェルカムチャンネルが設定されていません。`/welcome set_channel`で設定してください。")
@@ -334,7 +390,7 @@ class CountryBasedWelcome(commands.Cog):
         await ctx.send("CV2形式のウェルカムメッセージをテスト送信中...")
         
         # 設定を取得
-        channel_id = self.load_config(ctx.guild.id)
+        channel_id = await self.load_config(ctx.guild.id)
         if not channel_id:
             await ctx.send("ウェルカムチャンネルが設定されていません。`/welcome set_channel`で設定してください。")
             return
@@ -379,7 +435,7 @@ class CountryBasedWelcome(commands.Cog):
             return
             
         # 設定を取得
-        channel_id = self.load_config(ctx.guild.id)
+        channel_id = await self.load_config(ctx.guild.id)
         if not channel_id:
             await ctx.send("ウェルカムチャンネルが設定されていません。`/welcome set_channel`で設定してください。")
             return
@@ -439,7 +495,7 @@ class CountryBasedWelcome(commands.Cog):
             return
             
         # 設定を取得
-        channel_id = self.load_config(ctx.guild.id)
+        channel_id = await self.load_config(ctx.guild.id)
         if not channel_id:
             await ctx.send("ウェルカムチャンネルが設定されていません。`/welcome set_channel`で設定してください。")
             return
@@ -482,7 +538,7 @@ class CountryBasedWelcome(commands.Cog):
         logger.info(f"ユーザー情報: 表示名={name}, グローバル名={global_name}")
 
         # 設定を取得
-        channel_id = self.load_config(member.guild.id)
+        channel_id = await self.load_config(member.guild.id)
         if not channel_id:
             logger.warning(f"ギルド {member.guild.id} のウェルカムチャンネルが設定されていません")
             return

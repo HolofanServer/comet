@@ -19,7 +19,7 @@ __pycache__/
 .ruff_cache/
 
 # 仮想環境
-iphone3g/
+.venv/
 
 # Config ファイル
 bot.json

@@ -24,7 +24,7 @@ class StaffManager(commands.Cog):
         self.config_path = 'config/members.json'  # 一時的なローカルキャッシュとして使用
         
         # 設定ファイルからの値が期待と異なるため、直接URLを指定
-        self.api_endpoint = "https://test.local.hfs.jp/api"
+        self.api_endpoint = "https://hfs.jp/api"
         self.api_token = settings.staff_api_key  # APIの認証キー
         self.last_update = None
         self.members_cache = {"staff": [], "specialThanks": []}

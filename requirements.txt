@@ -21,6 +21,7 @@ ruff==0.11.7
 jisho_api==0.1.8
 sentry-sdk==2.19.0
 matplotlib==3.9.4
-discord-ext-voice-recv==0.4.2a145
 pynacl==1.5.0
 aiofiles==24.1.0
+asyncpg==0.30.0
+openai-whisper==20240930

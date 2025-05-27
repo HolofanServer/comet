@@ -22,7 +22,7 @@ from utils.commands_help import is_guild_app, is_owner_app
 logger = setup_logging("D")
 
 LOCAL_DEMO_IMG: Final[pathlib.Path] = pathlib.Path(__file__).with_suffix(".png")
-MAX_MEDIA_ITEMS: Final[int] = 4  # Discord 現行制限
+MAX_MEDIA_ITEMS: Final[int] = 4
 
 
 class CV2Demo(commands.Cog):
@@ -275,14 +275,7 @@ class CV2Demo(commands.Cog):
                     cv2.button("デンジャー", custom_id="btn_danger", style="danger", emoji="🔴"),
                     cv2.button("リンク", url="https://hfs.jp/bot", style="link", emoji="🔗"),
                 ]),
-                
-                # カラーパレットの例
-                cv2.text("## アクセントカラー一覧"),
             ]
-            
-            # カラーサンプルを追加
-            for i, color in enumerate(cv2._PALETTE):
-                components.append(cv2.text(f"Color {i+1}: 0x{color:06X}"))
             
             logger.info(f"CV2デモパネルのコンポーネント作成完了: {len(components)} 個")
             
@@ -381,8 +374,8 @@ class CV2Demo(commands.Cog):
             container1 = cv2.container([
                 cv2.title("複数コンテナモードデモ", level=1),
                 cv2.text("このメッセージは複数の別々のコンテナで構成されています。"),
-                cv2.text("部分ごとにアクセントカラーが変わります。"),
-            ], accent_color=cv2._PALETTE[0])
+                cv2.text("シンプルなコンテナで構成されています。"),
+            ])
             
             # ボタン行のコンテナ
             container2 = cv2.container([
@@ -392,7 +385,7 @@ class CV2Demo(commands.Cog):
                     cv2.button("セカンダリ", custom_id="btn_secondary_multi", style="secondary", emoji="⚪"),
                     cv2.button("サクセス", custom_id="btn_success_multi", style="success", emoji="🟢"),
                 ]),
-            ], accent_color=cv2._PALETTE[1])
+            ])
             
             # セレクトメニューのコンテナ
             container3 = cv2.container([
@@ -405,13 +398,13 @@ class CV2Demo(commands.Cog):
                     ],
                     placeholder="選択してください",
                 ),
-            ], accent_color=cv2._PALETTE[2])
+            ])
             
             # 全コンテナの送信
             components = [container1, container2, container3]
             
             if media_urls:
-                media_container = cv2.container([cv2.text("メディアギャラリー"), cv2.line()], accent_color=cv2._PALETTE[3])
+                media_container = cv2.container([cv2.text("メディアギャラリー"), cv2.line()])
                 components.append(media_container)
             
             logger.info(f"CV2マルチコンテナ送信開始: コンテナ数={len(components)}")

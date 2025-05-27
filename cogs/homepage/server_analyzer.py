@@ -21,7 +21,7 @@ class ServerAnalyzer(commands.Cog):
         self.bot = bot
         self.openai_api_key = settings.etc_api_openai_api_key
         # 設定ファイルの値が期待と異なるため、直接URLを指定
-        self.api_base_url = "https://test.local.hfs.jp/api"
+        self.api_base_url = "https://hfs.jp/api"
         self.api_token = settings.homepage_api_token
         
         # デバッグログ
