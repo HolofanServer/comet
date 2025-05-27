@@ -17,7 +17,7 @@ class WebsiteIntegration(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         # 設定ファイルの値が期待と異なるため、直接URLを指定
-        self.api_base_url = "https://test.local.hfs.jp/api"
+        self.api_base_url = "https://hfs.jp/api"
         self.api_token = settings.homepage_api_token
         self.target_guild_id = settings.homepage_target_guild_id
         self.cache_dir = os.path.join(os.getcwd(), "cache", "website")

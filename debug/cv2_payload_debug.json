@@ -1,0 +1,84 @@
+{
+  "components": [
+    {
+      "type": 17,
+      "components": [
+        {
+          "type": 10,
+          "content": "## 推しロール選択"
+        },
+        {
+          "type": 10,
+          "content": "あなたの推しメンバーを選んでください！"
+        },
+        {
+          "type": 14,
+          "divider": true,
+          "spacing": 1
+        },
+        {
+          "type": 1,
+          "components": [
+            {
+              "type": 3,
+              "custom_id": "member_select",
+              "options": [
+                {
+                  "label": "ホロ星人A",
+                  "value": "a",
+                  "description": "可愛い",
+                  "emoji": {
+                    "name": "🌟"
+                  }
+                },
+                {
+                  "label": "ホロ星人B",
+                  "value": "b",
+                  "description": "カッコいい",
+                  "emoji": {
+                    "name": "💫"
+                  }
+                }
+              ],
+              "min_values": 1,
+              "max_values": 1,
+              "disabled": false,
+              "placeholder": "メンバーを選択"
+            }
+          ]
+        },
+        {
+          "type": 14,
+          "divider": true,
+          "spacing": 2
+        },
+        {
+          "type": 1,
+          "components": [
+            {
+              "type": 2,
+              "style": 3,
+              "label": "決定",
+              "disabled": false,
+              "custom_id": "confirm_btn",
+              "emoji": {
+                "name": "✅"
+              }
+            },
+            {
+              "type": 2,
+              "style": 4,
+              "label": "キャンセル",
+              "disabled": false,
+              "custom_id": "cancel_btn",
+              "emoji": {
+                "name": "✖"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "flags": 32768
+}

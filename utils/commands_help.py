@@ -16,7 +16,7 @@ from utils.stats import update_stats, get_stats
 settings = get_settings()
 
 owner_id = settings.bot_owner_id
-moderator_role_name = "moderator"
+moderator_role_name = "Community Mod"
 dev_guild_id = settings.admin_dev_guild_id
 log_commands_channel_id = settings.admin_commands_log_channel_id
 

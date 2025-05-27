@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import random
 import textwrap
 from typing import TYPE_CHECKING, Any, Mapping, MutableMapping, Sequence, TypeVar, Union
 
@@ -217,8 +216,26 @@ class CV2:
         # デバッグ用にペイロードの構造をログに出力
         import json
         debug_payload = json.dumps(payload, indent=2, ensure_ascii=False)
-        log.info(f"CV2 送信ペイロード:\n{debug_payload}")
         
+        # ログとファイルの両方に出力
+        try:
+            log.info(f"CV2 送信ペイロードサイズ: {len(debug_payload)} bytes")
+            print(f"CV2 DEBUG: 送信ペイロードサイズ {len(debug_payload)} bytes")
+            
+            # ファイルにデバッグ情報を出力
+            import os
+            debug_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "debug")
+            os.makedirs(debug_dir, exist_ok=True)
+            debug_file = os.path.join(debug_dir, "cv2_payload_debug.json")
+            
+            with open(debug_file, "w", encoding="utf-8") as f:
+                f.write(debug_payload)
+                
+            log.info(f"CV2ペイロードをファイルに出力しました: {debug_file}")
+            print(f"CV2 DEBUG: ペイロードを保存しました: {debug_file}")
+        except Exception as e:
+            print(f"CV2 DEBUG ERROR: {e}")
+            
         return await self._request("POST", self._ep("channels/{cid}/messages", cid=channel_id), json=payload, files=files)
 
     async def reply(self, interaction: "discord.Interaction", **kw):
@@ -369,8 +386,9 @@ class CV2:
     def channel_select(self, cid, **kw):
         return self._generic_select(self.types.CHANNEL_SELECT, cid, **kw)
 
-    def container(self, comps: Sequence[dict[str, Any]], *, accent_color=None, spoiler=False):
-        return {"type": self.types.CONTAINER, "accent_color": accent_color or random.choice(self._PALETTE), "spoiler": spoiler, "components": list(comps)}
+    def container(self, components, *, accent_color=None):
+        # アクセントカラーを完全に無視してシンプルなコンテナを返す
+        return {"type": self.types.CONTAINER, "components": list(components)}
 
     def section(self, lines: Sequence[Union[str, dict]], *, accessory=None):
         txts = [self.text_display(line) if isinstance(line, str) else line for line in lines][:3]

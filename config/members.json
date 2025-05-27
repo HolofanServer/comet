@@ -47,17 +47,6 @@
   ],
   "specialThanks": [
     {
-      "id": "1027932870951583814",
-      "name": "かぷ",
-      "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/1027932870951583814/94fe134704c8baf7921e6cb53021daaf.png?size=1024",
-      "message": "",
-      "joinedAt": "2023-04-14",
-      "joinedAtJp": "2023年04月14日",
-      "roleColor": "#ffffff",
-      "socials": {}
-    },
-    {
       "id": "707320830387814531",
       "name": "FreeWiFi",
       "role": "常連0期生",
@@ -65,6 +54,17 @@
       "message": "わいふぁいって呼んでください！困ったことがあったらいつでもご連絡してくださいね！",
       "joinedAt": "2023-04-03",
       "joinedAtJp": "2023年04月03日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1027932870951583814",
+      "name": "かぷ",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/1027932870951583814/dfc3ca1f1cfe3baebd1c9a5ec34b5a19.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-14",
+      "joinedAtJp": "2023年04月14日",
       "roleColor": "#ffffff",
       "socials": {}
     },
@@ -261,7 +261,7 @@
       "id": "1203337222514941954",
       "name": "でんし　🌸🌽🐏(最推し)",
       "role": "テスター",
-      "avatar": "https://cdn.discordapp.com/avatars/1203337222514941954/8572cb09a881e0a6fa0ba87afaec6713.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/1203337222514941954/06f793ff9b793aa11677ca737755c35f.png?size=1024",
       "message": "",
       "joinedAt": "2025-01-23",
       "joinedAtJp": "2025年01月23日",

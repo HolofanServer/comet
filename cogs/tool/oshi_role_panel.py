@@ -114,6 +114,9 @@ class OshiRolePanel(commands.Cog):
             "reg_Ririka": "真っす組",
             # スタッフ
             "1_yagoo_": "YAGOO",
+            # FlowGlow
+            
+            # Justice
             
         }
         
@@ -1293,6 +1296,19 @@ class CV2MessageSender:
                 }
             },
             {
+                "name": "FlowGlow",
+                "emoji": "⚖️",
+                "description": "FlowGlowの推しロールはこちら",
+                "value": "oshi_flowglow",
+                "roles": {
+                    "響咲連合🎤👑": 1374947544982880357,
+                    "ニコ担😊🐅": 1374947583734190150,
+                    "すうりす💬🔁💙": 1374947951931035791,
+                    "ちはニック🎧🔧": 1374948001931595826,
+                    "vivid💅✨": 1374948068314841128,
+                }
+            },
+            {
                 "name": "その他",
                 "emoji": "👑",
                 "description": "スタッフやその他の特別なロール",
@@ -1324,6 +1340,18 @@ class CV2MessageSender:
                     "Jailbirds 🎼": 1133609781412761631,
                     "RUFFIANS🐾": 1133610126260060302
                 }
+            },
+            {
+              "name": "Justice",
+              "emoji": "⚖️",
+              "description": "Justiceの推しロールはこちら",
+              "value": "oshi_justice",
+              "roles": {
+                "Rosarians💄": 1374947341416665100,
+                "Gremurins👧": 1374947385645731910,
+                "Otomos🍵": 1374947434911891528,
+                "Chattino🐱": 1374947483054248107,
+              }
             },
             {
                 "name": "hololive ID",
