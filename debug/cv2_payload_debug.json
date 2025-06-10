@@ -5,11 +5,11 @@
       "components": [
         {
           "type": 10,
-          "content": "## 推しロール選択"
+          "content": "# CV2 総合デモパネル"
         },
         {
           "type": 10,
-          "content": "あなたの推しメンバーを選んでください！"
+          "content": "すべての CV2 コンポーネント機能を一つのパネルに表示しています。"
         },
         {
           "type": 14,
@@ -17,35 +17,31 @@
           "spacing": 1
         },
         {
-          "type": 1,
-          "components": [
+          "type": 9,
+          "text": [
             {
-              "type": 3,
-              "custom_id": "member_select",
-              "options": [
-                {
-                  "label": "ホロ星人A",
-                  "value": "a",
-                  "description": "可愛い",
-                  "emoji": {
-                    "name": "🌟"
-                  }
-                },
-                {
-                  "label": "ホロ星人B",
-                  "value": "b",
-                  "description": "カッコいい",
-                  "emoji": {
-                    "name": "💫"
-                  }
-                }
-              ],
-              "min_values": 1,
-              "max_values": 1,
-              "disabled": false,
-              "placeholder": "メンバーを選択"
+              "type": 10,
+              "content": "## セクションコンポーネント"
+            },
+            {
+              "type": 10,
+              "content": "テキストが 3 行まで配置可能"
+            },
+            {
+              "type": 10,
+              "content": "右側にアクセサリも表示できます"
             }
-          ]
+          ],
+          "accessory": {
+            "type": 2,
+            "style": 1,
+            "label": "セクションボタン",
+            "disabled": false,
+            "custom_id": "section_demo",
+            "emoji": {
+              "name": "👍"
+            }
+          }
         },
         {
           "type": 14,
@@ -56,23 +52,118 @@
           "type": 1,
           "components": [
             {
+              "type": 3,
+              "custom_id": "demo_select",
+              "options": [
+                {
+                  "label": "オプション 1",
+                  "value": "option1",
+                  "description": "説明も表示できます",
+                  "emoji": {
+                    "name": "🌟"
+                  }
+                },
+                {
+                  "label": "オプション 2",
+                  "value": "option2",
+                  "description": "絵文字付きオプション",
+                  "emoji": {
+                    "name": "👌"
+                  }
+                },
+                {
+                  "label": "オプション 3",
+                  "value": "option3",
+                  "description": "複数選択可能",
+                  "emoji": {
+                    "name": "👍"
+                  }
+                }
+              ],
+              "min_values": 1,
+              "max_values": 2,
+              "disabled": false,
+              "placeholder": "オプションを選択してください"
+            }
+          ]
+        },
+        {
+          "type": 1,
+          "components": [
+            {
+              "type": 5,
+              "custom_id": "demo_user_select",
+              "min_values": 0,
+              "max_values": 1,
+              "disabled": false,
+              "placeholder": "ユーザーを選択"
+            }
+          ]
+        },
+        {
+          "type": 1,
+          "components": [
+            {
+              "type": 6,
+              "custom_id": "demo_role_select",
+              "min_values": 0,
+              "max_values": 1,
+              "disabled": false,
+              "placeholder": "ロールを選択"
+            }
+          ]
+        },
+        {
+          "type": 1,
+          "components": [
+            {
+              "type": 2,
+              "style": 1,
+              "label": "プライマリ",
+              "disabled": false,
+              "custom_id": "btn_primary",
+              "emoji": {
+                "name": "🔵"
+              }
+            },
+            {
+              "type": 2,
+              "style": 2,
+              "label": "セカンダリ",
+              "disabled": false,
+              "custom_id": "btn_secondary",
+              "emoji": {
+                "name": "⚪"
+              }
+            },
+            {
               "type": 2,
               "style": 3,
-              "label": "決定",
+              "label": "サクセス",
               "disabled": false,
-              "custom_id": "confirm_btn",
+              "custom_id": "btn_success",
               "emoji": {
-                "name": "✅"
+                "name": "🟢"
               }
             },
             {
               "type": 2,
               "style": 4,
-              "label": "キャンセル",
+              "label": "デンジャー",
               "disabled": false,
-              "custom_id": "cancel_btn",
+              "custom_id": "btn_danger",
               "emoji": {
-                "name": "✖"
+                "name": "🔴"
+              }
+            },
+            {
+              "type": 2,
+              "style": 5,
+              "label": "リンク",
+              "disabled": false,
+              "url": "https://hfs.jp/bot",
+              "emoji": {
+                "name": "🔗"
               }
             }
           ]

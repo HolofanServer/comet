@@ -35,8 +35,8 @@ async def update_presence(bot):
         try:
             guild = bot.get_guild(main_guild_id)
             if guild is None:
-                logger.error("Guild not found")
-                await asyncio.sleep(5)
+                logger.error("Guild not found (waiting for guild cache to be ready)")
+                await asyncio.sleep(30)  # ギルドキャッシュが準備できるまで長めに待機
                 continue
 
             # サーバーメンバー数を取得
