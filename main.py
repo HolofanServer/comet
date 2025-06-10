@@ -8,6 +8,7 @@ import logging
 import asyncio
 import traceback
 import json
+import os
 # import sentry_sdk
 import pytz
 from datetime import datetime
@@ -23,6 +24,10 @@ from utils.error import handle_command_error, handle_application_command_error
 from utils.auth import verify_auth, load_auth
 # from utils.prometheus_config import add_bot_endpoint, reload_prometheus
 from config.setting import get_settings
+
+# ログディレクトリの作成
+log_dir = "data/logging"
+os.makedirs(log_dir, exist_ok=True)
 
 logger: logging.Logger = setup_logging("D")
 load_dotenv()
