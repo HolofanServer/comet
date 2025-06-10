@@ -39,13 +39,11 @@ class DBManager:
             return
             
         try:
-            # DATABASE_PUBLIC_URLを優先的に使用
             db_url = os.environ.get('DATABASE_PUBLIC_URL')
             if not db_url:
                 logger.error("DATABASE_PUBLIC_URL環境変数が設定されていません")
                 raise ValueError("DATABASE_PUBLIC_URL環境変数が設定されていません")
             
-            # 接続文字列を直接使用
             self.pool = await asyncpg.create_pool(db_url)
             await self._setup_tables()
             self._initialized = True
@@ -65,7 +63,6 @@ class DBManager:
         """すべてのテーブルとシーケンスを削除します（スキーマ変更時に使用）"""
         try:
             async with self.pool.acquire() as conn:
-                # 外部キー制約を持つテーブルから順に削除
                 await conn.execute("DROP TABLE IF EXISTS role_events CASCADE")
                 await conn.execute("DROP TABLE IF EXISTS user_roles CASCADE")
                 await conn.execute("DROP TABLE IF EXISTS role_stats CASCADE")
@@ -79,7 +76,6 @@ class DBManager:
                 await conn.execute("DROP TABLE IF EXISTS bot_configs CASCADE")
                 await conn.execute("DROP TABLE IF EXISTS staff_info CASCADE")
                 
-                # シーケンスも削除
                 sequences = [
                     "role_events_id_seq",
                     "user_roles_id_seq",
@@ -102,152 +98,18 @@ class DBManager:
             return False
     
     async def _setup_tables(self):
-        """必要なテーブルをセットアップします"""
-        # テーブルの存在を確認
-        try:
-            async with self.pool.acquire() as conn:
-                # usersテーブルが存在するか確認
-                exists = await conn.fetchval("SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public')")
-                
-                # 既にテーブルが存在する場合は何もしない
-                if exists:
-                    logger.info("テーブルは既に存在します。再作成をスキップします。")
-                    return
-                    
-                # 存在しない場合のみテーブルを作成
-                logger.info("テーブルが存在しないため、新規作成します")
-                
-                # 安全のため、先に既存テーブルを削除
-                await self._drop_all_tables()
-        except Exception as e:
-            logger.error(f"テーブル存在確認中にエラー: {e}")
-            # エラーが発生しても処理を継続
-        
+        """
+        必要なテーブルをセットアップします（毎回全テーブルをCREATE TABLE IF NOT EXISTSで流す）
+        """
         tables = [
-            # ユーザーテーブル
-            """
+            '''
             CREATE TABLE IF NOT EXISTS users (
                 user_id BIGINT PRIMARY KEY,
                 username VARCHAR(255),
-                first_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            )
-            """,
-            
-            # ロールテーブル
-            """
-            CREATE TABLE IF NOT EXISTS roles (
-                role_id TEXT PRIMARY KEY,
-                role_name VARCHAR(255) NOT NULL,
-                category VARCHAR(100),
-                emoji VARCHAR(50),
-                description TEXT,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            )
-            """,
-            
-            # ファングループロールテーブル（特化したロール情報用）
-            """
-            CREATE TABLE IF NOT EXISTS fan_roles (
-                role_id TEXT PRIMARY KEY REFERENCES roles(role_id),
-                fan_name VARCHAR(255) NOT NULL,
-                talent_name VARCHAR(255),
-                color VARCHAR(7),
-                added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            )
-            """,
-            
-            # ユーザーロール関連テーブル
-            """
-            CREATE TABLE IF NOT EXISTS user_roles (
-                id SERIAL PRIMARY KEY,
-                user_id BIGINT REFERENCES users(user_id),
-                role_id TEXT REFERENCES roles(role_id),
-                assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                removed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
-                is_active BOOLEAN DEFAULT TRUE,
-                UNIQUE(user_id, role_id, assigned_at)
-            )
-            """,
-            
-            # ロールイベント履歴テーブル
-            """
-            CREATE TABLE IF NOT EXISTS role_events (
-                id SERIAL PRIMARY KEY,
-                user_id BIGINT REFERENCES users(user_id),
-                role_id TEXT REFERENCES roles(role_id),
-                event_type VARCHAR(50) NOT NULL,  -- 'add', 'remove'
-                timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                interaction_id VARCHAR(100)
-            )
-            """,
-            
-            # ロール統計テーブル
-            """
-            CREATE TABLE IF NOT EXISTS role_stats (
-                role_id TEXT REFERENCES roles(role_id),
-                date DATE,
-                total_count INT DEFAULT 0,
-                daily_adds INT DEFAULT 0,
-                daily_removes INT DEFAULT 0,
-                PRIMARY KEY (role_id, date)
-            )
-            """,
-            
-            # サーバー設定テーブル
-            """
-            CREATE TABLE IF NOT EXISTS guild_configs (
-                guild_id BIGINT PRIMARY KEY,
-                welcome_channel_id BIGINT,
-                config_json JSONB DEFAULT '{}'::jsonb,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-            """,
-            
-            # カスタムアナウンステンプレートテーブル
-            """
-            CREATE TABLE IF NOT EXISTS custom_announcements (
-                id SERIAL PRIMARY KEY,
-                template_name VARCHAR(100) NOT NULL,
-                template_content TEXT NOT NULL,
-                guild_id BIGINT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                UNIQUE(guild_id, template_name)
-            )
-            """,
-            
-            # ロール絵文字マッピングテーブル
-            """
-            CREATE TABLE IF NOT EXISTS role_emoji_mappings (
-                id SERIAL PRIMARY KEY,
-                role_id TEXT NOT NULL,
-                emoji_id VARCHAR(100),
-                emoji_name VARCHAR(100),
-                emoji_data JSONB,
-                guild_id BIGINT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                UNIQUE(role_id, guild_id)
-            )
-            """,
-            
-            # ボットの基本設定テーブル
-            """
-            CREATE TABLE IF NOT EXISTS bot_config (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                version VARCHAR(20) NOT NULL,
-                owner VARCHAR(100) NOT NULL,
-                prefix VARCHAR(50) NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            )
-            """,
-            
-            # 認証情報テーブル
-            """
+            ''',
+            '''
             CREATE TABLE IF NOT EXISTS auth_config (
                 id UUID PRIMARY KEY,
                 label VARCHAR(100) NOT NULL,
@@ -255,10 +117,8 @@ class DBManager:
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-            """,
-            
-            # メンバー情報テーブル
-            """
+            ''',
+            '''
             CREATE TABLE IF NOT EXISTS members (
                 id BIGINT PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -269,14 +129,12 @@ class DBManager:
                 joined_at_jp VARCHAR(50),
                 role_color VARCHAR(10),
                 socials JSONB DEFAULT '{}'::jsonb,
-                type VARCHAR(50) NOT NULL, -- 'staff', 'specialThanks', 'testers'
+                type VARCHAR(50) NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-            """,
-            
-            # サーバー統計テーブル
-            """
+            ''',
+            '''
             CREATE TABLE IF NOT EXISTS server_stats (
                 id SERIAL PRIMARY KEY,
                 guild_id BIGINT NOT NULL,
@@ -287,9 +145,18 @@ class DBManager:
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 UNIQUE(guild_id)
             )
-            """
+            ''',
+            '''
+            CREATE TABLE IF NOT EXISTS bump_notice_settings (
+                guild_id BIGINT PRIMARY KEY,
+                channel_id BIGINT,
+                bot_id BIGINT,
+                role_id BIGINT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+            '''
         ]
-        
         async with self.pool.acquire() as conn:
             for table_query in tables:
                 await conn.execute(table_query)
@@ -301,7 +168,6 @@ class DBManager:
         """既存のテーブルデータをクリアします"""
         try:
             async with self.pool.acquire() as conn:
-                # 外部キー制約があるテーブルから順にクリア
                 await conn.execute("DELETE FROM role_events")
                 await conn.execute("DELETE FROM user_roles")
                 await conn.execute("DELETE FROM role_stats")
@@ -320,70 +186,55 @@ class DBManager:
         data_dir = os.path.join(os.getcwd(), "data")
         config_dir = os.path.join(os.getcwd(), "config")
         
-        # ディレクトリ存在確認
         if not os.path.exists(data_dir) and not os.path.exists(config_dir):
             logger.error(f"移行元ディレクトリが存在しません: {data_dir} または {config_dir}")
             return False
             
-        # データベース接続の確認
         if not self._initialized:
             await self.initialize()
             
-        # 既存テーブルのデータをクリア
         await self._clear_existing_tables()
         
         try:
-            # 推しロール関連データの移行
             if os.path.exists(base_dir):
-                # 各JSONファイルのパス
                 roles_path = os.path.join(base_dir, "roles.json")
                 users_path = os.path.join(base_dir, "users.json")
                 events_path = os.path.join(base_dir, "events.json")
                 summary_path = os.path.join(base_dir, "summary.json")
                 
-                # ロールデータ移行
                 if os.path.exists(roles_path):
                     await self._migrate_roles(roles_path)
                 
-                # ユーザーデータ移行
                 if os.path.exists(users_path):
                     await self._migrate_users(users_path)
                 
-                # イベントデータ移行
                 if os.path.exists(events_path):
                     await self._migrate_events(events_path)
                 
-                # 統計データ移行
                 if os.path.exists(summary_path):
                     await self._migrate_summary(summary_path)
             
-            # サーバー設定の移行
             config_path = os.path.join(data_dir, "config.json")
             if os.path.exists(config_path):
                 await self._migrate_guild_configs(config_path)
                 
-            # ロール絵文字マッピングの移行
             role_emoji_path = os.path.join(data_dir, "role_emoji_mapping.json")
             if os.path.exists(role_emoji_path):
                 await self._migrate_role_emoji_mapping(role_emoji_path)
             
-            # カスタムアナウンスの移行
             custom_announcements_dir = os.path.join(data_dir, "custom_announcements")
             if os.path.exists(custom_announcements_dir):
                 await self._migrate_custom_announcements(custom_announcements_dir)
             
-            # ホームページ関連のデータ移行
-            # bot.jsonの移行
+            
             bot_config_path = os.path.join(config_dir, "bot.json")
             if os.path.exists(bot_config_path):
                 await self._migrate_bot_config(bot_config_path)
             
-            # auth.jsonの移行
             auth_config_path = os.path.join(config_dir, "auth.json")
             if os.path.exists(auth_config_path):
                 await self._migrate_auth_config(auth_config_path)
             
-            # members.jsonの移行
             members_path = os.path.join(config_dir, "members.json")
             if os.path.exists(members_path):
                 await self._migrate_members(members_path)
@@ -400,7 +251,6 @@ class DBManager:
             with open(file_path, 'r', encoding='utf-8') as f:
                 roles_data = json.load(f)
             
-            # イベントファイルからロールIDとロール名のマッピングを取得
             events_file = os.path.join(os.path.dirname(file_path), "events.json")
             role_id_mapping = {}
             
@@ -409,7 +259,6 @@ class DBManager:
                     try:
                         events_data = json.load(f)
                         
-                        # イベントからロールID情報を収集
                         for event in events_data:
                             if 'roles' in event and event['roles']:
                                 for role in event['roles']:
@@ -421,7 +270,6 @@ class DBManager:
                         logger.error(f"イベントファイルからのロールIDマッピング取得中にエラー: {e}")
             
             async with self.pool.acquire() as conn:
-                # TEXTタイプのrole_idで新しいテーブルを作成
                 await conn.execute("""
                     CREATE TABLE IF NOT EXISTS roles (
                         role_id TEXT PRIMARY KEY,
@@ -437,12 +285,10 @@ class DBManager:
                 
                 for role_name, role_info in roles_data.items():
                     try:
-                        # イベントから取得したIDがあればそれを使用、なければロール名をIDとして使用
                         role_id = role_id_mapping.get(role_name, role_name)
                         
-                        # 必要に応じて追加情報を設定
                         category = ''
-                        if 'count' in role_info:  # 推しロール情報と考えられる
+                        if 'count' in role_info:
                             category = '推しロール'
                         
                         await conn.execute(
@@ -464,7 +310,6 @@ class DBManager:
                         skipped_count += 1
                         continue
                 
-                # イベントから取得したロールIDも追加（それぞれのロールが確実にDBに存在するように）
                 for role_name, role_id in role_id_mapping.items():
                     try:
                         await conn.execute(
@@ -496,7 +341,6 @@ class DBManager:
             
             async with self.pool.acquire() as conn:
                 for user_id, user_info in users_data.items():
-                    # ユーザー基本情報
                     try:
                         user_db_id = int(user_id)
                     except ValueError:
@@ -516,7 +360,6 @@ class DBManager:
                         datetime.datetime.fromisoformat(user_info.get('last_updated', datetime.datetime.now().isoformat()))
                     )
                     
-                    # ユーザーのロール情報
                     if 'roles' in user_info:
                         for role_data in user_info['roles']:
                             try:
@@ -563,12 +406,10 @@ class DBManager:
             with open(file_path, 'r', encoding='utf-8') as f:
                 events_data = json.load(f)
             
-            # 内部対応用に変換されたイベント数をカウント
             migrated_count = 0
             skipped_count = 0
             
             async with self.pool.acquire() as conn:
-                # テーブルが存在しない場合は作成
                 await conn.execute("""
                     CREATE TABLE IF NOT EXISTS role_events (
                         id SERIAL PRIMARY KEY,
@@ -582,7 +423,6 @@ class DBManager:
                 
                 for event in events_data:
                     try:
-                        # ユーザーIDが整数形式か確認
                         try:
                             user_id = int(event.get('user_id'))
                         except (ValueError, TypeError):
@@ -590,10 +430,8 @@ class DBManager:
                             skipped_count += 1
                             continue
                             
-                        # timestampを処理
                         timestamp_str = event.get('timestamp')
                         if timestamp_str:
-                            # 複数の日付形式を試す
                             timestamp = None
                             date_formats = [
                                 "%Y-%m-%d %H:%M:%S",
@@ -614,24 +452,20 @@ class DBManager:
                         else:
                             timestamp = datetime.datetime.now()
                         
-                        # event_typeの処理
                         event_type = event.get('event_type', 'unknown')
                         
-                        # イベントに複数のロールが含まれている場合、個別に処理
                         roles = event.get('roles', [])
                         if roles:
                             for role in roles:
                                 try:
-                                    role_id = str(role.get('id'))  # 文字列として扱う
+                                    role_id = str(role.get('id'))
                                     
-                                    # ロールがrolesテーブルに存在するか確認
                                     role_exists = await conn.fetchval(
                                         "SELECT EXISTS(SELECT 1 FROM roles WHERE role_id = $1)",
                                         role_id
                                     )
                                     
                                     if not role_exists:
-                                        # ロールが存在しない場合は追加
                                         await conn.execute(
                                             """
                                             INSERT INTO roles (role_id, role_name, category, emoji, description)
@@ -644,7 +478,6 @@ class DBManager:
                                             ''
                                         )
                                     
-                                    # イベントを挿入
                                     await conn.execute(
                                         """
                                         INSERT INTO role_events (user_id, role_id, event_type, timestamp, interaction_id)
@@ -661,12 +494,10 @@ class DBManager:
                                     logger.warning(f"イベント処理中にエラー: {e}, ロール: {role}")
                                     skipped_count += 1
                         else:
-                            # 形式が古い場合のフォールバック
                             try:
                                 if 'role_id' in event:
-                                    role_id = str(event.get('role_id'))  # 文字列として扱う
+                                    role_id = str(event.get('role_id'))
                                     
-                                    # ロールがrolesテーブルに存在するか確認して必要なら追加
                                     role_exists = await conn.fetchval(
                                         "SELECT EXISTS(SELECT 1 FROM roles WHERE role_id = $1)",
                                         role_id
@@ -1299,6 +1130,40 @@ class DBManager:
         except Exception as e:
             logger.error(f"統計情報取得中にエラー: {e}")
             return {}
+
+    async def get_bump_notice_settings(self, guild_id: int):
+        """
+        bump notice用設定（チャンネル/BOT/ロールID）を取得
+        Returns: dict or None
+        """
+        if not self.pool:
+            await self.initialize()
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT channel_id, bot_id, role_id FROM bump_notice_settings WHERE guild_id = $1
+            """, guild_id)
+            if row:
+                return dict(row)
+            return None
+
+    async def set_bump_notice_settings(self, guild_id: int, channel_id: int = None, bot_id: int = None, role_id: int = None):
+        """
+        bump notice用設定を保存/更新
+        指定された値のみ更新（Noneは変更しない）
+        """
+        if not self.pool:
+            await self.initialize()
+        async with self.pool.acquire() as conn:
+            # 既存取得
+            row = await conn.fetchrow("SELECT * FROM bump_notice_settings WHERE guild_id = $1", guild_id)
+            new_channel_id = channel_id if channel_id is not None else (row["channel_id"] if row else None)
+            new_bot_id = bot_id if bot_id is not None else (row["bot_id"] if row else None)
+            new_role_id = role_id if role_id is not None else (row["role_id"] if row else None)
+            await conn.execute("""
+                INSERT INTO bump_notice_settings (guild_id, channel_id, bot_id, role_id, updated_at)
+                VALUES ($1, $2, $3, $4, NOW())
+                ON CONFLICT (guild_id) DO UPDATE SET channel_id = $2, bot_id = $3, role_id = $4, updated_at = NOW()
+            """, guild_id, new_channel_id, new_bot_id, new_role_id)
 
 # シングルトンインスタンス
 db = DBManager()

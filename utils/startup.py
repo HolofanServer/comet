@@ -10,6 +10,7 @@ import subprocess
 import json
 import pyfiglet
 import pkg_resources
+import asyncio
 
 from pathlib import Path
 from datetime import datetime
@@ -249,24 +250,44 @@ def rainbow_text(text):
 
 async def git_pull():
     logger.info("Git pull started")
-    subprocess.run(["git", "pull"])
+    process = await asyncio.create_subprocess_exec(
+        "git", "pull",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    await process.communicate()
     logger.info("Git pull completed")
 
 async def pip_install():
     logger.info("Pip install started")
-    subprocess.run(["pip", "install", "--upgrade", "pip"])
+    process = await asyncio.create_subprocess_exec(
+        sys.executable, "-m", "pip", "install", "--upgrade", "pip",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    await process.communicate()
+    
     result = get_github_branch()
-    if result == "Dev" or result == "dev":
-        subprocess.run(["pip", "install", "-r", "requirements-dev.txt"])
-    else:
-        subprocess.run(["pip", "install", "-r", "requirements.txt"])
+    req_file = "requirements-dev.txt" if result in ["Dev", "dev"] else "requirements.txt"
+    
+    process = await asyncio.create_subprocess_exec(
+        sys.executable, "-m", "pip", "install", "-r", req_file,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    await process.communicate()
     logger.info("Pip install completed")
     
 async def check_dev():
     result = get_github_branch()
-    if result == "Dev" or result == "dev":
+    if result in ["Dev", "dev"]:
         logger.info("Dev branch detected. Updating discord.py...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "git+https://github.com/rapptz/discord.py"])
+        process = await asyncio.create_subprocess_exec(
+            sys.executable, "-m", "pip", "install", "git+https://github.com/rapptz/discord.py",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        await process.communicate()
         logger.info("Discord.py updated")
         return True
     else:

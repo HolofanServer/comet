@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 from utils import presence
 from utils.logging import save_log
-from utils.startup import startup_send_webhook, startup_send_botinfo, startup_message, yokobou, git_pull, pip_install, check_dev
+from utils.startup import startup_send_webhook, startup_send_botinfo, startup_message, yokobou, git_pull, pip_install
 from utils.startup_status import update_status
 from utils.logging import setup_logging
 from utils.error import handle_command_error, handle_application_command_error
@@ -73,10 +73,12 @@ class MyBot(commands.AutoShardedBot):
     async def setup_hook(self) -> None:
         try:
             await self.auth()
-            logger.info("認証に成功しました。Cogのロードを開始します。")
+            logger.info("認証に成功しました。データベースの初期化を開始します。")
+            from utils.db_manager import db
+            await db.initialize()
+            logger.info("データベースの初期化が完了しました。Cogのロードを開始します。")
             await git_pull()
             await pip_install()
-            await check_dev()
             await self.load_cogs('cogs')
             await self.load_extension('jishaku')
 
@@ -92,10 +94,10 @@ class MyBot(commands.AutoShardedBot):
         except Exception as e:
             logger.error(f"認証に失敗しました。Cogのロードをスキップします。: {e}")
             return
+        
         self.loop.create_task(self.after_ready())
 
     async def after_ready(self) -> None:
-        await self.wait_until_ready()
         logger.info("setup_hook is called")
         logger.info(startup_message())
         await update_status(self, "Bot Startup...")
@@ -104,6 +106,7 @@ class MyBot(commands.AutoShardedBot):
         await update_status(self, "現在の処理: tree sync")
         if not self.initialized:
             self.initialized = True
+            await asyncio.sleep(10)
             asyncio.create_task(presence.update_presence(self))
 
     async def on_ready(self) -> None:
