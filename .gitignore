@@ -23,7 +23,6 @@ cache/
 .venv/
 
 # Config ファイル
-bot.json
 spam_blocker.json
 sudo.json
 auth.json
