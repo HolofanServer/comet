@@ -25,7 +25,6 @@ cache/
 # Config ファイル
 spam_blocker.json
 sudo.json
-auth.json
 
 # ログファイル
 *.log
