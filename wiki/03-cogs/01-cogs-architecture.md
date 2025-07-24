@@ -1,57 +1,57 @@
-# Cogs Architecture
+# Cogsアーキテクチャ
 
-## Overview
+## 概要
 
-The iPhone3G bot uses Discord.py's cogs system to organize functionality into modular, reloadable extensions. This architecture enables clean separation of concerns and dynamic feature management.
+COMETボットは、Discord.pyのCogsシステムを使用して機能をモジュラーで再ロード可能な拡張に整理します。このアーキテクチャにより、関心の明確な分離と動的機能管理が可能になります。
 
-## Cog Categories
+## Cogカテゴリ
 
-### 1. Events Cogs (`cogs/events/`)
-**Purpose**: Handle Discord events and server monitoring
+### 1. イベントCogs (`cogs/events/`)
+**目的**: Discordイベントとサーバーモニタリングを処理
 
-| Cog | File | Description |
+| Cog | ファイル | 説明 |
 |-----|------|-------------|
-| Banner Sync | `banner_sync.py` | Synchronizes server banners and visual elements |
-| Guild Watcher | `guild_watcher.py` | Monitors guild events and member activities |
+| バナー同期 | `banner_sync.py` | サーバーバナーと視覚要素を同期 |
+| ギルドウォッチャー | `guild_watcher.py` | ギルドイベントとメンバーアクティビティを監視 |
 
-### 2. Homepage Cogs (`cogs/homepage/`)
-**Purpose**: Website integration and server analysis
+### 2. ホームページCogs (`cogs/homepage/`)
+**目的**: ウェブサイト統合とサーバー分析
 
-| Cog | File | Description |
+| Cog | ファイル | 説明 |
 |-----|------|-------------|
-| Staff Manager | `staff_manager.py` | Manages staff roles and permissions |
-| Server Analyzer | `server_analyzer.py` | Analyzes server statistics and metrics |
-| Website Integration | `website_integration.py` | Connects bot with external website |
+| スタッフマネージャー | `staff_manager.py` | スタッフロールと権限を管理 |
+| サーバーアナライザー | `server_analyzer.py` | サーバー統計とメトリクスを分析 |
+| ウェブサイト統合 | `website_integration.py` | ボットを外部ウェブサイトと接続 |
 
-### 3. Management Cogs (`cogs/manage/`)
-**Purpose**: Bot administration and control
+### 3. 管理Cogs (`cogs/manage/`)
+**目的**: ボット管理と制御
 
-| Cog | File | Description |
+| Cog | ファイル | 説明 |
 |-----|------|-------------|
-| Manage Cogs | `manage_cogs.py` | Dynamic cog loading/unloading |
-| DB Migration Commands | `db_migration_commands.py` | Database schema management |
-| Help System | `help.py` | Custom help command implementation |
-| Manage Bot | `manage_bot.py` | Bot configuration and control |
+| Cog管理 | `manage_cogs.py` | 動的Cogロード/アンロード |
+| DBマイグレーションコマンド | `db_migration_commands.py` | データベーススキーマ管理 |
+| ヘルプシステム | `help.py` | カスタムヘルプコマンド実装 |
+| ボット管理 | `manage_bot.py` | ボット設定と制御 |
 
-### 4. Tool Cogs (`cogs/tool/`)
-**Purpose**: Utility commands and features
+### 4. ツールCogs (`cogs/tool/`)
+**目的**: ユーティリティコマンドと機能
 
-| Cog | File | Description |
+| Cog | ファイル | 説明 |
 |-----|------|-------------|
-| Announcement New | `announcement_new.py` | Advanced announcement system |
-| Recorder | `recorder.py` | Voice/activity recording features |
-| User Analyzer | `user_analyzer.py` | User behavior analysis |
-| Oshi Role Panel | `oshi_role_panel.py` | Role selection interface |
-| Custom Announcement | `custom_announcement.py` | Customizable announcements |
-| Server Stats | `server_stats.py` | Real-time server statistics |
-| CV2 Test | `cv2_test.py` | Computer vision testing tools |
-| Welcome Message | `welcom_message.py` | New member welcome system |
-| MS Ana | `ms_ana.py` | Message analysis tools |
-| Bug Reporter | `bug.py` | Bug reporting system |
+| 新アナウンス | `announcement_new.py` | 高度なアナウンスシステム |
+| レコーダー | `recorder.py` | 音声/アクティビティ記録機能 |
+| ユーザーアナライザー | `user_analyzer.py` | ユーザー行動分析 |
+| 推しロールパネル | `oshi_role_panel.py` | ロール選択インターフェース |
+| カスタムアナウンス | `custom_announcement.py` | カスタマイズ可能なアナウンス |
+| サーバー統計 | `server_stats.py` | リアルタイムサーバー統計 |
+| CV2テスト | `cv2_test.py` | コンピュータビジョンテストツール |
+| ウェルカムメッセージ | `welcom_message.py` | 新メンバー歓迎システム |
+| MSアナ | `ms_ana.py` | メッセージ分析ツール |
+| バグレポーター | `bug.py` | バグ報告システム |
 
-## Cog Loading System
+## Cogローディングシステム
 
-### Dynamic Loading Process
+### 動的ローディングプロセス
 
 ```python
 async def load_cogs(self, folder_name: str) -> None:
@@ -70,15 +70,15 @@ async def load_cogs(self, folder_name: str) -> None:
             logger.error(f"Failed to load extension: {cog_path} | {e}")
 ```
 
-**Features**:
-- **Recursive Discovery**: Automatically finds all Python files in cogs directory
-- **Development Filtering**: Skips cogs in 'Dev' directories for production
-- **Error Resilience**: Continues loading other cogs if one fails
-- **Path Normalization**: Converts file paths to Python import paths
+**機能**:
+- **再帰的発見**: cogsディレクトリ内のすべてのPythonファイルを自動検出
+- **開発フィルタリング**: 本番環境で'Dev'ディレクトリのCogsをスキップ
+- **エラー耐性**: 1つのCogが失敗しても他のCogのロードを継続
+- **パス正規化**: ファイルパスをPythonインポートパスに変換
 
-### Hot Reloading
+### ホットリロード
 
-Cogs can be dynamically reloaded without restarting the bot:
+ボットを再起動せずにCogsを動的にリロードできます:
 
 ```python
 # Reload a specific cog
@@ -91,9 +91,9 @@ await bot.unload_extension('cogs.events.banner_sync')
 await bot.load_extension('cogs.manage.new_feature')
 ```
 
-## Cog Structure Template
+## Cog構造テンプレート
 
-### Basic Cog Structure
+### 基本Cog構造
 ```python
 import discord
 from discord.ext import commands
@@ -118,9 +118,9 @@ async def setup(bot):
     await bot.add_cog(ExampleCog(bot))
 ```
 
-### Advanced Cog Features
+### 高度なCog機能
 
-#### 1. Event Listeners
+#### 1. イベントリスナー
 ```python
 @commands.Cog.listener()
 async def on_member_join(self, member):
@@ -133,14 +133,14 @@ async def on_message(self, message):
     pass
 ```
 
-#### 2. Slash Commands
+#### 2. スラッシュコマンド
 ```python
 @discord.app_commands.command(name="example", description="Example slash command")
 async def example_slash(self, interaction: discord.Interaction, param: str):
     await interaction.response.send_message(f"You said: {param}")
 ```
 
-#### 3. Context Menus
+#### 3. コンテキストメニュー
 ```python
 @discord.app_commands.context_menu(name="Analyze User")
 async def analyze_user(self, interaction: discord.Interaction, member: discord.Member):
@@ -148,17 +148,17 @@ async def analyze_user(self, interaction: discord.Interaction, member: discord.M
     pass
 ```
 
-## Cog Dependencies
+## Cog依存関係
 
-### Shared Utilities
-Cogs commonly use shared utilities from the `utils/` directory:
+### 共有ユーティリティ
+Cogsは一般的に`utils/`ディレクトリの共有ユーティリティを使用します:
 
-- **Database**: `utils/database.py`, `utils/db_manager.py`
-- **Logging**: `utils/logging.py`
-- **API Integration**: `utils/api.py`
-- **Configuration**: `config/setting.py`
+- **データベース**: `utils/database.py`, `utils/db_manager.py`
+- **ログ**: `utils/logging.py`
+- **API統合**: `utils/api.py`
+- **設定**: `config/setting.py`
 
-### Inter-Cog Communication
+### Cog間通信
 ```python
 # Access other cogs
 other_cog = self.bot.get_cog('OtherCogName')
@@ -166,9 +166,9 @@ if other_cog:
     result = await other_cog.some_method()
 ```
 
-## Error Handling in Cogs
+## Cogでのエラーハンドリング
 
-### Local Error Handling
+### ローカルエラーハンドリング
 ```python
 @example_command.error
 async def example_command_error(self, ctx, error):
@@ -179,49 +179,49 @@ async def example_command_error(self, ctx, error):
         raise error
 ```
 
-### Global Error Integration
-Cogs integrate with the bot's global error handling system automatically.
+### グローバルエラー統合
+Cogsはボットのグローバルエラーハンドリングシステムと自動的に統合されます。
 
-## Performance Considerations
+## パフォーマンス考慮事項
 
-### 1. Async Best Practices
-- Use `await` for all Discord API calls
-- Implement proper connection pooling
-- Handle rate limits gracefully
+### 1. 非同期ベストプラクティス
+- すべてのDiscord API呼び出しで`await`を使用
+- 適切な接続プールを実装
+- レート制限を優雅に処理
 
-### 2. Memory Management
-- Clean up resources in cog teardown
-- Avoid storing large objects in memory
-- Use generators for large data processing
+### 2. メモリ管理
+- Cog終了時にリソースをクリーンアップ
+- 大きなオブジェクトをメモリに保存することを避ける
+- 大量データ処理にはジェネレーターを使用
 
-### 3. Database Optimization
-- Use connection pooling
-- Implement proper indexing
-- Cache frequently accessed data
+### 3. データベース最適化
+- 接続プールを使用
+- 適切なインデックスを実装
+- 頻繁にアクセスされるデータをキャッシュ
 
-## Development Guidelines
+## 開発ガイドライン
 
-### 1. Naming Conventions
-- Cog classes: `PascalCase` (e.g., `UserAnalyzer`)
-- File names: `snake_case` (e.g., `user_analyzer.py`)
-- Commands: `snake_case` (e.g., `analyze_user`)
+### 1. 命名規則
+- Cogクラス: `PascalCase` (例: `UserAnalyzer`)
+- ファイル名: `snake_case` (例: `user_analyzer.py`)
+- コマンド: `snake_case` (例: `analyze_user`)
 
-### 2. Documentation
-- Document all public methods
-- Include usage examples
-- Explain complex algorithms
+### 2. ドキュメント
+- すべてのパブリックメソッドを文書化
+- 使用例を含める
+- 複雑なアルゴリズムを説明
 
-### 3. Testing
-- Write unit tests for core functionality
-- Test error conditions
-- Validate Discord API interactions
+### 3. テスト
+- コア機能のユニットテストを作成
+- エラー条件をテスト
+- Discord API相互作用を検証
 
 ---
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Events Cogs](02-events-cogs.md)
-- [Homepage Cogs](03-homepage-cogs.md)
-- [Management Cogs](04-management-cogs.md)
-- [Tool Cogs](05-tool-cogs.md)
-- [Main Bot Class](../02-core/01-main-bot-class.md)
+- [イベントCogs](02-events-cogs.md)
+- [ホームページCogs](03-homepage-cogs.md)
+- [管理Cogs](04-management-cogs.md)
+- [ツールCogs](05-tool-cogs.md)
+- [メインボットクラス](../02-core/01-main-bot-class.md)

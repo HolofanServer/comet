@@ -1,23 +1,23 @@
-# Tool Cogs
+# ツールCogs
 
-## Overview
+## 概要
 
-Tool cogs provide utility functions, analysis capabilities, and interactive features for server members and administrators.
+ツールCogsは、サーバーメンバーと管理者向けのユーティリティ機能、分析機能、インタラクティブ機能を提供します。
 
-## Available Tool Cogs
+## 利用可能なツールCogs
 
-### 1. User Analyzer (`user_analyzer.py`)
+### 1. ユーザーアナライザー (`user_analyzer.py`)
 
-**Purpose**: AI-powered analysis of user behavior and communication patterns using OpenAI GPT-4.
+**目的**: OpenAI GPT-4を使用したユーザー行動とコミュニケーションパターンのAI分析。
 
-**Key Features**:
-- **Message Collection**: Scans server channels for user messages
-- **AI Analysis**: Uses GPT-4 to analyze communication patterns
-- **Comprehensive Reports**: Generates detailed personality and behavior insights
-- **File Output**: Saves analysis results as Markdown files
-- **Progress Tracking**: Real-time progress updates during analysis
+**主要機能**:
+- **メッセージ収集**: サーバーチャンネルからユーザーメッセージをスキャン
+- **AI分析**: GPT-4を使用してコミュニケーションパターンを分析
+- **包括的レポート**: 詳細な性格と行動の洞察を生成
+- **ファイル出力**: 分析結果をMarkdownファイルとして保存
+- **進捗追跡**: 分析中のリアルタイム進捗更新
 
-**Implementation Details**:
+**実装詳細**:
 ```python
 @app_commands.command(name="user_analyze")
 @is_guild_app()
@@ -27,63 +27,63 @@ async def analyze_user(self, interaction, user: discord.Member,
                       message_limit: Optional[int] = None):
 ```
 
-**Analysis Process**:
-1. **Message Collection**: Scans specified channels for user messages
-2. **Data Formatting**: Structures messages with timestamps, reactions, attachments
-3. **AI Processing**: Sends data to OpenAI GPT-4 for analysis
-4. **Report Generation**: Creates comprehensive personality analysis
-5. **File Storage**: Saves results to `cache/user_analysis/`
+**分析プロセス**:
+1. **メッセージ収集**: 指定されたチャンネルからユーザーメッセージをスキャン
+2. **データフォーマット**: タイムスタンプ、リアクション、添付ファイル付きでメッセージを構造化
+3. **AI処理**: 分析のためにOpenAI GPT-4にデータを送信
+4. **レポート生成**: 包括的な性格分析を作成
+5. **ファイル保存**: 結果を`cache/user_analysis/`に保存
 
-**Analysis Categories**:
-- Communication style and patterns
-- Topic preferences and interests
-- Emotional tendencies
-- Social interaction patterns
-- Language usage characteristics
-- Personality trait assessment
+**分析カテゴリ**:
+- コミュニケーションスタイルとパターン
+- トピックの好みと興味
+- 感情的傾向
+- 社会的相互作用パターン
+- 言語使用特性
+- 性格特性評価
 
-### 2. Bug Reporter (`bug.py`)
+### 2. バグレポーター (`bug.py`)
 
-**Purpose**: Streamlined bug reporting system for users to report issues directly to developers.
+**目的**: ユーザーが開発者に直接問題を報告するための合理化されたバグ報告システム。
 
-**Key Features**:
-- **DM-Only Interface**: Private bug reporting via direct messages
-- **Image Attachments**: Support for screenshot attachments
-- **Automatic Forwarding**: Routes reports to designated bug report channel
-- **User-Friendly**: Simple command interface
+**主要機能**:
+- **DM専用インターフェース**: ダイレクトメッセージによるプライベートバグ報告
+- **画像添付**: スクリーンショット添付のサポート
+- **自動転送**: 指定されたバグ報告チャンネルにレポートをルーティング
+- **ユーザーフレンドリー**: シンプルなコマンドインターフェース
 
-**Commands**:
+**コマンド**:
 ```python
 @commands.hybrid_command(name="bug_report")
 @commands.dm_only()
 async def bug_report(self, ctx, 内容: str, 画像: discord.Attachment = None):
 ```
 
-### 3. Message Analyzer (`ms_ana.py`)
+### 3. メッセージアナライザー (`ms_ana.py`)
 
-**Purpose**: Analyzes message patterns and content for moderation and insights.
+**目的**: モデレーションと洞察のためのメッセージパターンとコンテンツの分析。
 
-**Key Features**:
-- **Message Pattern Analysis**: Identifies trends in server communication
-- **Content Analysis**: Examines message content for various metrics
-- **File Processing**: Can analyze uploaded text files
-- **Statistical Reports**: Generates usage statistics and patterns
+**主要機能**:
+- **メッセージパターン分析**: サーバーコミュニケーションのトレンドを特定
+- **コンテンツ分析**: 様々な指標でメッセージコンテンツを検査
+- **ファイル処理**: アップロードされたテキストファイルを分析可能
+- **統計レポート**: 使用統計とパターンを生成
 
-**Commands**:
-- `analyze`: Analyze recent server messages
-- `analyze_file`: Analyze uploaded text files
+**コマンド**:
+- `analyze`: 最近のサーバーメッセージを分析
+- `analyze_file`: アップロードされたテキストファイルを分析
 
-### 4. Welcome Message (`welcom_message.py`)
+### 4. ウェルカムメッセージ (`welcom_message.py`)
 
-**Purpose**: Manages welcome messages and new member onboarding.
+**目的**: ウェルカムメッセージと新メンバーオンボーディングの管理。
 
-**Key Features**:
-- **Custom Welcome Messages**: Configurable welcome content
-- **Channel Management**: Set specific welcome channels
-- **Role Assignment**: Automatic role assignment for new members
-- **Personalization**: Customizable welcome experience
+**主要機能**:
+- **カスタムウェルカムメッセージ**: 設定可能なウェルカムコンテンツ
+- **チャンネル管理**: 特定のウェルカムチャンネルを設定
+- **ロール割り当て**: 新メンバーへの自動ロール割り当て
+- **パーソナライゼーション**: カスタマイズ可能なウェルカム体験
 
-**Commands**:
+**コマンド**:
 ```python
 @commands.hybrid_command(name="set_welcome_channel")
 @is_guild()
@@ -91,20 +91,20 @@ async def bug_report(self, ctx, 内容: str, 画像: discord.Attachment = None):
 async def set_welcome_channel(self, ctx, channel: discord.TextChannel):
 ```
 
-### 5. Additional Tool Cogs
+### 5. 追加ツールCogs
 
-Based on the codebase structure, additional tool cogs include:
+コードベース構造に基づく追加ツールCogsには以下が含まれます:
 
-- **Announcement New** (`announcement_new.py`): Advanced announcement system
-- **Recorder** (`recorder.py`): Voice/activity recording features  
-- **Oshi Role Panel** (`oshi_role_panel.py`): Role selection interface
-- **Custom Announcement** (`custom_announcement.py`): Customizable announcements
-- **Server Stats** (`server_stats.py`): Real-time server statistics
-- **CV2 Test** (`cv2_test.py`): Computer vision testing tools
+- **アナウンスメント新** (`announcement_new.py`): 高度なアナウンスシステム
+- **レコーダー** (`recorder.py`): 音声/アクティビティ録音機能
+- **推しロールパネル** (`oshi_role_panel.py`): ロール選択インターフェース
+- **カスタムアナウンスメント** (`custom_announcement.py`): カスタマイズ可能なアナウンス
+- **サーバー統計** (`server_stats.py`): リアルタイムサーバー統計
+- **CV2テスト** (`cv2_test.py`): コンピュータビジョンテストツール
 
-## Common Patterns
+## 共通パターン
 
-### Permission Decorators
+### 権限デコレーター
 ```python
 @is_guild_app()      # Guild-only slash commands
 @is_owner_app()      # Owner-only slash commands
@@ -113,7 +113,7 @@ Based on the codebase structure, additional tool cogs include:
 @log_commands()      # Command usage logging
 ```
 
-### Error Handling
+### エラーハンドリング
 ```python
 try:
     # Tool operation
@@ -124,24 +124,24 @@ except Exception as e:
     await interaction.response.send_message(f"❌ Operation failed: {e}")
 ```
 
-### Async Task Management
+### 非同期タスク管理
 ```python
 # For long-running operations
 task = asyncio.create_task(long_running_analysis())
 self.analysis_tasks[user.id] = task
 ```
 
-## Configuration
+## 設定
 
-### API Keys
-Tool cogs often require external API access:
+### APIキー
+ツールCogsは外部API アクセスを必要とすることが多いです:
 ```python
 OPENAI_API_KEY = settings.etc_api_openai_api_key
 async_client_ai = AsyncOpenAI(api_key=OPENAI_API_KEY)
 ```
 
-### File Storage
-Results are typically stored in organized directories:
+### ファイルストレージ
+結果は通常、整理されたディレクトリに保存されます:
 ```
 cache/
 ├── user_analysis/
@@ -150,34 +150,34 @@ cache/
 └── reports/
 ```
 
-### Rate Limiting
-Commands implement appropriate rate limiting:
+### レート制限
+コマンドは適切なレート制限を実装します:
 ```python
 @commands.cooldown(1, 30, commands.BucketType.user)
 ```
 
-## Usage Examples
+## 使用例
 
-### User Analysis
+### ユーザー分析
 ```
 /user_analyze user:@username channel_limit:10 message_limit:500
 ```
 
-### Bug Reporting
+### バグ報告
 ```
 /bug_report 内容:"Bot crashes when using command" 画像:[screenshot.png]
 ```
 
-### Welcome Setup
+### ウェルカム設定
 ```
 /set_welcome_channel channel:#welcome
 ```
 
 ---
 
-## Related Documentation
+## 関連ドキュメント
 
-- [AI Integration](../04-utilities/03-ai-integration.md)
-- [File Management](../04-utilities/04-file-management.md)
-- [Command Categories](../06-commands/01-command-categories.md)
-- [Error Handling](../02-core/04-error-handling.md)
+- [AI統合](../04-utilities/03-ai-integration.md)
+- [ファイル管理](../04-utilities/04-file-management.md)
+- [コマンドカテゴリ](../06-commands/01-command-categories.md)
+- [エラーハンドリング](../02-core/04-error-handling.md)

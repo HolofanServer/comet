@@ -1,15 +1,15 @@
-# Logging System
+# ログシステム
 
-## Overview
+## 概要
 
-The iPhone3G bot implements a comprehensive logging system with colored console output, file logging, and structured log data management.
+HFS専属ボットは、カラーコンソール出力、ファイルログ、構造化ログデータ管理を備えた包括的なログシステムを実装しています。
 
-## Logging Architecture
+## ログアーキテクチャ
 
-### Core Components
+### コアコンポーネント
 
-#### 1. Custom Formatter (`CustomFormatter`)
-Provides colored console output for different log levels:
+#### 1. カスタムフォーマッター (`CustomFormatter`)
+異なるログレベルに対してカラーコンソール出力を提供します:
 
 ```python
 class CustomFormatter(Formatter):
@@ -22,33 +22,33 @@ class CustomFormatter(Formatter):
     }
 ```
 
-**Color Scheme**:
-- **DEBUG**: Blue
-- **INFO**: White  
-- **WARNING**: Yellow
-- **ERROR**: Red
-- **CRITICAL**: Bold Red
+**カラースキーム**:
+- **DEBUG**: 青
+- **INFO**: 白  
+- **WARNING**: 黄
+- **ERROR**: 赤
+- **CRITICAL**: 太字赤
 
-#### 2. Setup Function (`setup_logging`)
-Configurable logging setup with multiple modes:
+#### 2. セットアップ関数 (`setup_logging`)
+複数のモードを持つ設定可能なログセットアップ:
 
 ```python
 def setup_logging(mode: Optional[str] = None):
     # Supports: "debug", "info", "warning", "error", "critical", "api"
 ```
 
-**Available Modes**:
-- `"debug"` or `"D"`: Debug level logging
-- `"info"` or `"I"`: Info level logging  
-- `"warning"` or `"W"`: Warning level logging
-- `"error"` or `"E"`: Error level logging
-- `"critical"` or `"C"`: Critical level logging
-- `"api"` or `"API"`: Special API logging with file output
+**利用可能なモード**:
+- `"debug"` または `"D"`: デバッグレベルログ
+- `"info"` または `"I"`: 情報レベルログ  
+- `"warning"` または `"W"`: 警告レベルログ
+- `"error"` または `"E"`: エラーレベルログ
+- `"critical"` または `"C"`: 重要レベルログ
+- `"api"` または `"API"`: ファイル出力付き特別APIログ
 
-### Log Data Management
+### ログデータ管理
 
-#### Structured Log Storage (`save_log`)
-Saves structured log data as JSON files with automatic archiving:
+#### 構造化ログストレージ (`save_log`)
+自動アーカイブ機能付きでJSONファイルとして構造化ログデータを保存します:
 
 ```python
 def save_log(log_data):
@@ -57,7 +57,7 @@ def save_log(log_data):
     # Automatically archives old logs (keeps 10 most recent days)
 ```
 
-**Directory Structure**:
+**ディレクトリ構造**:
 ```
 data/
 └── logging/
@@ -69,7 +69,7 @@ data/
         └── older-logs/
 ```
 
-**Log Data Format**:
+**ログデータ形式**:
 ```json
 {
   "event": "BotReady",
@@ -80,32 +80,32 @@ data/
 }
 ```
 
-### Logging Modes
+### ログモード
 
-#### 1. Standard Console Logging
-Default logging to console with colored output:
+#### 1. 標準コンソールログ
+カラー出力付きのデフォルトコンソールログ:
 ```python
 logger = setup_logging("info")
 logger.info("Bot started successfully")
 ```
 
-#### 2. API Logging Mode
-Special logging mode for API operations with both console and file output:
+#### 2. APIログモード
+コンソールとファイル出力の両方を持つAPI操作用の特別なログモード:
 ```python
 api_logger = setup_logging("api")
 # Logs to both console and data/logging/api/api.log
 ```
 
-#### 3. Debug Mode
-Enhanced logging for development:
+#### 3. デバッグモード
+開発用の拡張ログ:
 ```python
 debug_logger = setup_logging("debug")
 # Shows detailed debug information
 ```
 
-## Usage Patterns
+## 使用パターン
 
-### In Cogs
+### Cogs内での使用
 ```python
 from utils.logging import setup_logging
 
@@ -124,7 +124,7 @@ class MyCog(commands.Cog):
             logger.error(f"Operation failed: {e}")
 ```
 
-### Structured Event Logging
+### 構造化イベントログ
 ```python
 from utils.logging import save_log
 
@@ -139,7 +139,7 @@ log_data = {
 save_log(log_data)
 ```
 
-### Error Tracking
+### エラー追跡
 ```python
 try:
     await risky_operation()
@@ -158,15 +158,15 @@ except Exception as e:
     save_log(error_data)
 ```
 
-## Log Management
+## ログ管理
 
-### Automatic Archiving
-The system automatically manages log storage:
-- Keeps 10 most recent days of logs
-- Archives older logs to `archive/` directory
-- Prevents disk space issues from log accumulation
+### 自動アーカイブ
+システムは自動的にログストレージを管理します:
+- 最新10日間のログを保持
+- 古いログを`archive/`ディレクトリにアーカイブ
+- ログ蓄積によるディスク容量問題を防止
 
-### File Organization
+### ファイル構成
 ```
 data/logging/
 ├── 2024-01-15/          # Today's logs
@@ -180,15 +180,15 @@ data/logging/
     └── api.log
 ```
 
-### Log Rotation
-- Daily log directories
-- Session-based subdirectories
-- UUID-based individual log files
-- Automatic cleanup of old logs
+### ログローテーション
+- 日次ログディレクトリ
+- セッションベースのサブディレクトリ
+- UUIDベースの個別ログファイル
+- 古いログの自動クリーンアップ
 
-## Integration with Bot Systems
+## ボットシステムとの統合
 
-### Main Bot Logging
+### メインボットログ
 ```python
 # In main.py
 from utils.logging import setup_logging, save_log
@@ -205,7 +205,7 @@ async def on_ready(self):
     save_log(log_data)
 ```
 
-### Error Handler Integration
+### エラーハンドラー統合
 ```python
 async def on_command_error(self, ctx, error):
     logger.error(f"Command error: {error}")
@@ -221,23 +221,23 @@ async def on_command_error(self, ctx, error):
     save_log(error_log)
 ```
 
-## Performance Considerations
+## パフォーマンス考慮事項
 
-### Efficient Logging
-- Lazy string formatting: `logger.info("User %s joined", user.name)`
-- Conditional debug logging: `if logger.isEnabledFor(DEBUG):`
-- Async-safe logging operations
+### 効率的なログ
+- 遅延文字列フォーマット: `logger.info("User %s joined", user.name)`
+- 条件付きデバッグログ: `if logger.isEnabledFor(DEBUG):`
+- 非同期セーフなログ操作
 
-### Storage Management
-- Automatic log rotation prevents disk space issues
-- JSON format allows for easy parsing and analysis
-- UUID filenames prevent naming conflicts
+### ストレージ管理
+- 自動ログローテーションによりディスク容量問題を防止
+- JSON形式により簡単な解析と分析が可能
+- UUIDファイル名により命名競合を防止
 
 ---
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Error Handling](../02-core/04-error-handling.md)
-- [Configuration Management](../01-architecture/04-configuration-management.md)
-- [Development Setup](../05-development/01-development-setup.md)
-- [Monitoring and Debugging](../05-development/02-monitoring-debugging.md)
+- [エラーハンドリング](../02-core/04-error-handling.md)
+- [設定管理](../01-architecture/04-configuration-management.md)
+- [開発セットアップ](../05-development/01-development-setup.md)
+- [監視とデバッグ](../05-development/02-monitoring-debugging.md)

@@ -1,57 +1,57 @@
-# Events Cogs
+# イベントCogs
 
-## Overview
+## 概要
 
-Events cogs handle Discord events and server monitoring functionality. These cogs are responsible for reacting to various Discord events and maintaining server security and visual consistency.
+イベントCogsはDiscordイベントとサーバーモニタリング機能を処理します。これらのCogsは様々なDiscordイベントに反応し、サーバーのセキュリティと視覚的一貫性を維持する責任があります。
 
-## Available Events Cogs
+## 利用可能なイベントCogs
 
-### 1. Banner Sync (`banner_sync.py`)
+### 1. バナー同期 (`banner_sync.py`)
 
-**Purpose**: Automatically synchronizes the main server's banner to the bot's profile banner.
+**目的**: メインサーバーのバナーをボットのプロフィールバナーに自動同期します。
 
-**Key Features**:
-- **Automatic Synchronization**: Runs every 3 hours via `@tasks.loop(hours=3)`
-- **Change Detection**: Only updates when banner hash changes to avoid unnecessary API calls
-- **Image Processing**: Supports PNG, JPEG, and GIF formats with automatic MIME type detection
-- **Base64 Encoding**: Converts banner images to data URIs for Discord API
-- **Manual Sync Command**: `/sync_banner` for administrator-triggered updates
+**主要機能**:
+- **自動同期**: `@tasks.loop(hours=3)`により3時間ごとに実行
+- **変更検出**: バナーハッシュが変更された場合のみ更新し、不要なAPI呼び出しを回避
+- **画像処理**: 自動MIMEタイプ検出でPNG、JPEG、GIF形式をサポート
+- **Base64エンコーディング**: Discord API用にバナー画像をデータURIに変換
+- **手動同期コマンド**: 管理者がトリガーする`/sync_banner`更新
 
-**Implementation Details**:
+**実装詳細**:
 ```python
 @tasks.loop(hours=3)
 async def sync_banner(self):
-    # Downloads banner from main guild
-    # Converts to base64 data URI
-    # Updates bot profile via Discord API PATCH /users/@me
+    # メインギルドからバナーをダウンロード
+    # base64データURIに変換
+    # Discord API PATCH /users/@me経由でボットプロフィールを更新
 ```
 
-**Commands**:
-- `sync_banner` (Hybrid Command): Manual banner synchronization (Administrator only)
+**コマンド**:
+- `sync_banner` (ハイブリッドコマンド): 手動バナー同期（管理者のみ）
 
-### 2. Guild Watcher (`guild_watcher.py`)
+### 2. ギルドウォッチャー (`guild_watcher.py`)
 
-**Purpose**: Security system that automatically removes the bot from unauthorized servers.
+**目的**: 未承認サーバーからボットを自動的に削除するセキュリティシステム。
 
-**Key Features**:
-- **Whitelist System**: Only allows bot in specified main and dev guilds
-- **Auto-Leave**: Automatically leaves unauthorized servers on join
-- **Startup Check**: Validates all current guilds on bot startup
-- **Guild Monitoring**: Logs all guild join/leave events
+**主要機能**:
+- **ホワイトリストシステム**: 指定されたメインと開発ギルドでのみボットを許可
+- **自動退出**: 参加時に未承認サーバーから自動的に退出
+- **起動チェック**: ボット起動時に現在のすべてのギルドを検証
+- **ギルドモニタリング**: すべてのギルド参加/退出イベントをログ記録
 
-**Configuration**:
+**設定**:
 ```python
 self.main_guild_id = int(settings.admin_main_guild_id)
 self.dev_guild_id = int(settings.admin_dev_guild_id)
 self.allowed_guild_ids = [self.main_guild_id, self.dev_guild_id]
 ```
 
-**Events Handled**:
-- `on_guild_join`: Checks if new guild is authorized, leaves if not
-- `on_ready`: Validates all current guilds on startup
+**処理されるイベント**:
+- `on_guild_join`: 新しいギルドが承認されているかチェック、そうでなければ退出
+- `on_ready`: 起動時にすべての現在のギルドを検証
 
-**Commands**:
-- `list_guilds`: Lists all guilds the bot is currently in (Owner only)
+**コマンド**:
+- `list_guilds`: ボットが現在参加しているすべてのギルドをリスト（オーナーのみ）
 
 ## Event Processing Architecture
 

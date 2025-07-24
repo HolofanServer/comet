@@ -1,88 +1,88 @@
-# iPhone3G Discord Bot Wiki
+# COMET (C.O.M.E.T.) Discord Bot Wiki
 
 <div align="center">
-    <img src="https://images.frwi.net/data/images/f573f557-1cd7-4f4e-b21b-22aa6f911634.png" alt="iPhone3G Logo" width="200" height="200">
-    <h1>iPhone3G Bot Documentation</h1>
-    <h3>Comprehensive Guide to Gizmodo Woods専属BOTv2</h3>
+    <img src="https://images.frwi.net/data/images/f573f557-1cd7-4f4e-b21b-22aa6f911634.png" alt="COMET Logo" width="200" height="200">
+    <h1>COMET Bot ドキュメント</h1>
+    <h3>Gizmodo Woods専属BOTv2 総合ガイド</h3>
 </div>
 
 ---
 
-## 📚 Wiki Navigation
+## 📚 Wiki ナビゲーション
 
-### 🏗️ Architecture & Core Systems
-- [**Bot Architecture Overview**](01-architecture/01-bot-architecture-overview.md) - High-level system design and components
-- [**Application Startup Flow**](01-architecture/02-application-startup-flow.md) - Bot initialization and setup process
-- [**Service Layer Architecture**](01-architecture/03-service-layer-architecture.md) - Dependency injection and core services
-- [**Configuration Management**](01-architecture/04-configuration-management.md) - Settings, environment variables, and bot configuration
+### 🏗️ アーキテクチャ & コアシステム
+- [**ボットアーキテクチャ概要**](01-architecture/01-bot-architecture-overview.md) - 高レベルシステム設計とコンポーネント
+- [**アプリケーション起動フロー**](01-architecture/02-application-startup-flow.md) - ボット初期化とセットアップ処理
+- [**サービス層アーキテクチャ**](01-architecture/03-service-layer-architecture.md) - 依存性注入とコアサービス
+- [**設定管理**](01-architecture/04-configuration-management.md) - 設定、環境変数、ボット設定
 
-### 🔧 Core Components
-- [**Main Bot Class**](02-core/01-main-bot-class.md) - MyBot class and core functionality
-- [**Authentication System**](02-core/02-authentication-system.md) - Bot authentication and security
-- [**Logging System**](02-core/03-logging-system.md) - Comprehensive logging and monitoring
-- [**Error Handling**](02-core/04-error-handling.md) - Error management and reporting
+### 🔧 コアコンポーネント
+- [**メインボットクラス**](02-core/01-main-bot-class.md) - MyBotクラスとコア機能
+- [**認証システム**](02-core/02-authentication-system.md) - ボット認証とセキュリティ
+- [**ログシステム**](02-core/03-logging-system.md) - 包括的なログとモニタリング
+- [**エラーハンドリング**](02-core/04-error-handling.md) - エラー管理とレポート
 
-### 🎯 Cogs System
-- [**Cogs Architecture**](03-cogs/01-cogs-architecture.md) - Extension system overview
-- [**Events Cogs**](03-cogs/02-events-cogs.md) - Event handling and monitoring
-- [**Homepage Cogs**](03-cogs/03-homepage-cogs.md) - Website integration and server analysis
-- [**Management Cogs**](03-cogs/04-management-cogs.md) - Bot administration and control
-- [**Tool Cogs**](03-cogs/05-tool-cogs.md) - Utility commands and features
+### 🎯 Cogsシステム
+- [**Cogsアーキテクチャ**](03-cogs/01-cogs-architecture.md) - 拡張システム概要
+- [**イベントCogs**](03-cogs/02-events-cogs.md) - イベント処理とモニタリング
+- [**ホームページCogs**](03-cogs/03-homepage-cogs.md) - ウェブサイト統合とサーバー分析
+- [**管理Cogs**](03-cogs/04-management-cogs.md) - ボット管理と制御
+- [**ツールCogs**](03-cogs/05-tool-cogs.md) - ユーティリティコマンドと機能
 
-### 🛠️ Utilities & Helpers
-- [**Database Management**](04-utilities/01-database-management.md) - Data persistence and migration
-- [**API Integration**](04-utilities/02-api-integration.md) - External service connections
-- [**Presence Management**](04-utilities/03-presence-management.md) - Bot status and activity
-- [**Startup Utilities**](04-utilities/04-startup-utilities.md) - Initialization helpers
+### 🛠️ ユーティリティ & ヘルパー
+- [**データベース管理**](04-utilities/01-database-management.md) - データ永続化とマイグレーション
+- [**API統合**](04-utilities/02-api-integration.md) - 外部サービス接続
+- [**プレゼンス管理**](04-utilities/03-presence-management.md) - ボットステータスとアクティビティ
+- [**起動ユーティリティ**](04-utilities/04-startup-utilities.md) - 初期化ヘルパー
 
-### 🚀 Development & Deployment
-- [**Development Setup**](05-development/01-development-setup.md) - Local development environment
-- [**Testing Framework**](05-development/02-testing-framework.md) - Testing strategies and tools
-- [**Deployment Guide**](05-development/03-deployment-guide.md) - Production deployment process
-- [**Contributing Guidelines**](05-development/04-contributing-guidelines.md) - Code standards and contribution process
+### 🚀 開発 & デプロイ
+- [**開発環境セットアップ**](05-development/01-development-setup.md) - ローカル開発環境
+- [**テストフレームワーク**](05-development/02-testing-framework.md) - テスト戦略とツール
+- [**デプロイガイド**](05-development/03-deployment-guide.md) - 本番デプロイプロセス
+- [**貢献ガイドライン**](05-development/04-contributing-guidelines.md) - コード標準と貢献プロセス
 
-### 📖 Command Reference
-- [**Command Categories**](06-commands/01-command-categories.md) - Overview of all bot commands
-- [**Admin Commands**](06-commands/02-admin-commands.md) - Administrative functionality
-- [**User Commands**](06-commands/03-user-commands.md) - Public user commands
-- [**Tool Commands**](06-commands/04-tool-commands.md) - Utility and analysis commands
-
----
-
-## 🎯 Quick Start
-
-1. **Understanding the Bot**: Start with [Bot Architecture Overview](01-architecture/01-bot-architecture-overview.md)
-2. **Setting Up Development**: Follow the [Development Setup](05-development/01-development-setup.md) guide
-3. **Exploring Features**: Browse the [Cogs System](03-cogs/01-cogs-architecture.md) documentation
-4. **Contributing**: Read the [Contributing Guidelines](05-development/04-contributing-guidelines.md)
+### 📖 コマンドリファレンス
+- [**コマンドカテゴリ**](06-commands/01-command-categories.md) - 全ボットコマンド概要
+- [**管理者コマンド**](06-commands/02-admin-commands.md) - 管理機能
+- [**ユーザーコマンド**](06-commands/03-user-commands.md) - 公開ユーザーコマンド
+- [**ツールコマンド**](06-commands/04-tool-commands.md) - ユーティリティと分析コマンド
 
 ---
 
-## 🔍 Search & Navigation Tips
+## 🎯 クイックスタート
 
-- Use the navigation menu above to jump to specific sections
-- Each page includes cross-references to related components
-- Code examples include direct links to source files
-- Interactive diagrams show system relationships
-
----
-
-## 📊 Bot Statistics
-
-- **Main Bot**: iPhone3G #6472
-- **Dev Bot**: iPhone3G Dev #9786
-- **Primary Guild**: Gizmodo Woods Discord Server
-- **Language**: Python 3.x with discord.py
-- **Architecture**: Multi-cog modular system
+1. **ボットの理解**: [ボットアーキテクチャ概要](01-architecture/01-bot-architecture-overview.md)から始める
+2. **開発環境セットアップ**: [開発環境セットアップ](05-development/01-development-setup.md)ガイドに従う
+3. **機能の探索**: [Cogsシステム](03-cogs/01-cogs-architecture.md)ドキュメントを参照
+4. **貢献**: [貢献ガイドライン](05-development/04-contributing-guidelines.md)を読む
 
 ---
 
-## 🔗 External Links
+## 🔍 検索 & ナビゲーションのヒント
 
-- [GitHub Repository](https://github.com/FreeWiFi7749/hfs-homepage-mg-bot)
+- 上記のナビゲーションメニューを使用して特定のセクションにジャンプ
+- 各ページには関連コンポーネントへの相互参照が含まれています
+- コード例にはソースファイルへの直接リンクが含まれています
+- インタラクティブな図でシステム関係を表示
+
+---
+
+## 📊 ボット統計
+
+- **メインボット**: COMET #6472
+- **開発ボット**: COMET Dev #9786
+- **プライマリギルド**: Gizmodo Woods Discord サーバー
+- **言語**: Python 3.x with discord.py
+- **アーキテクチャ**: マルチCogモジュラーシステム
+
+---
+
+## 🔗 外部リンク
+
+- [GitHubリポジトリ](https://github.com/FreeWiFi7749/hfs-homepage-mg-bot)
 - [Gizmodo Woods Discord](https://discord.gg/gizmodo)
-- [Developer Profile](https://github.com/FreeWiFi7749)
+- [開発者プロフィール](https://github.com/FreeWiFi7749)
 
 ---
 
-*This wiki provides comprehensive documentation for the iPhone3G Discord bot, designed to help developers understand, maintain, and extend the bot's functionality.*
+*このWikiは、COMET (C.O.M.E.T.) Discord botの包括的なドキュメントを提供し、開発者がボットの機能を理解、保守、拡張するのに役立つように設計されています。*

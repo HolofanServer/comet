@@ -1,14 +1,14 @@
-# Bot Architecture Overview
+# ボットアーキテクチャ概要
 
-## System Design
+## システム設計
 
-The iPhone3G Discord bot follows a modular, event-driven architecture built on the discord.py library. The system is designed for scalability, maintainability, and extensibility.
+COMET Discord botは、discord.pyライブラリ上に構築されたモジュラー、イベント駆動アーキテクチャに従います。システムはスケーラビリティ、保守性、拡張性を考慮して設計されています。
 
-## High-Level Architecture
+## 高レベルアーキテクチャ
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    iPhone3G Bot System                      │
+│                    COMET Bot System                         │
 ├─────────────────────────────────────────────────────────────┤
 │  Main Bot (MyBot)                                          │
 │  ├── Authentication Layer                                   │
@@ -35,43 +35,43 @@ The iPhone3G Discord bot follows a modular, event-driven architecture built on t
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Core Components
+## コアコンポーネント
 
-### 1. Main Bot Class (`MyBot`)
-- **Location**: [`main.py`](../main.py)
-- **Purpose**: Central bot instance extending `commands.AutoShardedBot`
-- **Key Features**:
-  - Auto-sharding for large servers
-  - Dynamic cog loading
-  - Global error handling
-  - Session management
+### 1. メインボットクラス (`MyBot`)
+- **場所**: [`main.py`](../main.py)
+- **目的**: `commands.AutoShardedBot`を拡張した中央ボットインスタンス
+- **主要機能**:
+  - 大規模サーバー向けの自動シャーディング
+  - 動的Cogローディング
+  - グローバルエラーハンドリング
+  - セッション管理
 
-### 2. Authentication System
-- **Location**: [`utils/auth.py`](../utils/auth.py)
-- **Purpose**: Secure bot authentication and authorization
-- **Features**:
-  - Token validation
-  - Permission verification
-  - Secure credential management
+### 2. 認証システム
+- **場所**: [`utils/auth.py`](../utils/auth.py)
+- **目的**: セキュアなボット認証と認可
+- **機能**:
+  - トークン検証
+  - 権限確認
+  - セキュアな認証情報管理
 
-### 3. Configuration Management
-- **Location**: [`config/setting.py`](../config/setting.py)
-- **Purpose**: Centralized configuration handling
-- **Features**:
-  - Environment variable management
-  - JSON configuration files
-  - Runtime setting updates
+### 3. 設定管理
+- **場所**: [`config/setting.py`](../config/setting.py)
+- **目的**: 一元化された設定処理
+- **機能**:
+  - 環境変数管理
+  - JSON設定ファイル
+  - ランタイム設定更新
 
-### 4. Cogs System
-- **Location**: [`cogs/`](../cogs/) directory
-- **Purpose**: Modular functionality extensions
-- **Categories**:
-  - **Events**: Guild monitoring, banner sync
-  - **Homepage**: Server analysis, website integration
-  - **Management**: Bot administration, database operations
-  - **Tools**: User analysis, announcements, utilities
+### 4. Cogsシステム
+- **場所**: [`cogs/`](../cogs/) ディレクトリ
+- **目的**: モジュラー機能拡張
+- **カテゴリ**:
+  - **Events**: ギルドモニタリング、バナー同期
+  - **Homepage**: サーバー分析、ウェブサイト統合
+  - **Management**: ボット管理、データベース操作
+  - **Tools**: ユーザー分析、アナウンス、ユーティリティ
 
-## Data Flow
+## データフロー
 
 ```
 Discord Event → Bot Instance → Event Handler → Cog Processing → Response
@@ -79,57 +79,57 @@ Discord Event → Bot Instance → Event Handler → Cog Processing → Response
   User Action → Authentication → Command Router → Business Logic → Discord API
 ```
 
-## Key Design Principles
+## 主要設計原則
 
-### 1. Modularity
-- Each feature is implemented as a separate cog
-- Cogs can be loaded/unloaded dynamically
-- Minimal coupling between components
+### 1. モジュラリティ
+- 各機能は独立したCogとして実装
+- Cogは動的にロード/アンロード可能
+- コンポーネント間の結合度を最小化
 
-### 2. Scalability
-- Auto-sharding support for large Discord servers
-- Efficient database operations
-- Asynchronous processing throughout
+### 2. スケーラビリティ
+- 大規模Discordサーバー向けの自動シャーディングサポート
+- 効率的なデータベース操作
+- 全体を通した非同期処理
 
-### 3. Reliability
-- Comprehensive error handling
-- Logging at multiple levels
-- Graceful degradation on failures
+### 3. 信頼性
+- 包括的なエラーハンドリング
+- 複数レベルでのログ記録
+- 障害時の優雅な劣化
 
-### 4. Maintainability
-- Clear separation of concerns
-- Consistent coding patterns
-- Extensive documentation
+### 4. 保守性
+- 明確な関心の分離
+- 一貫したコーディングパターン
+- 広範囲なドキュメント
 
-## Technology Stack
+## 技術スタック
 
-- **Core Framework**: discord.py (Python Discord API wrapper)
-- **Python Version**: 3.x
-- **Database**: JSON files with migration support
-- **Logging**: Python logging with custom handlers
-- **Configuration**: Environment variables + JSON
-- **Deployment**: Docker containerization
+- **コアフレームワーク**: discord.py (Python Discord APIラッパー)
+- **Pythonバージョン**: 3.x
+- **データベース**: マイグレーションサポート付きJSONファイル
+- **ログ**: カスタムハンドラー付きPythonログ
+- **設定**: 環境変数 + JSON
+- **デプロイ**: Dockerコンテナ化
 
-## Security Features
+## セキュリティ機能
 
-- Token-based authentication
-- Permission-based command access
-- Input validation and sanitization
-- Secure credential storage
-- Audit logging
+- トークンベース認証
+- 権限ベースコマンドアクセス
+- 入力検証とサニタイゼーション
+- セキュアな認証情報保存
+- 監査ログ
 
-## Performance Considerations
+## パフォーマンス考慮事項
 
-- Asynchronous operations throughout
-- Connection pooling for database operations
-- Efficient caching strategies
-- Resource monitoring and cleanup
+- 全体を通した非同期操作
+- データベース操作のコネクションプーリング
+- 効率的なキャッシュ戦略
+- リソースモニタリングとクリーンアップ
 
 ---
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Application Startup Flow](02-application-startup-flow.md)
-- [Service Layer Architecture](03-service-layer-architecture.md)
-- [Main Bot Class](../02-core/01-main-bot-class.md)
-- [Cogs Architecture](../03-cogs/01-cogs-architecture.md)
+- [アプリケーション起動フロー](02-application-startup-flow.md)
+- [サービス層アーキテクチャ](03-service-layer-architecture.md)
+- [メインボットクラス](../02-core/01-main-bot-class.md)
+- [Cogsアーキテクチャ](../03-cogs/01-cogs-architecture.md)

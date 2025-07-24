@@ -1,12 +1,12 @@
-# Main Bot Class (MyBot)
+# メインボットクラス (MyBot)
 
-## Overview
+## 概要
 
-The `MyBot` class is the central component of the iPhone3G Discord bot, extending discord.py's `AutoShardedBot` to provide enhanced functionality for the Gizmodo Woods community.
+`MyBot`クラスは、COMET Discord botの中核コンポーネントで、discord.pyの`AutoShardedBot`を拡張してGizmodo Woodsコミュニティ向けの拡張機能を提供します。
 
-## Class Definition
+## クラス定義
 
-**Location**: [`main.py:65-199`](../main.py#L65-L199)
+**場所**: [`main.py:65-199`](../main.py#L65-L199)
 
 ```python
 class MyBot(commands.AutoShardedBot):
@@ -18,32 +18,32 @@ class MyBot(commands.AutoShardedBot):
         self.gagame_sessions: dict = {}
 ```
 
-## Key Features
+## 主要機能
 
-### 1. Auto-Sharding Support
-- Automatically handles multiple Discord shards
-- Scales efficiently across large server counts
-- Manages shard-specific operations
+### 1. 自動シャーディングサポート
+- 複数のDiscordシャードを自動処理
+- 大規模サーバー数での効率的なスケーリング
+- シャード固有の操作を管理
 
-### 2. Dynamic Cog Loading
-- Loads cogs from the `cogs/` directory automatically
-- Skips development cogs in production
-- Handles loading failures gracefully
+### 2. 動的Cogローディング
+- `cogs/`ディレクトリからCogsを自動ロード
+- 本番環境で開発用Cogsをスキップ
+- ロード失敗を優雅に処理
 
-### 3. Comprehensive Error Handling
-- Global command error handling
-- Application command error handling
-- Structured error logging and reporting
+### 3. 包括的エラーハンドリング
+- グローバルコマンドエラーハンドリング
+- アプリケーションコマンドエラーハンドリング
+- 構造化されたエラーログとレポート
 
-### 4. Session Management
-- Tracks bot initialization state
-- Manages session IDs for logging
-- Handles reconnection scenarios
+### 4. セッション管理
+- ボット初期化状態の追跡
+- ログ用セッションIDの管理
+- 再接続シナリオの処理
 
-## Core Methods
+## コアメソッド
 
 ### `setup_hook()`
-**Purpose**: Initializes the bot during startup
+**目的**: 起動時にボットを初期化
 
 ```python
 async def setup_hook(self) -> None:
@@ -61,16 +61,16 @@ async def setup_hook(self) -> None:
     self.loop.create_task(self.after_ready())
 ```
 
-**Key Operations**:
-1. **Authentication**: Verifies bot credentials
-2. **Git Operations**: Pulls latest code changes
-3. **Dependencies**: Installs required packages
-4. **Environment Check**: Validates development/production environment
-5. **Cog Loading**: Dynamically loads all extension modules
-6. **Jishaku**: Loads debugging extension
+**主要操作**:
+1. **認証**: ボット認証情報を検証
+2. **Git操作**: 最新のコード変更をプル
+3. **依存関係**: 必要なパッケージをインストール
+4. **環境チェック**: 開発/本番環境を検証
+5. **Cogローディング**: すべての拡張モジュールを動的ロード
+6. **Jishaku**: デバッグ拡張をロード
 
 ### `load_cogs(folder_name: str)`
-**Purpose**: Dynamically loads all Python modules from the cogs directory
+**目的**: cogsディレクトリからすべてのPythonモジュールを動的ロード
 
 ```python
 async def load_cogs(self, folder_name: str) -> None:
@@ -89,14 +89,14 @@ async def load_cogs(self, folder_name: str) -> None:
             logger.error(f"Failed to load extension: {cog_path} | {e}")
 ```
 
-**Features**:
-- Recursive directory scanning
-- Development cog filtering
-- Error handling for failed loads
-- Path normalization for imports
+**機能**:
+- 再帰的ディレクトリスキャン
+- 開発用Cogフィルタリング
+- ロード失敗のエラーハンドリング
+- インポート用パス正規化
 
 ### `on_ready()`
-**Purpose**: Handles bot ready event and initialization
+**目的**: ボット準備完了イベントと初期化を処理
 
 ```python
 async def on_ready(self) -> None:
@@ -118,15 +118,15 @@ async def on_ready(self) -> None:
         self.initialized = True
 ```
 
-**Operations**:
-- Logs successful connection
-- Records session information
-- Sends startup notifications
-- Updates initialization state
+**操作**:
+- 接続成功をログ記録
+- セッション情報を記録
+- 起動通知を送信
+- 初期化状態を更新
 
-## Error Handling
+## エラーハンドリング
 
-### Command Error Handler
+### コマンドエラーハンドラー
 ```python
 @commands.Cog.listener()
 async def on_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
@@ -155,7 +155,7 @@ async def on_command_error(self, ctx: commands.Context, error: commands.CommandE
         ctx.handled = True
 ```
 
-### Application Command Error Handler
+### アプリケーションコマンドエラーハンドラー
 ```python
 @commands.Cog.listener()
 async def on_application_command_error(self, interaction: discord.Interaction, error: commands.CommandError) -> None:
@@ -163,27 +163,27 @@ async def on_application_command_error(self, interaction: discord.Interaction, e
     await handle_application_command_error(interaction, error)
 ```
 
-## Configuration
+## 設定
 
-### Bot Initialization
+### ボット初期化
 ```python
 intent: discord.Intents = discord.Intents.all()
 bot: MyBot = MyBot(command_prefix=command_prefix, intents=intent, help_command=None)
 ```
 
-**Settings**:
-- **Intents**: All Discord intents enabled
-- **Prefix**: Configurable command prefixes
-- **Help Command**: Disabled (custom implementation)
+**設定**:
+- **Intents**: すべてのDiscord intentsを有効化
+- **Prefix**: 設定可能なコマンドプレフィックス
+- **Help Command**: 無効化（カスタム実装）
 
-### Environment Variables
-- `TOKEN`: Discord bot token
-- `ADMIN_MAIN_GUILD_ID`: Primary server ID
-- `ADMIN_DEV_GUILD_ID`: Development server ID
-- `ADMIN_STARTUP_CHANNEL_ID`: Startup notification channel
-- `ADMIN_ERROR_LOG_CHANNEL_ID`: Error logging channel
+### 環境変数
+- `TOKEN`: Discord botトークン
+- `ADMIN_MAIN_GUILD_ID`: プライマリサーバーID
+- `ADMIN_DEV_GUILD_ID`: 開発サーバーID
+- `ADMIN_STARTUP_CHANNEL_ID`: 起動通知チャンネル
+- `ADMIN_ERROR_LOG_CHANNEL_ID`: エラーログチャンネル
 
-## Instance Variables
+## インスタンス変数
 
 | Variable | Type | Purpose |
 |----------|------|---------|
@@ -192,19 +192,19 @@ bot: MyBot = MyBot(command_prefix=command_prefix, intents=intent, help_command=N
 | `ERROR_LOG_CHANNEL_ID` | `int` | Channel for error reporting |
 | `gagame_sessions` | `dict` | Game session management |
 
-## Lifecycle
+## ライフサイクル
 
-1. **Initialization**: Bot instance created with configuration
-2. **Setup Hook**: Authentication, cog loading, and preparation
-3. **Ready Event**: Connection established, notifications sent
-4. **Runtime**: Event processing and command handling
-5. **Shutdown**: Graceful cleanup and disconnection
+1. **初期化**: 設定でボットインスタンスを作成
+2. **セットアップフック**: 認証、Cogローディング、準備
+3. **準備完了イベント**: 接続確立、通知送信
+4. **ランタイム**: イベント処理とコマンドハンドリング
+5. **シャットダウン**: 優雅なクリーンアップと切断
 
 ---
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Authentication System](02-authentication-system.md)
-- [Error Handling](04-error-handling.md)
-- [Cogs Architecture](../03-cogs/01-cogs-architecture.md)
-- [Application Startup Flow](../01-architecture/02-application-startup-flow.md)
+- [認証システム](02-authentication-system.md)
+- [エラーハンドリング](04-error-handling.md)
+- [Cogsアーキテクチャ](../03-cogs/01-cogs-architecture.md)
+- [アプリケーション起動フロー](../01-architecture/02-application-startup-flow.md)

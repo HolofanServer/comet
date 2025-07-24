@@ -1,18 +1,18 @@
-# Database Management
+# データベース管理
 
-## Overview
+## 概要
 
-The iPhone3G bot uses PostgreSQL as its primary database with asyncpg for connection management, along with JSON files for configuration and caching.
+COMETボットは、PostgreSQLを主要データベースとして使用し、asyncpgで接続管理を行い、設定とキャッシュにはJSONファイルを使用します。
 
-## Database Architecture
+## データベースアーキテクチャ
 
-### Current Implementation
-- **Primary Database**: PostgreSQL with asyncpg connection pooling
-- **Configuration Storage**: JSON files for local configuration
-- **Connection Management**: Railway environment support with fallback to local development
-- **Migration System**: Database migration commands available
+### 現在の実装
+- **主要データベース**: asyncpg接続プールを使用したPostgreSQL
+- **設定ストレージ**: ローカル設定用のJSONファイル
+- **接続管理**: ローカル開発へのフォールバック付きRailway環境サポート
+- **マイグレーションシステム**: データベースマイグレーションコマンドが利用可能
 
-### Database Configuration
+### データベース設定
 ```python
 # Railway Production Environment
 PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE
@@ -24,41 +24,41 @@ DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 DATABASE_PUBLIC_URL
 ```
 
-## Database Utilities
+## データベースユーティリティ
 
-### 1. Database Manager (`utils/db_manager.py`)
+### 1. データベースマネージャー (`utils/db_manager.py`)
 
-**Purpose**: Centralized database operations and connection management
+**目的**: 一元化されたデータベース操作と接続管理
 
-**Key Features**:
-- Connection pooling
-- Transaction management
-- Query optimization
-- Error handling
+**主要機能**:
+- 接続プール
+- トランザクション管理
+- クエリ最適化
+- エラーハンドリング
 
-### 2. Database Migration (`utils/db_migration.py`)
+### 2. データベースマイグレーション (`utils/db_migration.py`)
 
-**Purpose**: Schema versioning and data migration
+**目的**: スキーマバージョニングとデータマイグレーション
 
-**Key Features**:
-- Version-controlled schema changes
-- Rollback capabilities
-- Data transformation utilities
-- Migration validation
+**主要機能**:
+- バージョン管理されたスキーマ変更
+- ロールバック機能
+- データ変換ユーティリティ
+- マイグレーション検証
 
-### 3. Core Database (`utils/database.py`)
+### 3. コアデータベース (`utils/database.py`)
 
-**Purpose**: Low-level database operations and utilities
+**目的**: 低レベルデータベース操作とユーティリティ
 
-**Key Features**:
-- CRUD operations
-- Data validation
-- Connection management
-- Query building
+**主要機能**:
+- CRUD操作
+- データ検証
+- 接続管理
+- クエリ構築
 
-## Data Models
+## データモデル
 
-### Member Data Structure
+### メンバーデータ構造
 ```json
 {
   "user_id": "123456789",
@@ -76,7 +76,7 @@ DATABASE_PUBLIC_URL
 }
 ```
 
-### Message Analytics Structure
+### メッセージ分析構造
 ```json
 {
   "message_id": "123456789",
@@ -93,9 +93,9 @@ DATABASE_PUBLIC_URL
 }
 ```
 
-## Database Operations
+## データベース操作
 
-### Reading Data
+### データ読み取り
 ```python
 async def get_member_data(user_id: int, guild_id: int) -> dict:
     """Retrieve member data from database"""
@@ -112,7 +112,7 @@ async def get_member_data(user_id: int, guild_id: int) -> dict:
         return {}
 ```
 
-### Writing Data
+### データ書き込み
 ```python
 async def save_member_data(user_id: int, guild_id: int, data: dict) -> bool:
     """Save member data to database"""
@@ -138,7 +138,7 @@ async def save_member_data(user_id: int, guild_id: int, data: dict) -> bool:
         return False
 ```
 
-### Batch Operations
+### バッチ操作
 ```python
 async def batch_update_members(updates: list) -> int:
     """Perform batch updates on member data"""
@@ -169,9 +169,9 @@ async def batch_update_members(updates: list) -> int:
     return success_count
 ```
 
-## Migration System
+## マイグレーションシステム
 
-### Migration Structure
+### マイグレーション構造
 ```python
 class Migration:
     def __init__(self, version: str, description: str):
@@ -187,7 +187,7 @@ class Migration:
         raise NotImplementedError
 ```
 
-### Example Migration
+### マイグレーション例
 ```python
 class AddUserPreferences(Migration):
     def __init__(self):
@@ -219,9 +219,9 @@ class AddUserPreferences(Migration):
             json.dump(members, f, indent=2, ensure_ascii=False)
 ```
 
-## Backup and Recovery
+## バックアップと復旧
 
-### Automated Backups
+### 自動バックアップ
 ```python
 async def create_backup():
     """Create timestamped backup of all data files"""
@@ -245,7 +245,7 @@ async def create_backup():
     logger.info(f"Backup created: {backup_dir}")
 ```
 
-### Recovery Operations
+### 復旧操作
 ```python
 async def restore_backup(backup_timestamp: str):
     """Restore from backup"""
@@ -268,9 +268,9 @@ async def restore_backup(backup_timestamp: str):
     logger.info(f"Backup restored: {backup_timestamp}")
 ```
 
-## Performance Optimization
+## パフォーマンス最適化
 
-### 1. Caching Strategy
+### 1. キャッシュ戦略
 ```python
 from functools import lru_cache
 import asyncio
@@ -293,7 +293,7 @@ class DatabaseCache:
         self.cache[key] = (value, time.time())
 ```
 
-### 2. Connection Pooling
+### 2. 接続プール
 ```python
 class ConnectionPool:
     def __init__(self, max_connections: int = 10):
@@ -315,9 +315,9 @@ class ConnectionPool:
         await self.connections.put(connection)
 ```
 
-## Error Handling
+## エラーハンドリング
 
-### Database Exceptions
+### データベース例外
 ```python
 class DatabaseError(Exception):
     """Base database exception"""
@@ -336,7 +336,7 @@ class MigrationError(DatabaseError):
     pass
 ```
 
-### Error Recovery
+### エラー復旧
 ```python
 async def safe_database_operation(operation, *args, **kwargs):
     """Execute database operation with error recovery"""
@@ -364,9 +364,9 @@ async def safe_database_operation(operation, *args, **kwargs):
 
 ---
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Database Migration Commands](../03-cogs/04-management-cogs.md#db-migration-commands)
-- [Configuration Management](../01-architecture/04-configuration-management.md)
-- [API Integration](02-api-integration.md)
-- [Error Handling](../02-core/04-error-handling.md)
+- [データベースマイグレーションコマンド](../03-cogs/04-management-cogs.md#db-migration-commands)
+- [設定管理](../01-architecture/04-configuration-management.md)
+- [API統合](02-api-integration.md)
+- [エラーハンドリング](../02-core/04-error-handling.md)
