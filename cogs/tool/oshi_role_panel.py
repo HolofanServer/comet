@@ -10,6 +10,8 @@ import json
 import re
 import uuid
 
+from utils.db_manager import db
+
 logger = setup_logging("D")
 
 # --- 推しロールパネル用のCog ---
@@ -26,7 +28,8 @@ class OshiRolePanel(commands.Cog):
             "initial_counts": {},
             "last_updated": None
         }
-        self.load_role_emoji_mapping()
+        # 非同期でロール絵文字マッピングをロード
+        bot.loop.create_task(self._init_role_emoji())
         self.load_analytics_data()
         self.cv2_sender.analytics_callback = self.record_role_event
         self.talent_to_fanname = {
@@ -120,34 +123,88 @@ class OshiRolePanel(commands.Cog):
             
         }
         
-    def load_role_emoji_mapping(self):
-        """ロールと絵文字のマッピングをJSONファイルから読み込む"""
+    async def load_role_emoji_mapping(self):
+        """DBからロール絵文字マッピングを取得し、旧JSONがあればマージしてDBへ反映"""
+        # DB取得
+        try:
+            self.role_emoji_mapping = await db.get_role_emoji_mapping_dict()
+        except Exception as e:
+            logger.error(f"DB取得失敗: {e}")
+            self.role_emoji_mapping = {}
+
+        legacy_changed = False
         data_dir = os.path.join(os.getcwd(), "data")
         file_path = os.path.join(data_dir, "role_emoji_mapping.json")
-        
         if os.path.exists(file_path):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
-                    self.role_emoji_mapping = json.load(f)
-                logger.info(f"ロール絵文字マッピングを読み込みました: {len(self.role_emoji_mapping)}件")
+                    legacy_data = json.load(f)
+                for k, v in legacy_data.items():
+                    if k not in self.role_emoji_mapping:
+                        self.role_emoji_mapping[k] = v
+                        legacy_changed = True
+            except Exception as e:
+                logger.error(f"旧JSON読み込み失敗: {e}")
+
+        if legacy_changed:
+            await self.save_role_emoji_mapping()
+            logger.info("旧JSONマッピングをDBへマージしました")
+
+    async def _init_role_emoji(self):
+        """Cog起動時に呼ばれる非同期初期化"""
+        await self.load_role_emoji_mapping()
+        """role_emoji_mappings テーブルからマッピングを取得し、旧JSONをマージしてDBに反映"""
+        # 1. DB から取得
+        try:
+            self.role_emoji_mapping = await db.get_role_emoji_mapping_dict()
+        except Exception as e:
+            logger.error(f"DB取得失敗: {e}")
+            self.role_emoji_mapping = {}
+
+        legacy_changed = False
+        data_dir = os.path.join(os.getcwd(), "data")
+        file_path = os.path.join(data_dir, "role_emoji_mapping.json")
+
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    legacy_data = json.load(f)
+                for k, v in legacy_data.items():
+                    if k not in self.role_emoji_mapping:
+                        self.role_emoji_mapping[k] = v
+                        legacy_changed = True
             except Exception as e:
                 logger.error(f"ロール絵文字マッピングの読み込みに失敗: {e}")
                 self.role_emoji_mapping = {}
-        else:
-            logger.info("ロール絵文字マッピングファイルが見つかりません")
-            self.role_emoji_mapping = {}
         
-    def save_role_emoji_mapping(self):
-        """ロールと絵文字のマッピングをJSONファイルに保存"""
-        data_dir = os.path.join(os.getcwd(), "data")
-        os.makedirs(data_dir, exist_ok=True)
-        file_path = os.path.join(data_dir, "role_emoji_mapping.json")
-        
+    async def save_role_emoji_mapping(self, guild_id: int = None):
+        """ロールと絵文字のマッピングをDBへ保存"""
         try:
+            if guild_id is not None:
+                await db.upsert_role_emoji_mapping_dict(self.role_emoji_mapping, guild_id)
+                logger.info(f"ロール絵文字マッピングをDBへ保存: {len(self.role_emoji_mapping)}件")
+            else:
+                logger.info(f"初期化時のguild_idなしでDB保存をスキップ: {len(self.role_emoji_mapping)}件")
+            
+            # file_pathを定義
+            data_dir = os.path.join(os.getcwd(), "data")
+            file_path = os.path.join(data_dir, "role_emoji_mapping.json")
+            
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(self.role_emoji_mapping, f, indent=4, ensure_ascii=False)
             logger.info(f"ロール絵文字マッピングを保存しました: {len(self.role_emoji_mapping)}件")
             return True
+        except Exception as e:
+            logger.error(f"ロール絵文字マッピングDB保存失敗: {e}")
+            return False
+
+    async def _init_role_emoji(self):
+        """Cog 起動時に呼ばれる非同期初期化"""
+        await self.load_role_emoji_mapping()
+        """ロールと絵文字のマッピングをDBへ保存"""
+        try:
+            # save_role_emoji_mappingメソッドを使用
+            return await self.save_role_emoji_mapping()
         except Exception as e:
             logger.error(f"ロール絵文字マッピングの保存に失敗: {e}")
             return False
@@ -251,7 +308,7 @@ class OshiRolePanel(commands.Cog):
                 self.role_emoji_mapping[role_id] = emoji_data
                 logger.info(f"新しいロール絵文字マッピングを追加: {role_id} -> {emoji_data}")
         
-        self.save_role_emoji_mapping()
+        await self.save_role_emoji_mapping(guild.id)
         
         if initial_counts:
             if "initial_counts" not in self.analytics_data:
@@ -493,7 +550,7 @@ class OshiRolePanel(commands.Cog):
                     emojis_mapped += 1
                     logger.info(f"ロール「{role_name}」に絵文字 {emoji_str} をマッピングしました (マッチ: {best_match_path})")
         
-        self.save_role_emoji_mapping()
+        await self.save_role_emoji_mapping(guild.id)
         logger.info(f"ロール絵文字スキャン完了: {roles_total}個のロール、{emojis_mapped}個の絵文字をマッピング")
         
         return roles_total, emojis_mapped
@@ -917,13 +974,13 @@ CV2形式でアナリティクスデータを表示する
         if isinstance(interaction, discord.Interaction):
             # CV2形式のコンポーネントを作成
             rainbow_colors = [
-                0xE74C3C,  # 赤
-                0xFFA726,  # オレンジ
-                0xF1C40F,  # 黄色
-                0x57F287,  # 緑
-                0x3498DB,  # 青
-                0x7289DA,  # ブルーパープル
-                0x9B59B6,  # 紫
+                15158332,
+                16754470,
+                15844367,
+                5763719,
+                3447003,
+                7506394,
+                10181046
             ]
             accent_color = random.choice(rainbow_colors)
             
@@ -970,7 +1027,8 @@ CV2形式でアナリティクスデータを表示する
                     current_members = stats.get('current_members', 0)
                     container_components.append({
                         "type": 10,  # TEXT_DISPLAY
-                        "content": f"{i+1}. {role_name}\n**選択回数**: {count_value}回 | **現在のメンバー数**: {current_members}人"
+                        "content": f"{i+1}. {role_name}\n"
+                        f"　　選択回数: {count_value}回 | 現在のメンバー数: {current_members}人"
                     })
                     
                     # 各エントリ間に適切なスペースを設定
@@ -1002,7 +1060,8 @@ CV2形式でアナリティクスデータを表示する
                     current_members = stats.get('current_members', 0)
                     container_components.append({
                         "type": 10,  # TEXT_DISPLAY
-                        "content": f"{i+1}. {role_name}\n**選択回数**: {count_value}回 | **現在のメンバー数**: {current_members}人"
+                        "content": f"{i+1}. {role_name}\n"
+                        f"　　選択回数: {count_value}回 | 現在のメンバー数: {current_members}人"
                     })
                     
                     if i < len(bottom_roles) - 1:
@@ -1028,7 +1087,8 @@ CV2形式でアナリティクスデータを表示する
                     last_change = stats.get("last_change", "不明")
                     container_components.append({
                         "type": 10,  # TEXT_DISPLAY
-                        "content": f"{i+1}. {user_name}\n**変更回数**: {total_changes}回 | **最終変更**: {last_change}"
+                        "content": f"{i+1}. {user_name}\n"
+                        f"　　変更回数: {total_changes}回 | 最終変更: {last_change}"
                     })
                     
                     if i < len(top_users) - 1:
@@ -1695,14 +1755,29 @@ class CV2MessageSender:
                         emoji_data = self.bot.get_cog("OshiRolePanel").role_emoji_mapping.get(str(role_id), "")
                         
                         if emoji_data:
-                            if isinstance(emoji_data, dict) and "emoji" in emoji_data:
+                            # DBからの新しい形式: {"emoji_id": "id", "emoji_name": "name", "animated": bool}
+                            if isinstance(emoji_data, dict) and "emoji_id" in emoji_data and emoji_data["emoji_id"]:
+                                emoji_obj = {
+                                    "id": emoji_data["emoji_id"],
+                                    "name": emoji_data["emoji_name"]
+                                }
+                                if emoji_data.get("animated", False):
+                                    emoji_obj["animated"] = True
+                            # 旧形式の文字列形式もサポート: <:name:id>
+                            elif isinstance(emoji_data, dict) and "emoji" in emoji_data:
                                 emoji_str = emoji_data["emoji"]
-                            else:
-                                emoji_str = emoji_data
-                        
-                        if isinstance(emoji_str, str) and emoji_str:
-                            if emoji_str.startswith("<") and emoji_str.endswith(">"): 
-                                emoji_parts = emoji_str.strip("<>").split(":")
+                                if isinstance(emoji_str, str) and emoji_str.startswith("<") and emoji_str.endswith(">"): 
+                                    emoji_parts = emoji_str.strip("<>").split(":")
+                                    if len(emoji_parts) == 3:
+                                        emoji_obj = {
+                                            "id": emoji_parts[2],
+                                            "name": emoji_parts[1]
+                                        }
+                                        if emoji_parts[0] == "a":
+                                            emoji_obj["animated"] = True
+                            # 直接の文字列形式: <:name:id>
+                            elif isinstance(emoji_data, str) and emoji_data.startswith("<") and emoji_data.endswith(">"): 
+                                emoji_parts = emoji_data.strip("<>").split(":")
                                 if len(emoji_parts) == 3:
                                     emoji_obj = {
                                         "id": emoji_parts[2],
@@ -1710,21 +1785,33 @@ class CV2MessageSender:
                                     }
                                     if emoji_parts[0] == "a":
                                         emoji_obj["animated"] = True
-                            else:
-                                emoji_obj = None
                     else:
                         emoji_data = self.bot.get_cog("OshiRolePanel").role_emoji_mapping.get(str(role_id), "")
-                        emoji_str = ""
                         
                         if emoji_data:
-                            if isinstance(emoji_data, dict) and "emoji" in emoji_data:
+                            # DBからの新しい形式: {"emoji_id": "id", "emoji_name": "name", "animated": bool}
+                            if isinstance(emoji_data, dict) and "emoji_id" in emoji_data and emoji_data["emoji_id"]:
+                                emoji_obj = {
+                                    "id": emoji_data["emoji_id"],
+                                    "name": emoji_data["emoji_name"]
+                                }
+                                if emoji_data.get("animated", False):
+                                    emoji_obj["animated"] = True
+                            # 旧形式の文字列形式もサポート: <:name:id>
+                            elif isinstance(emoji_data, dict) and "emoji" in emoji_data:
                                 emoji_str = emoji_data["emoji"]
-                            else:
-                                emoji_str = emoji_data
-                        
-                        if isinstance(emoji_str, str) and emoji_str:
-                            if emoji_str.startswith("<") and emoji_str.endswith(">"): 
-                                emoji_parts = emoji_str.strip("<>").split(":")
+                                if isinstance(emoji_str, str) and emoji_str.startswith("<") and emoji_str.endswith(">"): 
+                                    emoji_parts = emoji_str.strip("<>").split(":")
+                                    if len(emoji_parts) == 3:
+                                        emoji_obj = {
+                                            "id": emoji_parts[2],
+                                            "name": emoji_parts[1]
+                                        }
+                                        if emoji_parts[0] == "a":
+                                            emoji_obj["animated"] = True
+                            # 直接の文字列形式: <:name:id>
+                            elif isinstance(emoji_data, str) and emoji_data.startswith("<") and emoji_data.endswith(">"): 
+                                emoji_parts = emoji_data.strip("<>").split(":")
                                 if len(emoji_parts) == 3:
                                     emoji_obj = {
                                         "id": emoji_parts[2],
@@ -1732,8 +1819,6 @@ class CV2MessageSender:
                                     }
                                     if emoji_parts[0] == "a":
                                         emoji_obj["animated"] = True
-                            else:
-                                emoji_obj = None
                     
                     option = {
                         "label": member_name,
@@ -2177,53 +2262,6 @@ class CV2MessageSender:
                     break
                     
         if not selected_category:
-            try:
-                logger.debug("デバッグ: 方法3開始 - インタラクションデータから直接カテゴリを取得")
-                custom_id = interaction.data.get("custom_id", "")
-                logger.debug(f"デバッグ: カスタムID={custom_id}")
-                
-                if "member_select_" in custom_id:
-                    category_value = custom_id.split("member_select_")[1]
-                    logger.debug(f"デバッグ: 抽出されたカテゴリ値={category_value}")
-                    for category in self.oshi_categories:
-                        if category["value"] == category_value:
-                            selected_category = category
-                            logger.info(f"カスタムIDからカテゴリを特定: {category['name']}")
-                            break
-            except Exception as e:
-                logger.error(f"カスタムIDからのカテゴリ特定中にエラー: {e}", exc_info=True)
-        
-        if not selected_category:
-            try:
-                logger.debug("デバッグ: 方法4開始 - 選択ロールの頻度からカテゴリを特定")
-                displayed_roles = {}
-                for role_id in selected_role_ids:
-                    for category in self.oshi_categories:
-                        for role_name, cat_role_id in category["roles"].items():
-                            if cat_role_id == role_id:
-                                displayed_roles[role_id] = category
-                                logger.debug(f"デバッグ: ロールID {role_id} はカテゴリ '{category['name']}' に属しています")
-                                break
-                
-                if displayed_roles:
-                    category_counts = {}
-                    for role_id, category in displayed_roles.items():
-                        category_name = category["name"]
-                        category_counts[category_name] = category_counts.get(category_name, 0) + 1
-                    
-                    logger.debug(f"デバッグ: カテゴリ出現回数={category_counts}")
-                    most_common_category = max(category_counts.items(), key=lambda x: x[1])[0]
-                    logger.debug(f"デバッグ: 最も多いカテゴリ={most_common_category}")
-                    
-                    for category in self.oshi_categories:
-                        if category["name"] == most_common_category:
-                            selected_category = category
-                            logger.info(f"最も多く選択されているカテゴリから特定: {category['name']}")
-                            break
-            except Exception as e:
-                logger.error(f"最も一般的なカテゴリ特定中にエラー: {e}", exc_info=True)
-        
-        if not selected_category:
             selected_category = self.oshi_categories[0]
             logger.warning(f"カテゴリ特定失敗、フォールバックを使用: {selected_category['name']}")
             messages = ["⚠️ カテゴリの特定に失敗しましたが、処理を続行します。"]
@@ -2244,12 +2282,14 @@ class CV2MessageSender:
         for role_id in selected_role_ids:
             if role_id not in current_role_ids:
                 role = guild.get_role(role_id)
+                
                 if role:
                     roles_to_add.append(role)
         
         for role_id in category_role_ids:
             if role_id in current_role_ids and role_id not in selected_role_ids:
                 role = guild.get_role(role_id)
+                
                 if role:
                     roles_to_remove.append(role)
         

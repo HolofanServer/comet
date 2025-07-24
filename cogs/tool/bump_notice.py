@@ -149,7 +149,7 @@ class BumpNoticeCog(commands.Cog):
     async def on_message(self, message):
         if not message.guild:
             return
-        logger.info(f"メッセージ受信: {message.author.name} ({message.author.id}) - {message.content[:50]}")
+        #logger.info(f"メッセージ受信: {message.author.name} ({message.author.id}) - {message.content[:50]}")
 
         settings = await db.get_bump_notice_settings(message.guild.id)
         if not settings or not settings.get('bot_id') or not settings.get('channel_id'):
@@ -157,7 +157,7 @@ class BumpNoticeCog(commands.Cog):
             return
 
         if message.author.id != settings['bot_id']:
-            logger.info("対象BOTではありません。")
+            #logger.info("対象BOTではありません。")
             return
 
         if not message.embeds:
