@@ -155,6 +155,41 @@ class DBManager:
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
+            ''',
+            '''
+            CREATE TABLE IF NOT EXISTS member_emojis (
+                emoji_id BIGINT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                url TEXT NOT NULL,
+                animated BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+            ''',
+            '''
+            CREATE TABLE IF NOT EXISTS role_emoji_mappings (
+                role_id BIGINT PRIMARY KEY,
+                emoji_id BIGINT,
+                emoji_name TEXT,
+                animated BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+            ''',
+            '''
+            CREATE TABLE IF NOT EXISTS note_posts (
+                id SERIAL PRIMARY KEY,
+                post_id TEXT UNIQUE NOT NULL,
+                title TEXT NOT NULL,
+                link TEXT NOT NULL,
+                author TEXT,
+                published_at TIMESTAMP WITH TIME ZONE,
+                summary TEXT,
+                thumbnail_url TEXT,
+                creator_icon TEXT,
+                notified_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
             '''
         ]
         async with self.pool.acquire() as conn:
@@ -221,6 +256,10 @@ class DBManager:
             role_emoji_path = os.path.join(data_dir, "role_emoji_mapping.json")
             if os.path.exists(role_emoji_path):
                 await self._migrate_role_emoji_mapping(role_emoji_path)
+
+            member_emojis_path = os.path.join(data_dir, "m__emojis.json")
+            if os.path.exists(member_emojis_path):
+                await self._migrate_member_emojis(member_emojis_path)
             
             custom_announcements_dir = os.path.join(data_dir, "custom_announcements")
             if os.path.exists(custom_announcements_dir):
@@ -912,6 +951,71 @@ class DBManager:
             logger.error(f"メンバー情報移行中にエラー: {e}")
             raise
     
+    # --- role_emoji_mapping API ---
+    async def get_role_emoji_mapping_dict(self) -> Dict[str, str]:
+        """role_emoji_mappings テーブルを dict で取得"""
+        if not self._initialized:
+            await self.initialize()
+        mapping: Dict[str, str] = {}
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch("SELECT role_id, emoji_id, emoji_name, animated FROM role_emoji_mappings")
+            for r in rows:
+                mapping[str(r["role_id"])] = {
+                    "emoji_id": r["emoji_id"],
+                    "emoji_name": r["emoji_name"],
+                    "animated": r["animated"]
+                }
+        return mapping
+
+    async def upsert_role_emoji_mapping_dict(self, mapping: Dict[str, Dict[str, str]], guild_id: int):
+        """辞書をテーブルに upsert"""
+        if not self._initialized:
+            await self.initialize()
+        async with self.pool.acquire() as conn:
+            for role_id, emoji in mapping.items():
+                await conn.execute(
+                    """
+                    INSERT INTO role_emoji_mappings (role_id, guild_id, emoji_id, emoji_name, animated)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (role_id, guild_id) DO UPDATE
+                    SET emoji_id = $3, emoji_name = $4, animated = $5, updated_at = NOW()
+                    """,
+                    str(role_id), guild_id, emoji.get("emoji_id"), emoji.get("emoji_name"), emoji.get("animated", False)
+                )
+
+    async def _migrate_member_emojis(self, file_path):
+        """m__emojis.json を member_emojis テーブルに移行"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                emojis_data = json.load(f)
+
+            async with self.pool.acquire() as conn:
+                migrated = 0
+                for item in emojis_data:
+                    try:
+                        emoji_id = int(item.get('id'))
+                        name = item.get('name', '')
+                        url = item.get('url', '')
+                        animated = bool(item.get('animated', False))
+                        await conn.execute(
+                            """
+                            INSERT INTO member_emojis (emoji_id, name, url, animated)
+                            VALUES ($1, $2, $3, $4)
+                            ON CONFLICT (emoji_id) DO UPDATE
+                            SET name = $2, url = $3, animated = $4, updated_at = NOW()
+                            """,
+                            emoji_id, name, url, animated
+                        )
+                        migrated += 1
+                    except Exception as e:
+                        logger.error(f"member_emojis 移行中にエラー: {e}")
+                        continue
+            logger.info(f"member_emojis: {migrated} 件を移行しました")
+            return True
+        except Exception as e:
+            logger.error(f"m__emojis.json からの移行に失敗: {e}")
+            return False
+    
     # --- 推しロール操作用API ---
     
     async def get_user_roles(self, user_id: int) -> List[Dict[str, Any]]:
@@ -920,7 +1024,7 @@ class DBManager:
             async with self.pool.acquire() as conn:
                 records = await conn.fetch(
                     """
-                    SELECT r.role_id, r.role_name, r.category, r.emoji, 
+                    SELECT r.role_id, r.role_name, r.category, r.emoji,
                            ur.assigned_at
                     FROM roles r
                     JOIN user_roles ur ON r.role_id = ur.role_id

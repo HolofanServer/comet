@@ -56,6 +56,12 @@ class Settings:
         self.homepage_api_token: str = os.getenv("HOMEPAGE_API_TOKEN", "")
         self.homepage_target_guild_id: int = int(os.getenv("HOMEPAGE_TARGET_GUILD_ID", "0"))
         self.staff_api_key: str = os.getenv("STAFF_API_KEY", "")
+        
+        # Note通知機能
+        self.note_rss_url: str = os.getenv("NOTE_RSS_URL", "https://note.com/hfs_discord/rss")
+        self.note_webhook_url: str = os.getenv("NOTE_WEBHOOK_URL", "")
+        self.note_channel_id: int = int(os.getenv("NOTE_CHANNEL_ID", "0"))
+        self.note_notification_enabled: bool = os.getenv("NOTE_NOTIFICATION_ENABLED", "true").lower() == "true"
 
 _settings = None
 

@@ -8,18 +8,18 @@
       "message": "わいふぁいって呼んでください！困ったことがあったらいつでもご連絡してくださいね！",
       "joinedAt": "2023-04-03",
       "joinedAtJp": "2023年04月03日",
-      "roleColor": "#e91e63",
+      "roleColor": "#000000",
       "socials": {}
     },
     {
       "id": "941477228343070741",
       "name": "あくる(永遠のあくあくるー)",
       "role": "Staff",
-      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/0a9bfe84434b32c4ae09d9942d79b5ec.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/d96d70ec8a6d61b6f74fd00962be9839.png?size=1024",
       "message": "",
       "joinedAt": "2023-04-02",
       "joinedAtJp": "2023年04月02日",
-      "roleColor": "#2ecc71",
+      "roleColor": "#369876",
       "socials": {}
     },
     {
@@ -30,7 +30,7 @@
       "message": "",
       "joinedAt": "2024-05-04",
       "joinedAtJp": "2024年05月04日",
-      "roleColor": "#3498db",
+      "roleColor": "#000000",
       "socials": {}
     },
     {
@@ -41,7 +41,7 @@
       "message": "",
       "joinedAt": "2023-04-03",
       "joinedAtJp": "2023年04月03日",
-      "roleColor": "#2ecc71",
+      "roleColor": "#369876",
       "socials": {}
     }
   ],
@@ -72,7 +72,7 @@
       "id": "941477228343070741",
       "name": "あくる(永遠のあくあくるー)",
       "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/0a9bfe84434b32c4ae09d9942d79b5ec.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/d96d70ec8a6d61b6f74fd00962be9839.png?size=1024",
       "message": "",
       "joinedAt": "2023-04-02",
       "joinedAtJp": "2023年04月02日",
@@ -160,7 +160,7 @@
       "id": "1183337059398733834",
       "name": "なつてと",
       "role": "常連2期生",
-      "avatar": "https://cdn.discordapp.com/avatars/1183337059398733834/77cc7ff2a606c604a92fdc8abd6044e9.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/1183337059398733834/275d1672b2ba17b02c5020234c812954.png?size=1024",
       "message": "",
       "joinedAt": "2023-12-10",
       "joinedAtJp": "2023年12月10日",
@@ -171,7 +171,7 @@
       "id": "1113104912922984479",
       "name": "ほんさん",
       "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/1113104912922984479/b52c2be8a2612a57b311ed26509a0c98.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/1113104912922984479/c9e4563765379b081f66bee955ba12fb.png?size=1024",
       "message": "",
       "joinedAt": "2023-06-15",
       "joinedAtJp": "2023年06月15日",
@@ -202,9 +202,9 @@
     },
     {
       "id": "1004634798033215568",
-      "name": "カヨコ教司祭まんもちゅ",
+      "name": "まんもちゅ",
       "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/1004634798033215568/4459df84bfc028034ca98ea194c8a238.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/1004634798033215568/29512a635e37dee0666ede2a226e9e61.png?size=1024",
       "message": "",
       "joinedAt": "2023-04-03",
       "joinedAtJp": "2023年04月03日",
@@ -248,20 +248,20 @@
   "testers": [
     {
       "id": "1355706337480278207",
-      "name": "からあげ/🦊🧪🐶",
+      "name": "からあげ/🌽☔🧪",
       "role": "テスター",
-      "avatar": "https://cdn.discordapp.com/avatars/1355706337480278207/d2da80c4a9770d8e4202746da944becb.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/1355706337480278207/982706d056cc5deca672d38d7d1d5902.png?size=1024",
       "message": "",
-      "joinedAt": "2025-03-30",
-      "joinedAtJp": "2025年03月30日",
+      "joinedAt": "2025-07-06",
+      "joinedAtJp": "2025年07月06日",
       "roleColor": "#ffffff",
       "socials": {}
     },
     {
       "id": "1203337222514941954",
-      "name": "でんし　🌸🌽🐏(最推し)",
+      "name": "でんし　🌸🌽🐏(最推し)【クイズの達人】",
       "role": "テスター",
-      "avatar": "https://cdn.discordapp.com/avatars/1203337222514941954/0c2ce29783260f4538f0fd2a311c95ab.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/1203337222514941954/b7bced82ce0fd0cad9c3e08d577aa0be.png?size=1024",
       "message": "",
       "joinedAt": "2025-01-23",
       "joinedAtJp": "2025年01月23日",
@@ -281,9 +281,9 @@
     },
     {
       "id": "1331949252867264516",
-      "name": "STINGER/風真隊🍃",
+      "name": "STINGERMARK-Ⅲ/暁",
       "role": "テスター",
-      "avatar": "https://cdn.discordapp.com/avatars/1331949252867264516/e790f78186019f7c75c9840c9c3f1dd2.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/1331949252867264516/31f163723043b6153cd30fb472ef5d25.png?size=1024",
       "message": "",
       "joinedAt": "2025-02-04",
       "joinedAtJp": "2025年02月04日",
