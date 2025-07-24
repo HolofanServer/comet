@@ -1,83 +1,83 @@
-# Command Categories
+# コマンドカテゴリ
 
-## Overview
+## 概要
 
-The iPhone3G bot provides a comprehensive set of commands organized into logical categories. Commands are available as both traditional prefix commands and modern slash commands.
+COMETボットは、論理的なカテゴリに整理された包括的なコマンドセットを提供します。コマンドは従来のプレフィックスコマンドと現代的なスラッシュコマンドの両方で利用できます。
 
-## Command Categories
+## コマンドカテゴリ
 
-### 🛠️ Administrative Commands
-**Purpose**: Bot management and server administration
+### 🛠️ 管理コマンド
+**目的**: ボット管理とサーバー管理
 
-| Command | Type | Description | Permission Required |
+| コマンド | タイプ | 説明 | 必要権限 |
 |---------|------|-------------|-------------------|
-| `reload` | Prefix | Reload specific cog | Administrator |
-| `load` | Prefix | Load new cog | Administrator |
-| `unload` | Prefix | Unload cog | Administrator |
-| `sync` | Prefix | Sync slash commands | Administrator |
-| `shutdown` | Prefix | Gracefully shutdown bot | Bot Owner |
+| `reload` | プレフィックス | 特定のCogを再読み込み | 管理者 |
+| `load` | プレフィックス | 新しいCogを読み込み | 管理者 |
+| `unload` | プレフィックス | Cogをアンロード | 管理者 |
+| `sync` | プレフィックス | スラッシュコマンドを同期 | 管理者 |
+| `shutdown` | プレフィックス | ボットを正常にシャットダウン | ボット所有者 |
 
-### 📊 Analysis Commands
-**Purpose**: Server and user analytics
+### 📊 分析コマンド
+**目的**: サーバーとユーザー分析
 
-| Command | Type | Description | Permission Required |
+| コマンド | タイプ | 説明 | 必要権限 |
 |---------|------|-------------|-------------------|
-| `/analyze_user` | Slash | Analyze user activity patterns | Moderator |
-| `/server_stats` | Slash | Display server statistics | Member |
-| `/message_analysis` | Slash | Analyze message patterns | Moderator |
-| `/activity_report` | Slash | Generate activity report | Moderator |
+| `/analyze_user` | スラッシュ | ユーザー活動パターンを分析 | モデレーター |
+| `/server_stats` | スラッシュ | サーバー統計を表示 | メンバー |
+| `/message_analysis` | スラッシュ | メッセージパターンを分析 | モデレーター |
+| `/activity_report` | スラッシュ | 活動レポートを生成 | モデレーター |
 
-### 📢 Announcement Commands
-**Purpose**: Server announcements and notifications
+### 📢 アナウンスコマンド
+**目的**: サーバーアナウンスと通知
 
-| Command | Type | Description | Permission Required |
+| コマンド | タイプ | 説明 | 必要権限 |
 |---------|------|-------------|-------------------|
-| `/announce` | Slash | Create server announcement | Moderator |
-| `/custom_announce` | Slash | Create custom announcement | Moderator |
-| `/announcement_new` | Slash | Advanced announcement system | Administrator |
-| `/schedule_announce` | Slash | Schedule future announcement | Moderator |
+| `/announce` | スラッシュ | サーバーアナウンスを作成 | モデレーター |
+| `/custom_announce` | スラッシュ | カスタムアナウンスを作成 | モデレーター |
+| `/announcement_new` | スラッシュ | 高度なアナウンスシステム | 管理者 |
+| `/schedule_announce` | スラッシュ | 将来のアナウンスをスケジュール | モデレーター |
 
-### 🎭 Role Management Commands
-**Purpose**: Role assignment and management
+### 🎭 ロール管理コマンド
+**目的**: ロール割り当てと管理
 
-| Command | Type | Description | Permission Required |
+| コマンド | タイプ | 説明 | 必要権限 |
 |---------|------|-------------|-------------------|
-| `/oshi_panel` | Slash | Display role selection panel | Member |
-| `/assign_role` | Slash | Assign role to user | Moderator |
-| `/remove_role` | Slash | Remove role from user | Moderator |
-| `/role_info` | Slash | Display role information | Member |
+| `/oshi_panel` | スラッシュ | ロール選択パネルを表示 | メンバー |
+| `/assign_role` | スラッシュ | ユーザーにロールを割り当て | モデレーター |
+| `/remove_role` | スラッシュ | ユーザーからロールを削除 | モデレーター |
+| `/role_info` | スラッシュ | ロール情報を表示 | メンバー |
 
-### 🔍 Utility Commands
-**Purpose**: General utility and information
+### 🔍 ユーティリティコマンド
+**目的**: 一般的なユーティリティと情報
 
-| Command | Type | Description | Permission Required |
+| コマンド | タイプ | 説明 | 必要権限 |
 |---------|------|-------------|-------------------|
-| `/help` | Slash | Display help information | Member |
-| `/ping` | Slash | Check bot latency | Member |
-| `/uptime` | Slash | Display bot uptime | Member |
-| `/version` | Slash | Show bot version | Member |
+| `/help` | スラッシュ | ヘルプ情報を表示 | メンバー |
+| `/ping` | スラッシュ | ボットのレイテンシをチェック | メンバー |
+| `/uptime` | スラッシュ | ボットの稼働時間を表示 | メンバー |
+| `/version` | スラッシュ | ボットのバージョンを表示 | メンバー |
 
-### 🎮 Entertainment Commands
-**Purpose**: Fun and interactive features
+### 🎮 エンターテイメントコマンド
+**目的**: 楽しくインタラクティブな機能
 
-| Command | Type | Description | Permission Required |
+| コマンド | タイプ | 説明 | 必要権限 |
 |---------|------|-------------|-------------------|
-| `/cv2_test` | Slash | Computer vision testing | Member |
-| `/recorder` | Slash | Voice recording features | Member |
-| `/game_stats` | Slash | Gaming statistics | Member |
+| `/cv2_test` | スラッシュ | コンピュータビジョンテスト | メンバー |
+| `/recorder` | スラッシュ | 音声録音機能 | メンバー |
+| `/game_stats` | スラッシュ | ゲーム統計 | メンバー |
 
-### 🐛 Debug Commands
-**Purpose**: Debugging and development
+### 🐛 デバッグコマンド
+**目的**: デバッグと開発
 
-| Command | Type | Description | Permission Required |
+| コマンド | タイプ | 説明 | 必要権限 |
 |---------|------|-------------|-------------------|
-| `/bug_report` | Slash | Report bug to developers | Member |
-| `/debug_info` | Slash | Display debug information | Administrator |
-| `/test_feature` | Slash | Test new features | Developer |
+| `/bug_report` | スラッシュ | 開発者にバグを報告 | メンバー |
+| `/debug_info` | スラッシュ | デバッグ情報を表示 | 管理者 |
+| `/test_feature` | スラッシュ | 新機能をテスト | 開発者 |
 
-## Command Structure
+## コマンド構造
 
-### Slash Command Structure
+### スラッシュコマンド構造
 ```python
 @discord.app_commands.command(name="command_name", description="Command description")
 @discord.app_commands.describe(
@@ -93,7 +93,7 @@ async def command_name(
     await interaction.response.send_message("Response")
 ```
 
-### Prefix Command Structure
+### プレフィックスコマンド構造
 ```python
 @commands.command(name="command_name", help="Command help text")
 @commands.has_permissions(administrator=True)
@@ -101,16 +101,16 @@ async def command_name(self, ctx, parameter1: str, parameter2: int = None):
     await ctx.send("Response")
 ```
 
-## Permission System
+## 権限システム
 
-### Permission Levels
-1. **Bot Owner**: Full access to all commands
-2. **Administrator**: Server administration commands
-3. **Moderator**: Moderation and analysis commands
-4. **Member**: Basic utility and entertainment commands
-5. **Guest**: Limited read-only commands
+### 権限レベル
+1. **ボット所有者**: すべてのコマンドへのフルアクセス
+2. **管理者**: サーバー管理コマンド
+3. **モデレーター**: モデレーションと分析コマンド
+4. **メンバー**: 基本的なユーティリティとエンターテイメントコマンド
+5. **ゲスト**: 限定的な読み取り専用コマンド
 
-### Permission Decorators
+### 権限デコレーター
 ```python
 # Discord.py permission checks
 @commands.has_permissions(administrator=True)
@@ -122,48 +122,48 @@ async def command_name(self, ctx, parameter1: str, parameter2: int = None):
 @commands.check(is_staff_member)
 ```
 
-## Command Error Handling
+## コマンドエラーハンドリング
 
-### Common Error Types
-- **Missing Permissions**: User lacks required permissions
-- **Missing Arguments**: Required parameters not provided
-- **Invalid Arguments**: Parameters don't match expected types
-- **Command Not Found**: Command doesn't exist
-- **Command Disabled**: Command temporarily disabled
+### 一般的なエラータイプ
+- **権限不足**: ユーザーに必要な権限がない
+- **引数不足**: 必要なパラメータが提供されていない
+- **無効な引数**: パラメータが期待される型と一致しない
+- **コマンドが見つからない**: コマンドが存在しない
+- **コマンド無効**: コマンドが一時的に無効化されている
 
-### Error Response Examples
+### エラーレスポンス例
 ```python
-# Permission error
-"❌ You don't have permission to use this command."
+# 権限エラー
+"❌ このコマンドを使用する権限がありません。"
 
-# Missing argument error
-"❌ Missing required argument: `user`. Usage: `/analyze_user <user>`"
+# 引数不足エラー
+"❌ 必要な引数が不足しています: `user`。使用法: `/analyze_user <user>`"
 
-# Invalid argument error
-"❌ Invalid user specified. Please mention a valid server member."
+# 無効な引数エラー
+"❌ 無効なユーザーが指定されました。有効なサーバーメンバーをメンションしてください。"
 
-# Command disabled error
-"⚠️ This command is temporarily disabled for maintenance."
+# コマンド無効エラー
+"⚠️ このコマンドはメンテナンスのため一時的に無効化されています。"
 ```
 
-## Command Usage Statistics
+## コマンド使用統計
 
-### Most Used Commands
-1. `/help` - Help and information
-2. `/server_stats` - Server statistics
-3. `/oshi_panel` - Role selection
-4. `/ping` - Bot status check
-5. `/announce` - Announcements
+### 最も使用されるコマンド
+1. `/help` - ヘルプと情報
+2. `/server_stats` - サーバー統計
+3. `/oshi_panel` - ロール選択
+4. `/ping` - ボットステータスチェック
+5. `/announce` - アナウンス
 
-### Command Response Times
-- **Simple Commands**: < 100ms
-- **Database Queries**: < 500ms
-- **Analysis Commands**: < 2s
-- **Complex Operations**: < 5s
+### コマンド応答時間
+- **シンプルなコマンド**: < 100ms
+- **データベースクエリ**: < 500ms
+- **分析コマンド**: < 2s
+- **複雑な操作**: < 5s
 
-## Command Aliases
+## コマンドエイリアス
 
-### Common Aliases
+### 一般的なエイリアス
 ```python
 # Multiple names for same command
 @commands.command(aliases=['stats', 'info', 'status'])
@@ -176,9 +176,9 @@ async def reload(self, ctx, cog):
     pass
 ```
 
-## Command Cooldowns
+## コマンドクールダウン
 
-### Cooldown Configuration
+### クールダウン設定
 ```python
 # Per-user cooldown
 @commands.cooldown(1, 30, commands.BucketType.user)
@@ -190,15 +190,15 @@ async def reload(self, ctx, cog):
 @commands.cooldown(1, 10, commands.BucketType.default)
 ```
 
-### Cooldown Bypass
-- Bot owners bypass all cooldowns
-- Administrators have reduced cooldowns
-- Premium users may have cooldown reductions
+### クールダウンバイパス
+- ボット所有者はすべてのクールダウンをバイパス
+- 管理者はクールダウンが短縮される
+- プレミアムユーザーはクールダウンが短縮される場合がある
 
-## Command Documentation
+## コマンドドキュメント
 
-### Help System
-The bot includes a comprehensive help system:
+### ヘルプシステム
+ボットには包括的なヘルプシステムが含まれています:
 
 ```python
 # General help
@@ -211,8 +211,8 @@ The bot includes a comprehensive help system:
 /help command:analyze_user
 ```
 
-### Command Examples
-Each command includes usage examples:
+### コマンド例
+各コマンドには使用例が含まれています:
 
 ```
 /analyze_user user:@username
@@ -220,38 +220,38 @@ Each command includes usage examples:
 /oshi_panel category:"Gaming Roles"
 ```
 
-## Internationalization
+## 国際化
 
-### Supported Languages
-- **Japanese (ja)**: Primary language
-- **English (en)**: Secondary language
+### サポート言語
+- **日本語 (ja)**: 主要言語
+- **英語 (en)**: 副言語
 
-### Language Selection
+### 言語選択
 ```python
 # User can set preferred language
 /settings language:ja
 /settings language:en
 ```
 
-## Command Metrics
+## コマンドメトリクス
 
-### Performance Monitoring
-- Command execution time
-- Success/failure rates
-- Usage frequency
-- Error patterns
+### パフォーマンス監視
+- コマンド実行時間
+- 成功/失敗率
+- 使用頻度
+- エラーパターン
 
-### Analytics Dashboard
-- Most popular commands
-- Peak usage times
-- User engagement metrics
-- Error rate trends
+### 分析ダッシュボード
+- 最も人気のあるコマンド
+- ピーク使用時間
+- ユーザーエンゲージメント指標
+- エラー率のトレンド
 
 ---
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Admin Commands](02-admin-commands.md)
-- [User Commands](03-user-commands.md)
-- [Tool Commands](04-tool-commands.md)
-- [Error Handling](../02-core/04-error-handling.md)
+- [管理コマンド](02-admin-commands.md)
+- [ユーザーコマンド](03-user-commands.md)
+- [ツールコマンド](04-tool-commands.md)
+- [エラーハンドリング](../02-core/04-error-handling.md)

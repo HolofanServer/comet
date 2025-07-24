@@ -1,23 +1,23 @@
-# Homepage Cogs
+# ホームページCogs
 
-## Overview
+## 概要
 
-Homepage cogs manage integration between the Discord server and the website, handling staff information synchronization and member data management.
+ホームページCogsは、Discordサーバーとウェブサイト間の統合を管理し、スタッフ情報の同期とメンバーデータ管理を処理します。
 
-## Available Homepage Cogs
+## 利用可能なホームページCogs
 
-### 1. Staff Manager (`staff_manager.py`)
+### 1. スタッフマネージャー (`staff_manager.py`)
 
-**Purpose**: Synchronizes Discord server roles and member information with the website API.
+**目的**: Discordサーバーのロールとメンバー情報をウェブサイトAPIと同期します。
 
-**Key Features**:
-- **Automatic Sync**: Updates staff data every 3 hours via `@tasks.loop(hours=3)`
-- **Role-Based Categories**: Organizes members into Staff, Special Thanks, and Testers
-- **API Integration**: Sends data to website API endpoint (`https://hfs.jp/api`)
-- **Member Data**: Collects avatars, join dates, role colors, and custom messages
-- **Caching System**: Local JSON cache with API fallback
+**主要機能**:
+- **自動同期**: `@tasks.loop(hours=3)`により3時間ごとにスタッフデータを更新
+- **ロールベースカテゴリ**: メンバーをスタッフ、スペシャルサンクス、テスターに分類
+- **API統合**: ウェブサイトAPIエンドポイント（`https://hfs.jp/api`）にデータを送信
+- **メンバーデータ**: アバター、参加日、ロール色、カスタムメッセージを収集
+- **キャッシュシステム**: APIフォールバック付きローカルJSONキャッシュ
 
-#### Staff Role Hierarchy
+#### スタッフロール階層
 ```python
 role_priority = {
     "Administrator": 1,
@@ -26,7 +26,7 @@ role_priority = {
 }
 ```
 
-#### Member Data Structure
+#### メンバーデータ構造
 ```json
 {
   "id": "123456789",
@@ -41,50 +41,50 @@ role_priority = {
 }
 ```
 
-#### Categories Managed
-1. **Staff Members**: Users with Administrator, Moderator, or Staff roles
-2. **Special Thanks**: Users with roles starting with "常連" (regulars)
-3. **Testers**: Hardcoded list of specific user IDs with "テスター" role
+#### 管理カテゴリ
+1. **スタッフメンバー**: Administrator、Moderator、またはStaffロールを持つユーザー
+2. **スペシャルサンクス**: "常連"で始まるロールを持つユーザー（常連）
+3. **テスター**: "テスター"ロールを持つ特定のユーザーIDのハードコードリスト
 
-#### API Integration
-- **Endpoint**: `POST /api/members/update`
-- **Authentication**: Bearer token via `STAFF_API_KEY`
-- **Data Format**: JSON with staff, specialThanks, and testers arrays
-- **Fallback**: Local JSON cache if API unavailable
+#### API統合
+- **エンドポイント**: `POST /api/members/update`
+- **認証**: `STAFF_API_KEY`によるBearerトークン
+- **データ形式**: staff、specialThanks、testersの配列を含むJSON
+- **フォールバック**: API利用不可時のローカルJSONキャッシュ
 
-#### Commands Available
+#### 利用可能なコマンド
 
-| Command | Type | Permission | Description |
+| コマンド | タイプ | 権限 | 説明 |
 |---------|------|------------|-------------|
-| `update_staff` | Prefix | Administrator | Manual staff data update |
-| `/ひとこと` | Hybrid | Any | Set personal message |
-| `/ひとことリセット` | Hybrid | Any | Clear personal message |
-| `staff_status` | Prefix | Administrator | View current staff data status |
+| `update_staff` | プレフィックス | Administrator | 手動スタッフデータ更新 |
+| `/ひとこと` | ハイブリッド | 誰でも | 個人メッセージを設定 |
+| `/ひとことリセット` | ハイブリッド | 誰でも | 個人メッセージをクリア |
+| `staff_status` | プレフィックス | Administrator | 現在のスタッフデータ状態を表示 |
 
-#### Implementation Details
+#### 実装詳細
 
-**Automatic Updates**:
+**自動更新**:
 ```python
 @tasks.loop(hours=3)
 async def auto_update_staff(self):
     await self.update_staff_data()
 ```
 
-**Data Collection Process**:
-1. Scan all server members
-2. Check for staff roles (Administrator, Moderator, Staff)
-3. Check for special thanks roles (starting with "常連")
-4. Add hardcoded tester members
-5. Collect member data (avatar, join date, role color)
-6. Preserve existing messages and social links
-7. Send to API and cache locally
+**データ収集プロセス**:
+1. すべてのサーバーメンバーをスキャン
+2. スタッフロール（Administrator、Moderator、Staff）をチェック
+3. スペシャルサンクスロール（"常連"で始まる）をチェック
+4. ハードコードされたテスターメンバーを追加
+5. メンバーデータ（アバター、参加日、ロール色）を収集
+6. 既存のメッセージとソーシャルリンクを保持
+7. APIに送信してローカルにキャッシュ
 
-**Error Handling**:
-- API failures fall back to local cache
-- Individual member errors don't stop batch processing
-- Comprehensive logging for debugging
+**エラーハンドリング**:
+- API失敗時はローカルキャッシュにフォールバック
+- 個別メンバーエラーはバッチ処理を停止しない
+- デバッグ用の包括的ログ
 
-**Configuration**:
+**設定**:
 ```python
 self.api_endpoint = "https://hfs.jp/api"
 self.api_token = settings.staff_api_key
@@ -93,9 +93,9 @@ self.config_path = 'config/members.json'
 
 ---
 
-## Related Documentation
+## 関連ドキュメント
 
-- [API Integration](../04-utilities/02-api-integration.md)
-- [Database Management](../04-utilities/01-database-management.md)
-- [Configuration Management](../01-architecture/04-configuration-management.md)
-- [Error Handling](../02-core/04-error-handling.md)
+- [API統合](../04-utilities/02-api-integration.md)
+- [データベース管理](../04-utilities/01-database-management.md)
+- [設定管理](../01-architecture/04-configuration-management.md)
+- [エラーハンドリング](../02-core/04-error-handling.md)

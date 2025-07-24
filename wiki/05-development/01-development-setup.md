@@ -1,28 +1,28 @@
-# Development Setup
+# 開発セットアップ
 
-## Prerequisites
+## 前提条件
 
-### System Requirements
-- **Operating System**: Linux (Ubuntu/Debian recommended), macOS, or Windows with WSL
-- **Python**: 3.8 or higher (3.10+ recommended)
-- **Git**: Latest version
-- **Text Editor**: VS Code, PyCharm, or similar with Python support
+### システム要件
+- **オペレーティングシステム**: Linux (Ubuntu/Debian推奨)、macOS、またはWSL付きWindows
+- **Python**: 3.8以上 (3.10+推奨)
+- **Git**: 最新版
+- **テキストエディタ**: VS Code、PyCharm、またはPythonサポート付きの類似エディタ
 
-### Required Accounts
-- **Discord Developer Account**: For bot token and application management
-- **GitHub Account**: For repository access and contributions
+### 必要なアカウント
+- **Discord開発者アカウント**: ボットトークンとアプリケーション管理用
+- **GitHubアカウント**: リポジトリアクセスと貢献用
 
-## Installation Guide
+## インストールガイド
 
-### 1. Clone Repository
+### 1. リポジトリのクローン
 ```bash
 git clone https://github.com/FreeWiFi7749/hfs-homepage-mg-bot.git
 cd hfs-homepage-mg-bot
 ```
 
-### 2. Python Environment Setup
+### 2. Python環境セットアップ
 
-#### Using venv (Recommended)
+#### venvを使用 (推奨)
 ```bash
 # Create virtual environment
 python3 -m venv venv
@@ -34,14 +34,14 @@ source venv/bin/activate
 venv\Scripts\activate
 ```
 
-#### Using conda (Alternative)
+#### condaを使用 (代替)
 ```bash
 # Create conda environment
-conda create -n iphone3g python=3.10
-conda activate iphone3g
+conda create -n hfs-bot python=3.10
+conda activate hfs-bot
 ```
 
-### 3. Install Dependencies
+### 3. 依存関係のインストール
 ```bash
 # Install required packages
 pip install -r requirements.txt
@@ -50,15 +50,15 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
-### 4. Environment Configuration
+### 4. 環境設定
 
-#### Create Environment File
+#### 環境ファイルの作成
 ```bash
 cp .env.example .env
 ```
 
-#### Configure Environment Variables
-Edit `.env` file with your settings:
+#### 環境変数の設定
+`.env`ファイルを設定で編集します:
 
 ```env
 # Discord Bot Configuration
@@ -81,55 +81,55 @@ PROMETHEUS_ENABLED=false
 PROMETHEUS_PORT=8001
 ```
 
-### 5. Discord Bot Setup
+### 5. Discord Bot セットアップ
 
-#### Create Discord Application
-1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
-2. Click "New Application"
-3. Name your application (e.g., "iPhone3G Dev")
-4. Go to "Bot" section
-5. Click "Add Bot"
-6. Copy the bot token to your `.env` file
+#### Discordアプリケーションの作成
+1. [Discord Developer Portal](https://discord.com/developers/applications)にアクセス
+2. "New Application"をクリック
+3. アプリケーションに名前を付ける (例: "HFS Dev")
+4. "Bot"セクションに移動
+5. "Add Bot"をクリック
+6. ボットトークンを`.env`ファイルにコピー
 
-#### Bot Permissions
-Required permissions for full functionality:
-- **General Permissions**:
-  - Manage Roles
-  - Manage Channels
-  - Kick Members
-  - Ban Members
-  - Create Instant Invite
-  - Manage Nicknames
-  - Manage Emojis and Stickers
-  - View Audit Log
+#### ボット権限
+完全な機能に必要な権限:
+- **一般権限**:
+  - ロール管理
+  - チャンネル管理
+  - メンバーキック
+  - メンバーBAN
+  - 招待リンク作成
+  - ニックネーム管理
+  - 絵文字とスタンプ管理
+  - 監査ログ表示
 
-- **Text Permissions**:
-  - Send Messages
-  - Send Messages in Threads
-  - Create Public Threads
-  - Create Private Threads
-  - Embed Links
-  - Attach Files
-  - Read Message History
-  - Mention Everyone
-  - Use External Emojis
-  - Add Reactions
-  - Use Slash Commands
+- **テキスト権限**:
+  - メッセージ送信
+  - スレッドでメッセージ送信
+  - パブリックスレッド作成
+  - プライベートスレッド作成
+  - リンク埋め込み
+  - ファイル添付
+  - メッセージ履歴読み取り
+  - @everyone/@hereメンション
+  - 外部絵文字使用
+  - リアクション追加
+  - スラッシュコマンド使用
 
-- **Voice Permissions**:
-  - Connect
-  - Speak
-  - Use Voice Activity
+- **音声権限**:
+  - 接続
+  - 発言
+  - 音声検出使用
 
-#### Invite Bot to Server
-1. Go to "OAuth2" → "URL Generator"
-2. Select "bot" and "applications.commands" scopes
-3. Select required permissions
-4. Use generated URL to invite bot to your test server
+#### ボットをサーバーに招待
+1. "OAuth2" → "URL Generator"に移動
+2. "bot"と"applications.commands"スコープを選択
+3. 必要な権限を選択
+4. 生成されたURLを使用してボットをテストサーバーに招待
 
-## Development Workflow
+## 開発ワークフロー
 
-### 1. Branch Management
+### 1. ブランチ管理
 ```bash
 # Create feature branch
 git checkout -b feature/your-feature-name
@@ -142,30 +142,30 @@ git commit -m "feat: add new feature"
 git push origin feature/your-feature-name
 ```
 
-### 2. Running the Bot
+### 2. ボットの実行
 
-#### Development Mode
+#### 開発モード
 ```bash
 # Run with debug logging
 python main.py
 ```
 
-#### Production Mode
+#### 本番モード
 ```bash
 # Set production environment
 export ENVIRONMENT=production
 python main.py
 ```
 
-### 3. Testing
+### 3. テスト
 
-#### Manual Testing
-1. Start the bot in development mode
-2. Use test Discord server for validation
-3. Test commands and features
-4. Monitor logs for errors
+#### 手動テスト
+1. 開発モードでボットを起動
+2. 検証用テストDiscordサーバーを使用
+3. コマンドと機能をテスト
+4. エラーのログを監視
 
-#### Automated Testing (if available)
+#### 自動テスト (利用可能な場合)
 ```bash
 # Run unit tests
 python -m pytest tests/
@@ -174,9 +174,9 @@ python -m pytest tests/
 python -m pytest tests/ --cov=.
 ```
 
-## Development Tools
+## 開発ツール
 
-### 1. Code Formatting
+### 1. コードフォーマット
 ```bash
 # Install black (code formatter)
 pip install black
@@ -188,7 +188,7 @@ black .
 black --check .
 ```
 
-### 2. Linting
+### 2. リンティング
 ```bash
 # Install flake8 (linter)
 pip install flake8
@@ -197,7 +197,7 @@ pip install flake8
 flake8 .
 ```
 
-### 3. Type Checking
+### 3. 型チェック
 ```bash
 # Install mypy (type checker)
 pip install mypy
@@ -206,7 +206,7 @@ pip install mypy
 mypy .
 ```
 
-### 4. Pre-commit Hooks (Recommended)
+### 4. Pre-commitフック (推奨)
 ```bash
 # Install pre-commit
 pip install pre-commit
@@ -218,18 +218,18 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-## IDE Configuration
+## IDE設定
 
-### VS Code Setup
+### VS Code セットアップ
 
-#### Recommended Extensions
+#### 推奨拡張機能
 - Python
 - Python Docstring Generator
 - GitLens
 - Discord.py Snippets
 - JSON Tools
 
-#### Settings (`.vscode/settings.json`)
+#### 設定 (`.vscode/settings.json`)
 ```json
 {
     "python.defaultInterpreterPath": "./venv/bin/python",
@@ -244,19 +244,19 @@ pre-commit run --all-files
 }
 ```
 
-### PyCharm Setup
+### PyCharm セットアップ
 
-#### Configuration
-1. Open project in PyCharm
-2. Configure Python interpreter to use virtual environment
-3. Enable code inspections for Python
-4. Configure code style to match project standards
+#### 設定
+1. PyCharmでプロジェクトを開く
+2. 仮想環境を使用するようにPythonインタープリターを設定
+3. Python用コード検査を有効化
+4. プロジェクト標準に合わせてコードスタイルを設定
 
-## Debugging
+## デバッグ
 
-### 1. Debug Configuration
+### 1. デバッグ設定
 
-#### VS Code Debug Configuration (`.vscode/launch.json`)
+#### VS Code デバッグ設定 (`.vscode/launch.json`)
 ```json
 {
     "version": "0.2.0",
@@ -275,7 +275,7 @@ pre-commit run --all-files
 }
 ```
 
-### 2. Logging Configuration
+### 2. ログ設定
 ```python
 # Enable debug logging
 import logging
@@ -286,8 +286,8 @@ logging.getLogger('discord').setLevel(logging.DEBUG)
 logging.getLogger('discord.http').setLevel(logging.INFO)
 ```
 
-### 3. Jishaku (Development Extension)
-The bot includes Jishaku for runtime debugging:
+### 3. Jishaku (開発拡張)
+ボットには実行時デバッグ用のJishakuが含まれています:
 
 ```python
 # Load/reload cogs
@@ -304,9 +304,9 @@ The bot includes Jishaku for runtime debugging:
 >sql SELECT * FROM users LIMIT 5
 ```
 
-## Common Issues and Solutions
+## よくある問題と解決策
 
-### 1. Import Errors
+### 1. インポートエラー
 ```bash
 # Ensure PYTHONPATH is set correctly
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
@@ -315,26 +315,26 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 from .utils import helper_function
 ```
 
-### 2. Permission Errors
-- Verify bot has required permissions in Discord server
-- Check role hierarchy (bot role must be above managed roles)
-- Ensure bot is in the correct channels
+### 2. 権限エラー
+- ボットがDiscordサーバーで必要な権限を持っていることを確認
+- ロール階層を確認 (ボットロールは管理対象ロールより上位である必要)
+- ボットが正しいチャンネルにいることを確認
 
-### 3. Token Issues
-- Regenerate bot token if compromised
-- Ensure token is correctly set in environment variables
-- Check for extra spaces or characters in token
+### 3. トークン問題
+- 漏洩した場合はボットトークンを再生成
+- 環境変数にトークンが正しく設定されていることを確認
+- トークンに余分なスペースや文字がないかチェック
 
-### 4. Database Issues
+### 4. データベース問題
 ```bash
 # Reset database (development only)
 rm -f config/*.json
 python main.py  # Will recreate with defaults
 ```
 
-## Performance Monitoring
+## パフォーマンス監視
 
-### 1. Memory Usage
+### 1. メモリ使用量
 ```python
 import psutil
 import os
@@ -344,7 +344,7 @@ def get_memory_usage():
     return process.memory_info().rss / 1024 / 1024  # MB
 ```
 
-### 2. Response Times
+### 2. 応答時間
 ```python
 import time
 from functools import wraps
@@ -360,32 +360,32 @@ def measure_time(func):
     return wrapper
 ```
 
-## Contributing Guidelines
+## 貢献ガイドライン
 
-### 1. Code Standards
-- Follow PEP 8 style guidelines
-- Use type hints where possible
-- Write descriptive commit messages
-- Add docstrings to functions and classes
+### 1. コード標準
+- PEP 8スタイルガイドラインに従う
+- 可能な限り型ヒントを使用
+- 説明的なコミットメッセージを書く
+- 関数とクラスにdocstringを追加
 
-### 2. Pull Request Process
-1. Create feature branch from `main`
-2. Make changes with appropriate tests
-3. Update documentation if needed
-4. Submit pull request with clear description
-5. Address review feedback
+### 2. プルリクエストプロセス
+1. `main`から機能ブランチを作成
+2. 適切なテストと共に変更を行う
+3. 必要に応じてドキュメントを更新
+4. 明確な説明と共にプルリクエストを提出
+5. レビューフィードバックに対応
 
-### 3. Issue Reporting
-- Use GitHub issue templates
-- Provide clear reproduction steps
-- Include relevant logs and error messages
-- Tag issues appropriately
+### 3. 問題報告
+- GitHubイシューテンプレートを使用
+- 明確な再現手順を提供
+- 関連するログとエラーメッセージを含める
+- 適切にイシューをタグ付け
 
 ---
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Bot Architecture Overview](../01-architecture/01-bot-architecture-overview.md)
-- [Configuration Management](../01-architecture/04-configuration-management.md)
-- [Testing Framework](02-testing-framework.md)
-- [Contributing Guidelines](04-contributing-guidelines.md)
+- [ボットアーキテクチャ概要](../01-architecture/01-bot-architecture-overview.md)
+- [設定管理](../01-architecture/04-configuration-management.md)
+- [テストフレームワーク](02-testing-framework.md)
+- [貢献ガイドライン](04-contributing-guidelines.md)
