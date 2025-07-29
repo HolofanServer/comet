@@ -3,7 +3,7 @@
 <div align="center">
     <img src="https://images.frwi.net/data/images/f573f557-1cd7-4f4e-b21b-22aa6f911634.png" alt="COMET Logo" width="200" height="200">
     <h1>COMET Bot ドキュメント</h1>
-    <h3>Gizmodo Woods専属BOTv2 総合ガイド</h3>
+    <h3> HFS専属BOT 総合ガイド</h3>
 </div>
 
 ---
@@ -79,9 +79,9 @@
 
 ## 🔗 外部リンク
 
-- [GitHubリポジトリ](https://github.com/FreeWiFi7749/hfs-homepage-mg-bot)
-- [Gizmodo Woods Discord](https://discord.gg/gizmodo)
-- [開発者プロフィール](https://github.com/FreeWiFi7749)
+- [GitHubリポジトリ](https://github.com/HolofanServer/comet)
+- [HFS Discord](https://discord.gg/hfs)
+- [開発者プロフィール](https://github.com/HolofanServer)
 
 ---
 
