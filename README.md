@@ -1,58 +1,88 @@
+# COMET (C.O.M.E.T.) Discord Bot Wiki
+
 <div align="center">
-    <img src="https://images.frwi.net/data/images/f573f557-1cd7-4f4e-b21b-22aa6f911634.png" alt="iPhone3G Logo" width="200" height="200">
-    <h1>iPhone3G Developed by FreeWiFi7749</h1>
-    <h3>Gizmodo woods専属BOTv2</h3>
-    <img src="https://wakatime.com/badge/user/426e61d3-f6b7-4324-bdf6-c87be0cdc667/project/b6a3690b-0456-413d-b78c-5cbb8eb8846a.svg" alt="wakatime">
-    <a href="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/create-release.yml">
-        <img src="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/create-release.yml/badge.svg?branch=dev" alt="Create Release on Merge to Main">
-    </a>
-    <br>
-    <a href="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/deploy_to_main.yml">
-        <img src="https://github.com/GIZMODO-WOODS/iPhone3G/actions/workflows/deploy_to_main.yml/badge.svg?branch=main" alt="Deploy to Server">
-    </a>
+    <img src="https://images.frwi.net/data/images/f573f557-1cd7-4f4e-b21b-22aa6f911634.png" alt="COMET Logo" width="200" height="200">
+    <h1>COMET Bot ドキュメント</h1>
+    <h3> HFS専属BOT 総合ガイド</h3>
 </div>
 
 ---
 
-## 🚧 工事中 🚧 (自動化したい…)
+## 📚 Wiki ナビゲーション
 
-<img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif">
+### 🏗️ アーキテクチャ & コアシステム
+- [**ボットアーキテクチャ概要**](01-architecture/01-bot-architecture-overview.md) - 高レベルシステム設計とコンポーネント
+- [**アプリケーション起動フロー**](01-architecture/02-application-startup-flow.md) - ボット初期化とセットアップ処理
+- [**サービス層アーキテクチャ**](01-architecture/03-service-layer-architecture.md) - 依存性注入とコアサービス
+- [**設定管理**](01-architecture/04-configuration-management.md) - 設定、環境変数、ボット設定
 
-- ⚒️ 開発中の機能: **sudoコマンドの修正**
-- ❓ 疑問等: **issueを随時立ててください。**
-- 👨‍💻 このコードはGizmodo Woodsのモデレーターのみ閲覧可能です。 **共有等はお控えください。**
-- ⚡ Lightning: **iPhoneだけだよ！**
+### 🔧 コアコンポーネント
+- [**メインボットクラス**](02-core/01-main-bot-class.md) - MyBotクラスとコア機能
+- [**認証システム**](02-core/02-authentication-system.md) - ボット認証とセキュリティ
+- [**ログシステム**](02-core/03-logging-system.md) - 包括的なログとモニタリング
+- [**エラーハンドリング**](02-core/04-error-handling.md) - エラー管理とレポート
+
+### 🎯 Cogsシステム
+- [**Cogsアーキテクチャ**](03-cogs/01-cogs-architecture.md) - 拡張システム概要
+- [**イベントCogs**](03-cogs/02-events-cogs.md) - イベント処理とモニタリング
+- [**ホームページCogs**](03-cogs/03-homepage-cogs.md) - ウェブサイト統合とサーバー分析
+- [**管理Cogs**](03-cogs/04-management-cogs.md) - ボット管理と制御
+- [**ツールCogs**](03-cogs/05-tool-cogs.md) - ユーティリティコマンドと機能
+
+### 🛠️ ユーティリティ & ヘルパー
+- [**データベース管理**](04-utilities/01-database-management.md) - データ永続化とマイグレーション
+- [**API統合**](04-utilities/02-api-integration.md) - 外部サービス接続
+- [**プレゼンス管理**](04-utilities/03-presence-management.md) - ボットステータスとアクティビティ
+- [**起動ユーティリティ**](04-utilities/04-startup-utilities.md) - 初期化ヘルパー
+
+### 🚀 開発 & デプロイ
+- [**開発環境セットアップ**](05-development/01-development-setup.md) - ローカル開発環境
+- [**テストフレームワーク**](05-development/02-testing-framework.md) - テスト戦略とツール
+- [**デプロイガイド**](05-development/03-deployment-guide.md) - 本番デプロイプロセス
+- [**貢献ガイドライン**](05-development/04-contributing-guidelines.md) - コード標準と貢献プロセス
+
+### 📖 コマンドリファレンス
+- [**コマンドカテゴリ**](06-commands/01-command-categories.md) - 全ボットコマンド概要
+- [**管理者コマンド**](06-commands/02-admin-commands.md) - 管理機能
+- [**ユーザーコマンド**](06-commands/03-user-commands.md) - 公開ユーザーコマンド
+- [**ツールコマンド**](06-commands/04-tool-commands.md) - ユーティリティと分析コマンド
 
 ---
 
-## Bots
+## 🎯 クイックスタート
 
-- Main Bot: iPhone3G #6472
-- Dev Bot: iPhone3G Dev #9786
-
----
-
-## Links
-
-<div>
-    <a href="https://github.com/FreeWiFi7749" target="_blank">
-        <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" target="_blank">
-    </a>
-</div>
-
-### Gizmodo Woods:
-<p>
-    <a href="https://discord.gg/gizmodo" target="blank">
-        <img align="center" src="https://raw.githubusercontent.com/teamedwardforever/Readme-Generator/71f25dd8b98329b168142a6b782a107b75eab178/svg/Social/discord.svg" alt="https://discord.gg/gizmodo" height="30" width="40" />
-    </a>
-</p>
+1. **ボットの理解**: [ボットアーキテクチャ概要](01-architecture/01-bot-architecture-overview.md)から始める
+2. **開発環境セットアップ**: [開発環境セットアップ](05-development/01-development-setup.md)ガイドに従う
+3. **機能の探索**: [Cogsシステム](03-cogs/01-cogs-architecture.md)ドキュメントを参照
+4. **貢献**: [貢献ガイドライン](05-development/04-contributing-guidelines.md)を読む
 
 ---
 
-## Languages and Tools
+## 🔍 検索 & ナビゲーションのヒント
 
-<p>
-    <img src="https://raw.githubusercontent.com/teamedwardforever/Readme-Generator/71f25dd8b98329b168142a6b782a107b75eab178/svg/Skills/Languages/python-original.svg" alt="Python" width="40" height="40"/>
-</p>
+- 上記のナビゲーションメニューを使用して特定のセクションにジャンプ
+- 各ページには関連コンポーネントへの相互参照が含まれています
+- コード例にはソースファイルへの直接リンクが含まれています
+- インタラクティブな図でシステム関係を表示
 
-<img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif">
+---
+
+## 📊 ボット統計
+
+- **メインボット**: COMET #6472
+- **開発ボット**: COMET Dev #9786
+- **プライマリギルド**: Gizmodo Woods Discord サーバー
+- **言語**: Python 3.x with discord.py
+- **アーキテクチャ**: マルチCogモジュラーシステム
+
+---
+
+## 🔗 外部リンク
+
+- [GitHubリポジトリ](https://github.com/HolofanServer/comet)
+- [HFS Discord](https://discord.gg/hfs)
+- [開発者プロフィール](https://github.com/HolofanServer)
+
+---
+
+*このWikiは、COMET (C.O.M.E.T.) Discord botの包括的なドキュメントを提供し、開発者がボットの機能を理解、保守、拡張するのに役立つように設計されています。*

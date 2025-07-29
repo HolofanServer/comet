@@ -1,14 +1,31 @@
 # 環境設定ファイル
 .env
+.env.local
+.env.*.local
 
 # Mac OS のシステムファイル
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.tmp
+*.temp
 
 # 開発ツールの設定
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # データディレクトリ
 data/
+config/
 
 # Dev関連
 Dev/
@@ -16,19 +33,62 @@ requirements-dev.txt
 
 # キャッシュファイル
 __pycache__/
+*.py[cod]
+*$py.class
 .ruff_cache/
 cache/
+.pytest_cache/
+.coverage
+.tox/
 
 # 仮想環境
 .venv/
+venv/
+ENV/
+env/
+.env/
+pyvenv.cfg
 
 # Config ファイル
+auth.json
+members.json
 spam_blocker.json
 sudo.json
 
 # ログファイル
 *.log
+db_migration_*.log
 
 # テストファイル
+test.py
+debug_*.py
+old_bot_code.py
+setup.py
 
-cache/
+# 分析・一時ファイル
+analysis_messages_*.md
+analysis_messages_*.png
+message-data.json
+messages_*.json
+roles_*.json
+
+# バックアップファイル
+*.bak
+*.backup
+*.orig
+
+# コンパイルされたファイル
+*.so
+*.dylib
+*.dll
+
+# パッケージファイル
+*.egg
+*.egg-info/
+dist/
+build/
+
+# その他の不要ファイル
+.python-version
+pip-log.txt
+pip-delete-this-directory.txt
