@@ -1,7 +1,7 @@
 # COMET (C.O.M.E.T.) Discord Bot Wiki
 
 <div align="center">
-    <img src="https://images.frwi.net/data/images/87dd31a1-34ce-40d0-91e4-d2a0d56cc131.png" alt="COMET Logo" width="200" height="200">
+    <img src="https://images.frwi.net/data/images/ae990d92-087b-4500-955f-505c38bd33a6.png" alt="COMET Logo" width="200" height="200">
     <h1>COMET Bot ドキュメント</h1>
     <h3> HFS専属BOT 総合ガイド</h3>
 </div>
