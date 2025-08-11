@@ -393,11 +393,77 @@ class NoteNotify(commands.Cog):
         """
         try:
             if settings.note_webhook_url:
-                await self._send_webhook_notification(post_data)
+                await self._send_bot_notification(post_data)
                 
         except Exception as e:
             logger.error(f"通知送信中にエラー: {e}")
 
+    async def _send_bot_notification(self, post_data: Dict[str, Any]) -> None:
+        """
+        BOTのメッセージで通知を送信(ロールメンション付き)
+
+        Args:
+            post_data: 投稿データ
+        """
+        try:
+            # Webhook URLからチャンネルIDを抽出
+            channel_id = self._extract_channel_id_from_webhook_url(settings.note_webhook_url)
+            if not channel_id:
+                logger.error("Webhook URLからチャンネルIDを抽出できませんでした")
+                return
+            
+            # チャンネルオブジェクトを取得
+            channel = self.bot.get_channel(channel_id)
+            if not channel:
+                logger.error(f"チャンネルID {channel_id} のチャンネルが見つかりません")
+                return
+            
+            # エンベッドとロールメンションを準備
+            embed = self._create_notification_embed(post_data)
+            role_mention, role_id = await self._get_role_mention_and_id("HFS Note通知")
+            
+            # allowed_mentionsの設定
+            allowed_mentions = None
+            if role_id:
+                allowed_mentions = discord.AllowedMentions(
+                    roles=[discord.Object(id=int(role_id))]
+                )
+                logger.info(f"ロールID {role_id} のメンションを許可しました")
+            
+            # BOTメッセージとして送信
+            await channel.send(
+                content=role_mention,
+                embed=embed,
+                allowed_mentions=allowed_mentions
+            )
+            
+            logger.info(f"Note通知をBOTメッセージとして送信しました: チャンネルID={channel_id}")
+            
+        except Exception as e:
+            logger.error(f"BOT通知送信エラー: {e}")
+    
+    def _extract_channel_id_from_webhook_url(self, webhook_url: str) -> Optional[int]:
+        """
+        Webhook URLからチャンネルIDを抽出
+        
+        Args:
+            webhook_url: Discord Webhook URL
+            
+        Returns:
+            Optional[int]: チャンネルID（抽出できない場合はNone）
+        """
+        try:
+            # Discord Webhook URLの形式: https://discord.com/api/webhooks/{channel_id}/{webhook_token}
+            match = re.search(r'/webhooks/(\d+)/', webhook_url)
+            if match:
+                return int(match.group(1))
+            else:
+                logger.warning(f"Webhook URLからチャンネルIDを抽出できませんでした: {webhook_url}")
+                return None
+        except Exception as e:
+            logger.error(f"Webhook URLの解析中にエラー: {e}")
+            return None
+    
     async def _send_webhook_notification(self, post_data: Dict[str, Any]) -> None:
         """
         Webhookで通知を送信（ロールメンション付き）
