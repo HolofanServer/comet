@@ -1,7 +1,7 @@
 # COMET (C.O.M.E.T.) Discord Bot Wiki
 
 <div align="center">
-    <img src="https://images.frwi.net/data/images/f573f557-1cd7-4f4e-b21b-22aa6f911634.png" alt="COMET Logo" width="200" height="200">
+    <img src="https://images.frwi.net/data/images/ae990d92-087b-4500-955f-505c38bd33a6.png" alt="COMET Logo" width="200" height="200">
     <h1>COMET Bot ドキュメント</h1>
     <h3> HFS専属BOT 総合ガイド</h3>
 </div>
@@ -69,10 +69,10 @@
 
 ## 📊 ボット統計
 
-- **メインボット**: COMET #6472
-- **開発ボット**: COMET Dev #9786
-- **プライマリギルド**: Gizmodo Woods Discord サーバー
-- **言語**: Python 3.x with discord.py
+- **メインボット**: COMET #4630
+- **開発ボット**: 
+- **プライマリギルド**: HFS - ホロライブ非公式ファンサーバー
+- **言語**: Python 3.10.9 with discord.py 2.4
 - **アーキテクチャ**: マルチCogモジュラーシステム
 
 ---

@@ -110,11 +110,11 @@ class OshiRolePanel(commands.Cog):
             "id3_kaela": "Pemaloe",
             "id3_kobo": "Kobokerz",
             # ReGLOSS
-            "reg_hajime": "読者",
+            "reg_ao": "読者",
             "reg_raden": "でん同士",
             "reg_kanade": "音の勢",
-            "reg_ao": "秘書見習い",
-            "reg_Ririka": "真っす組",
+            "reg_Ririka": "秘書見習い",
+            "reg_hajime": "真っす組",
             # スタッフ
             "1_yagoo_": "YAGOO",
             # FlowGlow

@@ -307,79 +307,21 @@ class SimpleAnnouncementView(discord.ui.View):
 
     @discord.ui.button(label="送信", style=discord.ButtonStyle.green)
     async def confirm_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # メッセージ内容を取得し、メンションを変換
         message_content = self.message.split("\n\n添付ファイル:")[0]
         converted_content = await self.convert_mentions(message_content)
         
-        embed = discord.Embed(
-            title="メッセージ対応スレッド",
-            color=discord.Color.yellow(),
-            timestamp=interaction.created_at
-        )
+        # シンプルにメッセージと添付ファイルを送信
+        await self.channel.send(content=converted_content, files=self.files)
         
-        embed.description = "このスレッドは検出されたメッセージの対応のために作成されました。"
-
-        embed.add_field(
-            name="対応理由",
-            value=converted_content[:1000] + ("..." if len(converted_content) > 1000 else ""),
-            inline=False
-        )
-
-        embed.add_field(
-            name="対象メッセージ",
-            value=self.message,
-            inline=False
-        )
-
-        if self.files:
-            files_info = "\n".join([f"`{file.filename}`" for file in self.files])
-            embed.add_field(
-                name="添付ファイル",
-                value=files_info,
-                inline=False
-            )
-        
-        embed.add_field(
-            name="ユーザー",
-            value=f"{interaction.user.mention} ({interaction.user.display_name})",
-            inline=False
-        )
-
-        basic_info = (
-            f"📝 {self.channel.mention} | "
-            f"🕒 {discord.utils.format_dt(interaction.created_at, 'F')}"
-        )
-        embed.add_field(
-            name="基本情報",
-            value=basic_info,
-            inline=False
-        )
-        
-        stats = (
-            f"📊 {len(converted_content):,}文字 | "
-            f"📝 {len(converted_content.splitlines()):,}行"
-        )
-        if self.files:
-            stats += f" | 📎 {len(self.files)}個の添付ファイル"
-        
-        embed.add_field(
-            name="統計",
-            value=stats,
-            inline=False
-        )
-        
-        sent_message = await self.channel.send(embed=embed, files=self.files)
-        thread = await sent_message.create_thread(name=f"対応スレッド: {interaction.user.display_name}")
-        
-        thread_view = ThreadActionView(thread, sent_message)
-        self.bot.cogs['Announcement']._thread_views[thread.id] = thread_view
-        await thread.send("対応スレッドが作成されました。", view=thread_view)
-        
+        # ボタンを無効化
         for item in self.children:
             item.disabled = True
         await interaction.message.edit(view=self)
-        await interaction.response.send_message("通知を送信しました！", ephemeral=True)
+        await interaction.response.send_message("メッセージを送信しました！", ephemeral=True)
         logger.info(f"Simple announcement sent to channel: {self.channel.name}")
         
+        # ビューをクリーンアップ
         if hasattr(self.bot.cogs['Announcement'], '_announcement_views'):
             if self.view_id in self.bot.cogs['Announcement']._announcement_views:
                 del self.bot.cogs['Announcement']._announcement_views[self.view_id]
