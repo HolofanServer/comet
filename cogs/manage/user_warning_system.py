@@ -201,12 +201,19 @@ class UserWarningSystem(commands.Cog):
             
         # 監視対象ユーザーかチェック
         guild_monitored = self.monitored_users.get(guild_id, set())
+        logger.info(f"監視対象ユーザーチェック: ユーザーID {message.author.id}, 監視対象: {guild_monitored}")
+        
         if message.author.id not in guild_monitored:
             return
             
+        logger.info(f"監視対象ユーザー {message.author} からのメッセージを検出")
+        
         # 警告チャンネルが設定されていない場合は無視
         warning_channel_id = self.warning_channel_ids.get(guild_id)
+        logger.info(f"警告チャンネルID: {warning_channel_id}")
+        
         if not warning_channel_id:
+            logger.warning(f"警告チャンネルが設定されていません (Guild: {guild_id})")
             return
             
         # 除外チャンネルかチェック
@@ -216,6 +223,8 @@ class UserWarningSystem(commands.Cog):
             await self._send_warning_in_exclude_channel(message, warning_channel_id)
             return
             
+        logger.info(f"通常の警告処理を開始: {message.author} in {message.channel.name}")
+        
         # 警告を送信
         await self._send_warning(message, warning_channel_id)
         
@@ -340,13 +349,46 @@ class UserWarningSystem(commands.Cog):
             
             embed.set_footer(text=f"ユーザーID: {message.author.id}")
             
+            # タイムアウトボタン付きビューを作成
+            view = TimeoutView(message.author, timeout=3600)  # 1時間でタイムアウト
+            
             # 警告メッセージを送信
-            await warning_channel.send(embed=embed)
+            await warning_channel.send(embed=embed, view=view)
             
             logger.info(f"監視対象ユーザー {message.author} からのメッセージに対して警告を送信しました")
             
         except Exception as e:
             logger.error(f"警告メッセージ送信エラー: {e}")
+            
+    async def _delete_original_message(self, message: discord.Message):
+        """元のメッセージを削除"""
+        try:
+            logger.info(f"メッセージ削除を試行: {message.author} のメッセージ (ID: {message.id})")
+            
+            # ボットの権限をチェック
+            bot_member = message.guild.get_member(self.bot.user.id)
+            if not bot_member:
+                logger.error("ボットのメンバー情報を取得できません")
+                return
+                
+            channel_perms = message.channel.permissions_for(bot_member)
+            logger.info(f"ボットの権限 - manage_messages: {channel_perms.manage_messages}, read_messages: {channel_perms.read_messages}")
+            
+            if not channel_perms.manage_messages:
+                logger.error(f"チャンネル {message.channel.name} でメッセージ管理権限がありません")
+                return
+            
+            await message.delete()
+            logger.info(f"監視対象ユーザー {message.author} のメッセージを削除しました")
+            
+        except discord.NotFound:
+            logger.warning(f"削除対象のメッセージが見つかりません (ID: {message.id})")
+        except discord.Forbidden:
+            logger.error(f"メッセージ削除権限がありません - チャンネル: {message.channel.name}")
+        except discord.HTTPException as e:
+            logger.error(f"Discord API エラー: {e}")
+        except Exception as e:
+            logger.error(f"メッセージ削除エラー: {e}")
     
     async def _log_warning(self, message: discord.Message, warning_channel_id: int):
         """警告をデータベースに記録"""
@@ -407,7 +449,75 @@ class UserWarningSystem(commands.Cog):
                 value="設定状況またはユーザー詳細を表示",
                 inline=False
             )
+            embed.add_field(
+                name="`warning setup <警告チャンネル> <監視ユーザー> <理由> [除外チャンネル]`",
+                value="一括設定（除外チャンネルは任意）",
+                inline=False
+            )
             await ctx.send(embed=embed)
+    
+    @warning_group.command(name="setup")
+    @commands.has_permissions(moderate_members=True)
+    async def setup_warning_system(self, ctx: commands.Context, warning_channel: discord.TextChannel, user: discord.User, reason: str, exclude_channel: discord.TextChannel = None):
+        """一括設定コマンド: 警告チャンネル、監視ユーザー、理由、除外チャンネル"""
+        try:
+            guild_id = ctx.guild.id
+            
+            # 1. 警告チャンネル設定
+            async with db.pool.acquire() as conn:
+                await conn.execute("""
+                    INSERT INTO warning_system_config (guild_id, warning_channel_id, updated_by)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (guild_id) 
+                    DO UPDATE SET warning_channel_id = $2, updated_by = $3, updated_at = CURRENT_TIMESTAMP
+                """, guild_id, warning_channel.id, ctx.author.id)
+            
+            self.warning_channel_ids[guild_id] = warning_channel.id
+            
+            # 2. 監視対象ユーザー追加
+            async with db.pool.acquire() as conn:
+                await conn.execute("""
+                    INSERT INTO monitored_users (guild_id, user_id, added_by, reason)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (guild_id, user_id) DO UPDATE SET reason = $4, added_by = $3
+                """, guild_id, user.id, ctx.author.id, reason)
+            
+            if guild_id not in self.monitored_users:
+                self.monitored_users[guild_id] = set()
+            self.monitored_users[guild_id].add(user.id)
+            
+            # 3. 除外チャンネル追加（指定されている場合）
+            exclude_text = ""
+            if exclude_channel:
+                async with db.pool.acquire() as conn:
+                    await conn.execute("""
+                        INSERT INTO excluded_channels (guild_id, channel_id, added_by, reason)
+                        VALUES ($1, $2, $3, $4)
+                        ON CONFLICT (guild_id, channel_id) DO NOTHING
+                    """, guild_id, exclude_channel.id, ctx.author.id, "一括設定で追加")
+                
+                if guild_id not in self.excluded_channels:
+                    self.excluded_channels[guild_id] = set()
+                self.excluded_channels[guild_id].add(exclude_channel.id)
+                exclude_text = f"\n📝 除外チャンネル: {exclude_channel.mention}"
+            
+            # 成功メッセージ
+            embed = discord.Embed(
+                title="✅ 警告システム一括設定完了",
+                color=discord.Color.green()
+            )
+            embed.add_field(
+                name="設定内容",
+                value=f"🚨 警告チャンネル: {warning_channel.mention}\n👤 監視対象ユーザー: {user.mention}\n📋 理由: {reason}{exclude_text}",
+                inline=False
+            )
+            
+            await ctx.send(embed=embed)
+            logger.info(f"警告システム一括設定完了 - Guild: {guild_id}, User: {user.id}, Channel: {warning_channel.id}")
+            
+        except Exception as e:
+            await ctx.send(f"❌ エラーが発生しました: {e}")
+            logger.error(f"一括設定エラー: {e}")
     
     @warning_group.command(name="add")
     @commands.has_permissions(moderate_members=True)
