@@ -354,7 +354,7 @@ JSONフォーマットで返答せず、自然な日本語で分析結果を提�
             # Webサイト用APIにデータを送信
             await self.send_to_api("discord/server-analysis", analysis_data)
             
-            # logger.info(f"サーバー分析が完了しました。結果を {analysis_file} に保存しました。")
+            logger.info(f"サーバー分析が完了しました。結果を {analysis_file} に保存しました。")
             
         except Exception as e:
             logger.error(f"サーバー分析タスク実行中にエラーが発生しました: {e}")
@@ -539,8 +539,8 @@ JSONフォーマットで返答せず、自然な日本語で分析結果を提�
                 
                 # エンドポイントの先頭のスラッシュを削除して二重スラッシュを防ぐ
                 clean_endpoint = endpoint.lstrip('/')
-                url = f"{self.api_base_url}{clean_endpoint}"
-                # logger.info(f"APIエンドポイントにデータを送信: {url}")
+                url = f"{self.api_base_url}/{clean_endpoint}"
+                logger.info(f"APIエンドポイントにデータを送信: {url}")
                 
                 async with session.post(url, headers=headers, json=data) as response:
                     if response.status not in (200, 201, 204):

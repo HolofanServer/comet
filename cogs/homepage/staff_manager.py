@@ -292,17 +292,17 @@ class StaffManager(commands.Cog):
             base_url = self.api_endpoint.rstrip('/')
             api_url = f"{base_url}/members/update"
             
-            # # デバッグ情報の詳細出力
-            # logger.info(f'現在のself.api_endpoint値: {self.api_endpoint}')
-            # logger.info(f'設定されたAPI URL: {settings.homepage_api_url}')
-            # logger.info(f'構築されたAPIエンドポイント: {api_url}')
-            # logger.info(f'APIエンドポイントにデータを送信: {api_url}')
+            # デバッグ情報の詳細出力
+            logger.info(f'現在のself.api_endpoint値: {self.api_endpoint}')
+            logger.info(f'設定されたAPI URL: {settings.homepage_api_url}')
+            logger.info(f'構築されたAPIエンドポイント: {api_url}')
+            logger.info(f'APIエンドポイントにデータを送信: {api_url}')
             
-            # # 送信内容の詳細ログ
-            # logger.info('送信データ詳細:')
-            # logger.info(f'- スタッフ数: {len(data["staff"])}')
-            # logger.info(f'- スペシャルサンクス数: {len(data["specialThanks"])}')
-            # logger.info(f'- テスター数: {len(data.get("testers", []))}')
+            # 送信内容の詳細ログ
+            logger.info('送信データ詳細:')
+            logger.info(f'- スタッフ数: {len(data["staff"])}')
+            logger.info(f'- スペシャルサンクス数: {len(data["specialThanks"])}')
+            logger.info(f'- テスター数: {len(data.get("testers", []))}')
             
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -311,7 +311,7 @@ class StaffManager(commands.Cog):
                     json=data
                 ) as response:
                     if response.status in [200, 201, 204]:
-                        # logger.info(f'APIにデータを送信しました: ステータス {response.status}')
+                        logger.info(f'APIにデータを送信しました: ステータス {response.status}')
                         return True
                     else:
                         logger.error(f'APIへのデータ送信に失敗しました: ステータス {response.status}')
