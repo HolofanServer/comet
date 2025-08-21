@@ -1,17 +1,6 @@
 {
   "staff": [
     {
-      "id": "941477228343070741",
-      "name": "HFS創造神担当あくる/ぶぶ漬けどす",
-      "role": "Staff",
-      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/2b620a6263cf98e34019c22e45f4fc3f.png?size=1024",
-      "message": "",
-      "joinedAt": "2023-04-02",
-      "joinedAtJp": "2023年04月02日",
-      "roleColor": "#369876",
-      "socials": {}
-    },
-    {
       "id": "707320830387814531",
       "name": "HFSの清楚担当 FreeWiFi / ふりわい",
       "role": "Administrator",
@@ -20,6 +9,17 @@
       "joinedAt": "2023-04-03",
       "joinedAtJp": "2023年04月03日",
       "roleColor": "#000000",
+      "socials": {}
+    },
+    {
+      "id": "941477228343070741",
+      "name": "HFS創造神担当あくる/ぶぶ漬けどす",
+      "role": "Staff",
+      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/2b620a6263cf98e34019c22e45f4fc3f.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-02",
+      "joinedAtJp": "2023年04月02日",
+      "roleColor": "#369876",
       "socials": {}
     },
     {
@@ -47,35 +47,13 @@
   ],
   "specialThanks": [
     {
-      "id": "1029403469469192202",
-      "name": "🥒サロちゃん🍆",
-      "role": "常連2期生",
-      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/1029403469469192202/avatars/c89dd5072ab2180eb3b172eb7034653a.png?size=1024",
-      "message": "サロちんです。このサーバーを盛り上げてます",
-      "joinedAt": "2023-09-26",
-      "joinedAtJp": "2023年09月26日",
-      "roleColor": "#ffffff",
-      "socials": {}
-    },
-    {
-      "id": "1004634798033215568",
-      "name": "まんもちゅ",
+      "id": "1027932870951583814",
+      "name": "かぷ",
       "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/1004634798033215568/edd05cea6ef47fd7ea6e6062c8a34379.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/1027932870951583814/c31aa3686095b0fb3c81f35220fbffcc.png?size=1024",
       "message": "",
-      "joinedAt": "2023-04-03",
-      "joinedAtJp": "2023年04月03日",
-      "roleColor": "#ffffff",
-      "socials": {}
-    },
-    {
-      "id": "941477228343070741",
-      "name": "HFS創造神担当あくる/ぶぶ漬けどす",
-      "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/2b620a6263cf98e34019c22e45f4fc3f.png?size=1024",
-      "message": "",
-      "joinedAt": "2023-04-02",
-      "joinedAtJp": "2023年04月02日",
+      "joinedAt": "2023-04-14",
+      "joinedAtJp": "2023年04月14日",
       "roleColor": "#ffffff",
       "socials": {}
     },
@@ -91,13 +69,13 @@
       "socials": {}
     },
     {
-      "id": "1027932870951583814",
-      "name": "かぷ",
+      "id": "941477228343070741",
+      "name": "HFS創造神担当あくる/ぶぶ漬けどす",
       "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/1027932870951583814/c31aa3686095b0fb3c81f35220fbffcc.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/2b620a6263cf98e34019c22e45f4fc3f.png?size=1024",
       "message": "",
-      "joinedAt": "2023-04-14",
-      "joinedAtJp": "2023年04月14日",
+      "joinedAt": "2023-04-02",
+      "joinedAtJp": "2023年04月02日",
       "roleColor": "#ffffff",
       "socials": {}
     },
@@ -234,6 +212,17 @@
       "socials": {}
     },
     {
+      "id": "1004634798033215568",
+      "name": "まんもちゅ",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/1004634798033215568/edd05cea6ef47fd7ea6e6062c8a34379.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-04-03",
+      "joinedAtJp": "2023年04月03日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
       "id": "1113008430597279807",
       "name": "ねこば(ゆのアンチ",
       "role": "常連0期生",
@@ -252,6 +241,17 @@
       "message": "",
       "joinedAt": "2023-04-04",
       "joinedAtJp": "2023年04月04日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
+      "id": "1029403469469192202",
+      "name": "🥒サロちゃん🍆",
+      "role": "常連2期生",
+      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/1029403469469192202/avatars/c89dd5072ab2180eb3b172eb7034653a.png?size=1024",
+      "message": "サロちんです。このサーバーを盛り上げてます",
+      "joinedAt": "2023-09-26",
+      "joinedAtJp": "2023年09月26日",
       "roleColor": "#ffffff",
       "socials": {}
     }
