@@ -78,7 +78,7 @@ class HololiveOmikujiCog(commands.Cog):
             logger.error(f"ストリーク取得エラー: {e}")
             return {'streak': 0, 'max_streak': 0, 'last_date': None}
     
-    async def update_user_streak(self, user_id: int, guild_id: int, streak: int, draw_date: str) -> None:
+    async def update_user_streak(self, user_id: int, guild_id: int, streak: int, draw_date) -> None:
         """ユーザーのストリーク情報を更新"""
         try:
             await execute_query(
@@ -110,7 +110,7 @@ class HololiveOmikujiCog(commands.Cog):
             return []
     
     async def save_omikuji_result(self, user_id: int, guild_id: int, fortune_id: int, 
-                                  is_super_rare: bool, is_chance: bool, streak: int, draw_date: str) -> None:
+                                  is_super_rare: bool, is_chance: bool, streak: int, draw_date) -> None:
         """おみくじ結果をDBに保存"""
         try:
             await execute_query(
@@ -124,7 +124,7 @@ class HololiveOmikujiCog(commands.Cog):
             logger.error(f"おみくじ結果保存エラー: {e}")
     
     async def save_fortune_result(self, user_id: int, guild_id: int, fortune_level: str,
-                                  lucky_color: str, lucky_item: str, lucky_app: str, draw_date: str) -> None:
+                                  lucky_color: str, lucky_item: str, lucky_app: str, draw_date) -> None:
         """運勢結果をDBに保存"""
         try:
             await execute_query(
@@ -137,7 +137,7 @@ class HololiveOmikujiCog(commands.Cog):
         except Exception as e:
             logger.error(f"運勢結果保存エラー: {e}")
     
-    async def update_daily_stats(self, guild_id: int, stat_date: str, is_omikuji: bool = True) -> None:
+    async def update_daily_stats(self, guild_id: int, stat_date, is_omikuji: bool = True) -> None:
         """日次統計を更新"""
         try:
             if is_omikuji:
@@ -227,7 +227,7 @@ class HololiveOmikujiCog(commands.Cog):
             current_streak = 1
 
         # ストリーク情報を更新
-        await self.update_user_streak(user_id, guild_id, current_streak, today_str)
+        await self.update_user_streak(user_id, guild_id, current_streak, today_jst)
 
         # みこち電脳桜神社の演出ステップ
         steps = [
@@ -294,8 +294,8 @@ class HololiveOmikujiCog(commands.Cog):
         await fm.edit(embed=embed)
         
         # おみくじ結果をDBに保存
-        await self.save_omikuji_result(user_id, guild_id, fortune_id, is_super_rare, is_chance, current_streak, today_str)
-        await self.update_daily_stats(guild_id, today_str, is_omikuji=True)
+        await self.save_omikuji_result(user_id, guild_id, fortune_id, is_super_rare, is_chance, current_streak, today_jst)
+        await self.update_daily_stats(guild_id, today_jst, is_omikuji=True)
 
         # ホロライブ絵文字（既存のカスタム絵文字を流用）
         holo_emoji1 = "<:omkj_iphone_dakedayo_1:1290367507575869582>"
@@ -430,8 +430,8 @@ class HololiveOmikujiCog(commands.Cog):
         await fm.edit(embed=embed)
         
         # 運勢結果をDBに保存
-        await self.save_fortune_result(user_id, guild_id, fortune, lucky_color, lucky_item, lucky_app, today_str)
-        await self.update_daily_stats(guild_id, today_str, is_omikuji=False)
+        await self.save_fortune_result(user_id, guild_id, fortune, lucky_color, lucky_item, lucky_app, today_jst)
+        await self.update_daily_stats(guild_id, today_jst, is_omikuji=False)
 
     @commands.hybrid_command(name="ranking", aliases=["ランキング", "電脳ランキング"])
     @is_guild()
