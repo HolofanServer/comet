@@ -25,7 +25,7 @@ Thumbs.db
 
 # データディレクトリ
 data/
-config/
+# config/
 
 # Dev関連
 Dev/
@@ -50,8 +50,8 @@ env/
 pyvenv.cfg
 
 # Config ファイル
-auth.json
-members.json
+# auth.json
+# members.json
 spam_blocker.json
 sudo.json
 
