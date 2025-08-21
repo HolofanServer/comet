@@ -51,10 +51,13 @@ class CV2MessageSender:
 
 class BumpNoticeCog(commands.Cog):
     """
-    指定BOTのbump embed検知→CV2形式コンテナ送信→2時間後削除/再送信を管理します。
+    DISBOARD BOTのbump embed検知→CV2形式コンテナ送信→２時間後削除/再送信を管理します。
     深夜(JST 0-7時)はメンションを行いません。
     """
-    BUMP_EMBED_KEYWORD = "表示順をアップしたよ👍"
+    # DISBOARD BOTの正確なID
+    DISBOARD_BOT_ID = 302050872383242240
+    # bump成功時の特徴的な画像URL
+    BUMP_IMAGE_URL = "disboard.org/images/bot-command-image-bump.png"
     BUMP_INTERVAL = timedelta(hours=2)
     JST = timezone(timedelta(hours=9))
     NIGHT_START = 0
@@ -149,33 +152,38 @@ class BumpNoticeCog(commands.Cog):
     async def on_message(self, message):
         if not message.guild:
             return
-        #logger.info(f"メッセージ受信: {message.author.name} ({message.author.id}) - {message.content[:50]}")
-
+        
+        # DISBOARD BOTからのメッセージかどうかをチェック
+        if message.author.id != self.DISBOARD_BOT_ID:
+            return
+            
+        # bump通知設定を確認
         settings = await db.get_bump_notice_settings(message.guild.id)
-        if not settings or not settings.get('bot_id') or not settings.get('channel_id'):
-            logger.info("設定が見つかりません。")
+        if not settings or not settings.get('channel_id'):
             return
 
-        if message.author.id != settings['bot_id']:
-            #logger.info("対象BOTではありません。")
-            return
-
+        # embedがあるかどうかをチェック
         if not message.embeds:
-            logger.info("embedがありません。")
             return
 
-        for embed in message.embeds:
-            logger.info(f"embed受信: {embed.title} - {embed.description}")
-            if embed.description and self.BUMP_EMBED_KEYWORD in embed.description:
-                logger.info(f"Bump検知: サーバー {message.guild.name} (ID: {message.guild.id})")
-                self.channel = message.guild.get_channel(settings['channel_id'])
-                if not self.channel:
-                    logger.info("通知チャンネルが見つかりません。")
-                    return
-                self.role_id = settings.get('role_id')
-                await self.start_bump_timer(message.guild)
-                logger.info("bumpタイマー開始: サーバー {message.guild.name}")
-                break
+        # 参考コードのロジックを応用: 画像URLでbump成功を判定
+        try:
+            embed = message.embeds[0]
+            if embed.image and embed.image.url:
+                if self.BUMP_IMAGE_URL in str(embed.image.url):
+                    logger.info(f"Bump検知: サーバー {message.guild.name} (ID: {message.guild.id})")
+                    
+                    self.channel = message.guild.get_channel(settings['channel_id'])
+                    if not self.channel:
+                        logger.error(f"通知チャンネルが見つかりません: {message.guild.name}")
+                        return
+                    
+                    self.role_id = settings.get('role_id')
+                    await self.start_bump_timer(message.guild)
+                    logger.info(f"bumpタイマー開始: サーバー {message.guild.name}")
+        except IndexError:
+            # embedがない場合は無視
+            pass
     
     async def start_bump_timer(self, guild):
         if self.active_task and not self.active_task.done():
