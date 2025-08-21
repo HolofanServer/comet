@@ -12,7 +12,7 @@ jishaku==2.6.0
 pyfiglet==1.0.2
 flask==3.1.0
 httpx==0.28.1
-requests==2.32.3
+requests==2.32.5
 discord-ext-prometheus==0.2.0
 pyyaml==6.0.2
 annotated-types==0.7.0
