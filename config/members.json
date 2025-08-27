@@ -2,7 +2,7 @@
   "staff": [
     {
       "id": "707320830387814531",
-      "name": "HFSの清楚担当 FreeWiFi / ふりわい",
+      "name": "HFSの寝坊担当 FreeWiFi / ふりわい",
       "role": "Administrator",
       "avatar": "https://cdn.discordapp.com/avatars/707320830387814531/e62c7a3001f1e25ab6b71d1a17274fe3.png?size=1024",
       "message": "わいふぁいって呼んでください！困ったことがあったらいつでもご連絡してくださいね！",
@@ -15,7 +15,7 @@
       "id": "941477228343070741",
       "name": "HFS創造神担当あくる/ぶぶ漬けどす",
       "role": "Staff",
-      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/2b620a6263cf98e34019c22e45f4fc3f.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/15e51f5b9e6b685c7633f2c969c972ce.png?size=1024",
       "message": "",
       "joinedAt": "2023-04-02",
       "joinedAtJp": "2023年04月02日",
@@ -47,6 +47,17 @@
   ],
   "specialThanks": [
     {
+      "id": "707320830387814531",
+      "name": "HFSの寝坊担当 FreeWiFi / ふりわい",
+      "role": "常連0期生",
+      "avatar": "https://cdn.discordapp.com/avatars/707320830387814531/e62c7a3001f1e25ab6b71d1a17274fe3.png?size=1024",
+      "message": "わいふぁいって呼んでください！困ったことがあったらいつでもご連絡してくださいね！",
+      "joinedAt": "2023-04-03",
+      "joinedAtJp": "2023年04月03日",
+      "roleColor": "#ffffff",
+      "socials": {}
+    },
+    {
       "id": "1027932870951583814",
       "name": "かぷ",
       "role": "常連0期生",
@@ -58,21 +69,10 @@
       "socials": {}
     },
     {
-      "id": "707320830387814531",
-      "name": "HFSの清楚担当 FreeWiFi / ふりわい",
-      "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/707320830387814531/e62c7a3001f1e25ab6b71d1a17274fe3.png?size=1024",
-      "message": "わいふぁいって呼んでください！困ったことがあったらいつでもご連絡してくださいね！",
-      "joinedAt": "2023-04-03",
-      "joinedAtJp": "2023年04月03日",
-      "roleColor": "#ffffff",
-      "socials": {}
-    },
-    {
       "id": "941477228343070741",
       "name": "HFS創造神担当あくる/ぶぶ漬けどす",
       "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/2b620a6263cf98e34019c22e45f4fc3f.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/941477228343070741/15e51f5b9e6b685c7633f2c969c972ce.png?size=1024",
       "message": "",
       "joinedAt": "2023-04-02",
       "joinedAtJp": "2023年04月02日",
@@ -81,7 +81,7 @@
     },
     {
       "id": "788053238992863292",
-      "name": "ザクス🌽ゲマズ2両日参加",
+      "name": "ザクス",
       "role": "常連1期生",
       "avatar": "https://cdn.discordapp.com/avatars/788053238992863292/8e3b0f09325feb006ae52219b6cff406.png?size=1024",
       "message": "",
@@ -127,7 +127,7 @@
       "id": "916849660759535676",
       "name": "挨拶委員会🛸なつてと",
       "role": "常連2期生",
-      "avatar": "https://cdn.discordapp.com/guilds/1092138492173242430/users/916849660759535676/avatars/a8ca64d4da7e47cece2e7fa82b055423.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/916849660759535676/2944e51e3acb8bce6c30ba0752f74edb.png?size=1024",
       "message": "",
       "joinedAt": "2023-06-15",
       "joinedAtJp": "2023年06月15日",
@@ -160,7 +160,7 @@
       "id": "1183337059398733834",
       "name": "なつてと",
       "role": "常連2期生",
-      "avatar": "https://cdn.discordapp.com/avatars/1183337059398733834/275d1672b2ba17b02c5020234c812954.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/1183337059398733834/a8119fc3b1c4376c3c5f4b624075bce8.png?size=1024",
       "message": "",
       "joinedAt": "2023-12-10",
       "joinedAtJp": "2023年12月10日",
@@ -204,7 +204,7 @@
       "id": "959448930142269520",
       "name": "るきお",
       "role": "常連0期生",
-      "avatar": "https://cdn.discordapp.com/avatars/959448930142269520/25e7c7af3621ba4d6707d075e2a0dd8a.png?size=1024",
+      "avatar": "https://cdn.discordapp.com/avatars/959448930142269520/eb42aa3ff4ac96efa6b770719334b8af.png?size=1024",
       "message": "",
       "joinedAt": "2023-04-16",
       "joinedAtJp": "2023年04月16日",
@@ -259,7 +259,7 @@
   "testers": [
     {
       "id": "1355706337480278207",
-      "name": "🍗",
+      "name": "！からあげ",
       "role": "テスター",
       "avatar": "https://cdn.discordapp.com/avatars/1355706337480278207/982706d056cc5deca672d38d7d1d5902.png?size=1024",
       "message": "",
