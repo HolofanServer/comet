@@ -54,7 +54,6 @@ class UptimeKumaStatus(commands.Cog):
             color=discord.Color.green(),
             url="https://status.hfs.jp/status/hfs"
         )
-        e.set_image(url="attachment://status_pages.png")
         e.set_thumbnail(url="attachment://original.png")
         e.set_footer(text="Powerd by Uptime Kuma")
         e.set_author(name="https://status.hfs.jp/status/hfs")
