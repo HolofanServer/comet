@@ -8,14 +8,12 @@ Discord.pyレベリングシステムのゲーミフィケーション機能を
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import Optional, List, Dict, Any
-import asyncio
-from datetime import datetime
+from typing import Optional, List
 
 from models.rank.achievements import (
-    AchievementType, AchievementRarity, SkillType, PrestigeType
+    AchievementRarity
 )
-from utils.rank.achievement_manager import achievement_manager, AchievementProgress, SkillEffect
+from utils.rank.achievement_manager import achievement_manager, AchievementProgress
 from utils.logging import setup_logging
 
 logger = setup_logging("ACHIEVEMENTS_COG")

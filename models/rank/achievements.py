@@ -6,7 +6,7 @@ Discord.pyレベリングシステムのゲーミフィケーション機能を�
 """
 
 from pydantic import BaseModel, Field, validator
-from typing import Optional, Dict, List, Any, Union, Literal
+from typing import Optional, Dict, List, Any
 from datetime import datetime
 from enum import Enum
 
