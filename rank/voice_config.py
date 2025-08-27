@@ -9,14 +9,12 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from typing import Optional, Literal
-from datetime import datetime, timedelta
 
 from utils.logging import setup_logging
 from utils.commands_help import is_guild, log_commands
 from utils.rank.voice_manager import voice_manager
 from models.rank.voice_activity import (
-    VoiceConfig, VoiceTrackType, VoiceActivityType, 
-    VoiceChannelConfig, VoicePresets
+    VoiceTrackType, VoicePresets
 )
 from config.setting import get_settings
 

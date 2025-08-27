@@ -186,7 +186,6 @@ class VoiceTrackerCog(commands.Cog):
                 return
             
             # メインレベリングシステムに音声XPを追加
-            from cogs.rank.rank import LevelingSystem
             
             # Botからレベリングシステムのcogを取得
             leveling_cog = self.bot.get_cog("レベリング")
@@ -268,7 +267,6 @@ class VoiceTrackerCog(commands.Cog):
                                 continue
                             
                             # 最後の活動時間をチェック（簡易実装）
-                            user_key = f"{guild.id}:{member.id}"
                             active_session = None
                             
                             for session in voice_manager.active_sessions.values():

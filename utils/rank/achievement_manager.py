@@ -5,7 +5,6 @@ Discord.pyレベリングシステムのゲーミフィケーション機能を�
 包括的なシステムマネージャー。
 """
 
-import asyncio
 import json
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
@@ -14,8 +13,7 @@ from dataclasses import dataclass
 from utils.database import execute_query
 from utils.logging import setup_logging
 from models.rank.achievements import (
-    Achievement, AchievementType, AchievementRarity, AchievementCondition,
-    SkillNode, SkillType, UserSkill,
+    Achievement, AchievementType, AchievementRarity, SkillNode, SkillType, UserSkill,
     PrestigeTier, PrestigeType,
     GamificationStats
 )

@@ -6,7 +6,7 @@ AI（GPT-5/GPT-5-mini）による多次元メッセージ品質評価の
 """
 
 from pydantic import BaseModel, Field, validator
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from enum import Enum
 from datetime import datetime
 
