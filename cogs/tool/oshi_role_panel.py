@@ -133,7 +133,6 @@ class OshiRolePanel(commands.Cog):
             logger.error(f"DB取得失敗: {e}")
             self.role_emoji_mapping = {}
 
-        legacy_changed = False
         data_dir = os.path.join(os.getcwd(), "data")
         file_path = os.path.join(data_dir, "role_emoji_mapping.json")
         if os.path.exists(file_path):
@@ -143,13 +142,10 @@ class OshiRolePanel(commands.Cog):
                 for k, v in legacy_data.items():
                     if k not in self.role_emoji_mapping:
                         self.role_emoji_mapping[k] = v
-                        legacy_changed = True
+                await self.save_role_emoji_mapping()
+                logger.info("旧JSONマッピングをDBへマージしました")
             except Exception as e:
                 logger.error(f"旧JSON読み込み失敗: {e}")
-
-        if legacy_changed:
-            await self.save_role_emoji_mapping()
-            logger.info("旧JSONマッピングをDBへマージしました")
 
     async def _init_role_emoji(self):
         """Cog起動時に呼ばれる非同期初期化"""

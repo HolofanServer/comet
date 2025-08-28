@@ -11,14 +11,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from models.rank.achievements import (
-    AchievementRarity,
-)
+from models.rank.achievements import AchievementRarity
 from utils.logging import setup_logging
-from utils.rank.achievement_manager import (
-    AchievementProgress,
-    achievement_manager,
-)
+from utils.rank.achievement_manager import AchievementProgress, achievement_manager
 
 logger = setup_logging("ACHIEVEMENTS_COG")
 

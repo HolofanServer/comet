@@ -149,7 +149,6 @@ class HFSVoices(commands.Cog):
                         if channel:
                             # 進行中のインタビューにViewを再追加
                             if interview['status'] == 'pending':
-                                InterviewControlView(interview['id'], interview['user_id'])
                                 # 既存のメッセージを検索してViewを再追加（必要に応じて）
                                 logger.info(f"インタビュー {interview['id']} のView復元準備完了")
                             elif interview['status'] == 'in_progress':
@@ -159,7 +158,6 @@ class HFSVoices(commands.Cog):
                                     interview['id']
                                 )
                                 if last_question:
-                                    QuestionResponseView(interview['id'], last_question['question_number'])
                                     logger.info(f"インタビュー {interview['id']} の質問 {last_question['question_number']} View復元準備完了")
 
                     except Exception as e:
