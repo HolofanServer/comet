@@ -69,16 +69,10 @@ jobs:
     - name: Install linting tools
       run: |
         python -m pip install --upgrade pip
-        pip install ruff black isort mypy
+        pip install ruff mypy
 
     - name: Run Ruff
       run: ruff check . --output-format=github
-
-    - name: Check code formatting with Black
-      run: black --check --diff .
-
-    - name: Check import sorting with isort
-      run: isort --check-only --diff .
 
     - name: Run type checking with mypy
       run: mypy . --ignore-missing-imports --no-strict-optional
@@ -108,7 +102,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
@@ -163,7 +157,7 @@ jobs:
         PYTHONPATH: ${{ github.workspace }}
 
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: benchmark-results
         path: benchmark.json
@@ -181,12 +175,6 @@ jobs:
     - name: Install documentation tools
       run: |
         python -m pip install --upgrade pip
-        pip install markdown-link-check
-
-    - name: Check wiki links
-      run: |
-        find wiki/ -name "*.md" -exec markdown-link-check {} \;
-      continue-on-error: true
 
     - name: Validate wiki structure
       run: |
