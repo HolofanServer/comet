@@ -5,10 +5,12 @@ Discord.pyレベリングシステムのゲーミフィケーション機能を�
 包括的なデータ構造とバリデーション。
 """
 
-from pydantic import BaseModel, Field, validator
-from typing import Optional, Dict, List, Any
 from datetime import datetime
 from enum import Enum
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field, validator
+
 
 class AchievementType(str, Enum):
     """アチーブメントタイプ"""
@@ -56,13 +58,13 @@ class AchievementCondition(BaseModel):
     type: AchievementType
     target_value: int = Field(..., ge=1, description="目標値")
     current_value: int = Field(0, ge=0, description="現在値")
-    additional_params: Optional[Dict[str, Any]] = Field(default=None, description="追加パラメータ")
-    
+    additional_params: Optional[dict[str, Any]] = Field(default=None, description="追加パラメータ")
+
     @property
     def progress_percentage(self) -> float:
         """進捗率を計算"""
         return min(100.0, (self.current_value / self.target_value) * 100.0)
-    
+
     @property
     def is_completed(self) -> bool:
         """達成済みかチェック"""
@@ -76,23 +78,23 @@ class Achievement(BaseModel):
     type: AchievementType
     rarity: AchievementRarity
     condition: AchievementCondition
-    
+
     # 報酬
     xp_reward: int = Field(0, ge=0, description="XP報酬")
     skill_points_reward: int = Field(0, ge=0, description="スキルポイント報酬")
     title_reward: Optional[str] = Field(None, description="称号報酬")
     role_reward: Optional[str] = Field(None, description="ロール報酬")
-    custom_rewards: Optional[Dict[str, Any]] = Field(default=None, description="カスタム報酬")
-    
+    custom_rewards: Optional[dict[str, Any]] = Field(default=None, description="カスタム報酬")
+
     # メタデータ
     icon: Optional[str] = Field(None, description="アイコン絵文字")
     color: Optional[int] = Field(None, description="色コード")
     hidden: bool = Field(False, description="隠しアチーブメント")
     one_time: bool = Field(True, description="一回限り")
-    requires_achievements: Optional[List[str]] = Field(default=None, description="前提アチーブメント")
-    
+    requires_achievements: Optional[list[str]] = Field(default=None, description="前提アチーブメント")
+
     created_at: datetime = Field(default_factory=datetime.now)
-    
+
     @validator('color')
     def validate_color(cls, v):
         if v is not None and (v < 0 or v > 0xFFFFFF):
@@ -104,12 +106,12 @@ class UserAchievement(BaseModel):
     guild_id: int
     user_id: int
     achievement_id: str
-    
+
     # 進捗
     current_progress: int = Field(0, ge=0)
     is_completed: bool = Field(False)
     completion_date: Optional[datetime] = Field(None)
-    
+
     # メタデータ
     first_seen: datetime = Field(default_factory=datetime.now)
     last_updated: datetime = Field(default_factory=datetime.now)
@@ -121,16 +123,16 @@ class SkillNode(BaseModel):
     name: str = Field(..., description="スキル名")
     description: str = Field(..., description="スキル説明")
     type: SkillType
-    
+
     # ツリー構造
     tier: int = Field(..., ge=1, le=10, description="ティア（階層）")
-    prerequisites: Optional[List[str]] = Field(default=None, description="前提スキル")
-    
+    prerequisites: Optional[list[str]] = Field(default=None, description="前提スキル")
+
     # コスト・効果
     skill_points_cost: int = Field(..., ge=1, description="必要スキルポイント")
     max_level: int = Field(1, ge=1, le=10, description="最大レベル")
     effect_per_level: float = Field(..., description="レベル毎の効果量")
-    
+
     # メタデータ
     icon: Optional[str] = Field(None, description="アイコン絵文字")
     color: Optional[int] = Field(None, description="色コード")
@@ -141,7 +143,7 @@ class UserSkill(BaseModel):
     guild_id: int
     user_id: int
     skill_id: str
-    
+
     current_level: int = Field(0, ge=0, description="現在レベル")
     total_invested_points: int = Field(0, ge=0, description="投資済みポイント")
     unlocked_at: Optional[datetime] = Field(None)
@@ -152,28 +154,28 @@ class PrestigeBenefit(BaseModel):
     xp_multiplier: float = Field(1.0, ge=0.1, le=10.0, description="XP倍率")
     voice_xp_multiplier: float = Field(1.0, ge=0.1, le=10.0, description="音声XP倍率")
     skill_point_multiplier: float = Field(1.0, ge=0.1, le=10.0, description="スキルポイント倍率")
-    
+
     daily_xp_bonus: int = Field(0, ge=0, description="日次XPボーナス")
-    exclusive_titles: Optional[List[str]] = Field(default=None, description="専用称号")
-    exclusive_roles: Optional[List[str]] = Field(default=None, description="専用ロール")
-    
+    exclusive_titles: Optional[list[str]] = Field(default=None, description="専用称号")
+    exclusive_roles: Optional[list[str]] = Field(default=None, description="専用ロール")
+
     achievement_bonus: float = Field(1.0, ge=1.0, le=5.0, description="アチーブメント報酬倍率")
-    special_features: Optional[Dict[str, bool]] = Field(default=None, description="特別機能")
+    special_features: Optional[dict[str, bool]] = Field(default=None, description="特別機能")
 
 class PrestigeTier(BaseModel):
     """プレステージティア"""
     tier: int = Field(..., ge=1, description="ティア番号")
     name: str = Field(..., description="ティア名")
     type: PrestigeType
-    
+
     required_level: int = Field(..., ge=50, description="必要レベル")
     required_achievements: int = Field(0, ge=0, description="必要アチーブメント数")
     required_skill_points: int = Field(0, ge=0, description="必要スキルポイント")
-    
+
     benefits: PrestigeBenefit
     reset_progress: bool = Field(True, description="進捗リセット")
     keep_skills: bool = Field(False, description="スキル保持")
-    
+
     # 視覚効果
     icon: Optional[str] = Field(None, description="アイコン")
     color: Optional[int] = Field(None, description="色コード")
@@ -183,15 +185,15 @@ class UserPrestige(BaseModel):
     """ユーザーのプレステージ状況"""
     guild_id: int
     user_id: int
-    
+
     current_tier: int = Field(0, ge=0, description="現在ティア")
     current_type: Optional[PrestigeType] = Field(None)
     total_prestiges: int = Field(0, ge=0, description="総プレステージ回数")
-    
+
     # 履歴
     last_prestige_date: Optional[datetime] = Field(None)
-    prestige_history: Optional[List[Dict[str, Any]]] = Field(default=None)
-    
+    prestige_history: Optional[list[dict[str, Any]]] = Field(default=None)
+
     # 統計
     total_levels_before_prestige: int = Field(0, ge=0, description="プレステージ前総レベル")
     total_xp_before_prestige: int = Field(0, ge=0, description="プレステージ前総XP")
@@ -199,22 +201,22 @@ class UserPrestige(BaseModel):
 class GamificationConfig(BaseModel):
     """ゲーミフィケーション設定"""
     guild_id: int
-    
+
     # システム有効化
     achievements_enabled: bool = Field(True)
     skills_enabled: bool = Field(True)
     prestige_enabled: bool = Field(True)
-    
+
     # 通知設定
     achievement_notifications: bool = Field(True)
     skill_unlock_notifications: bool = Field(True)
     prestige_notifications: bool = Field(True)
-    
+
     # カスタム設定
-    custom_achievements: Optional[List[Achievement]] = Field(default=None)
+    custom_achievements: Optional[list[Achievement]] = Field(default=None)
     skill_point_base_rate: float = Field(1.0, ge=0.1, le=10.0, description="スキルポイント基本レート")
     achievement_channel_id: Optional[int] = Field(None, description="アチーブメント通知チャンネル")
-    
+
     # メタデータ
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
@@ -224,23 +226,23 @@ class GamificationStats(BaseModel):
     """ゲーミフィケーション統計"""
     guild_id: int
     user_id: int
-    
+
     # アチーブメント統計
     total_achievements: int = Field(0, ge=0)
     completed_achievements: int = Field(0, ge=0)
     achievement_completion_rate: float = Field(0.0, ge=0.0, le=100.0)
-    
+
     # スキル統計
     total_skill_points_earned: int = Field(0, ge=0)
     total_skill_points_spent: int = Field(0, ge=0)
     unlocked_skills_count: int = Field(0, ge=0)
     max_skill_tier: int = Field(0, ge=0)
-    
-    # プレステージ統計  
+
+    # プレステージ統計
     prestige_level: int = Field(0, ge=0)
     total_prestiges: int = Field(0, ge=0)
     prestige_xp_bonus: float = Field(0.0, ge=0.0)
-    
+
     # 全体統計
     gamification_score: float = Field(0.0, ge=0.0, description="ゲーミフィケーション総合スコア")
     last_updated: datetime = Field(default_factory=datetime.now)
@@ -248,12 +250,12 @@ class GamificationStats(BaseModel):
 # プリセット定義
 class AchievementPresets:
     """アチーブメントプリセット定義"""
-    
+
     @staticmethod
-    def get_level_achievements() -> List[Achievement]:
+    def get_level_achievements() -> list[Achievement]:
         """レベル系アチーブメント"""
         achievements = []
-        
+
         # レベル到達アチーブメント
         level_milestones = [
             (5, "初心者卒業", "レベル5に到達", AchievementRarity.COMMON, "🎯"),
@@ -263,7 +265,7 @@ class AchievementPresets:
             (75, "エキスパート", "レベル75に到達", AchievementRarity.EPIC, "🏆"),
             (100, "レジェンド", "レベル100に到達", AchievementRarity.LEGENDARY, "👑"),
         ]
-        
+
         for level, name, desc, rarity, icon in level_milestones:
             achievements.append(Achievement(
                 id=f"level_{level}",
@@ -279,14 +281,14 @@ class AchievementPresets:
                 skill_points_reward=max(1, level // 10),
                 icon=icon
             ))
-        
+
         return achievements
-    
+
     @staticmethod
-    def get_xp_achievements() -> List[Achievement]:
+    def get_xp_achievements() -> list[Achievement]:
         """XP系アチーブメント"""
         achievements = []
-        
+
         # XP獲得アチーブメント
         xp_milestones = [
             (1000, "千の道のり", "総XP 1,000獲得", AchievementRarity.COMMON, "💫"),
@@ -295,7 +297,7 @@ class AchievementPresets:
             (100000, "百戦練磨", "総XP 100,000獲得", AchievementRarity.EPIC, "✨"),
             (500000, "経験の王者", "総XP 500,000獲得", AchievementRarity.LEGENDARY, "🔥"),
         ]
-        
+
         for xp, name, desc, rarity, icon in xp_milestones:
             achievements.append(Achievement(
                 id=f"total_xp_{xp}",
@@ -311,14 +313,14 @@ class AchievementPresets:
                 skill_points_reward=max(1, xp // 25000),
                 icon=icon
             ))
-        
+
         return achievements
 
 class SkillTreePresets:
     """スキルツリープリセット定義"""
-    
+
     @staticmethod
-    def get_general_skills() -> List[SkillNode]:
+    def get_general_skills() -> list[SkillNode]:
         """汎用スキル"""
         return [
             # ティア1: 基本スキル
@@ -334,10 +336,10 @@ class SkillTreePresets:
                 icon="📚",
                 category="基本"
             ),
-            
+
             SkillNode(
                 id="voice_boost_basic",
-                name="音声経験値アップ I", 
+                name="音声経験値アップ I",
                 description="音声XP獲得量を3%増加",
                 type=SkillType.VOICE_BOOST,
                 tier=1,
@@ -347,7 +349,7 @@ class SkillTreePresets:
                 icon="🎤",
                 category="音声"
             ),
-            
+
             # ティア2: 中級スキル
             SkillNode(
                 id="cooldown_reduce_basic",
@@ -362,7 +364,7 @@ class SkillTreePresets:
                 icon="⏱️",
                 category="効率"
             ),
-            
+
             # ティア3: 上級スキル
             SkillNode(
                 id="quality_boost_advanced",
@@ -381,9 +383,9 @@ class SkillTreePresets:
 
 class PrestigePresets:
     """プレステージプリセット定義"""
-    
+
     @staticmethod
-    def get_standard_prestige_tiers() -> List[PrestigeTier]:
+    def get_standard_prestige_tiers() -> list[PrestigeTier]:
         """標準プレステージティア"""
         return [
             PrestigeTier(
@@ -402,7 +404,7 @@ class PrestigePresets:
                 icon="🌟",
                 badge="⭐"
             ),
-            
+
             PrestigeTier(
                 tier=2,
                 name="熟練者",
@@ -420,7 +422,7 @@ class PrestigePresets:
                 icon="💎",
                 badge="💎"
             ),
-            
+
             PrestigeTier(
                 tier=3,
                 name="マスター",

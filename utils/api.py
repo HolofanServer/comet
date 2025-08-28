@@ -1,9 +1,9 @@
 import time
+
 import httpx
 
-from utils.logging import setup_logging
-
 from config.setting import get_settings
+from utils.logging import setup_logging
 
 logger = setup_logging("API")
 settings = get_settings()

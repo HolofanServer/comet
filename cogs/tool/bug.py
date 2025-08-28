@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands
 
-from utils.logging import setup_logging
-from utils.commands_help import log_commands
-
 from config.setting import get_settings
+from utils.commands_help import log_commands
+from utils.logging import setup_logging
 
 logger = setup_logging()
 

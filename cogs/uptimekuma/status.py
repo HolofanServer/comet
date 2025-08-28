@@ -1,16 +1,15 @@
-import discord
-from discord.ext import commands, tasks
-from discord import app_commands
-
-import httpx
-import math
 import asyncio
+import math
 import traceback
 
-from config.setting import get_settings
+import discord
+import httpx
+from discord import app_commands
+from discord.ext import commands, tasks
 
-from utils.logging import setup_logging
+from config.setting import get_settings
 from utils.commands_help import is_guild
+from utils.logging import setup_logging
 
 logger = setup_logging()
 
@@ -26,7 +25,7 @@ class UptimeKumaStatus(commands.Cog):
         self.bot = bot
         self.spam_logger_channel_id = spam_logger_channel_id
         self.push_status.start()
-        
+
     @commands.hybrid_group(name="status", description="ステータス関連のコマンドです。")
     @is_guild()
     @app_commands.allowed_installs(guilds=True, users=True)
@@ -43,11 +42,11 @@ class UptimeKumaStatus(commands.Cog):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def link(self, ctx: commands.Context):
         await ctx.defer()
-        
+
         file = discord.File("resource/images/new_status_pages.png", filename="status_pages.png")
         file2 = discord.File("resource/images/original.png", filename="original.png")
         file_list = [file, file2]
-        
+
         e = discord.Embed(
             title="HFS Status",
             description="-# HFSで運用しているサービスのステータスを確認できます。\n-# もしサービスが正常に動作していないときはサービスが動作していない可能性があります。\n\n-# 🟢正常に動作中\n-# 🟡動作していない可能性あり\n-# 🔴正常に動作していない",
@@ -86,7 +85,7 @@ class UptimeKumaStatus(commands.Cog):
                     await self.log_error(f"Request error on attempt {attempt}: {e}")
                 except Exception as e:
                     await self.log_error(f"Unexpected error on attempt {attempt}: {e}")
-                
+
                 if attempt < max_retries:
                     await asyncio.sleep(retry_delay)
                 else:

@@ -1,17 +1,16 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
-
-import pytz
 import json
 import subprocess
-
 from datetime import datetime
 from typing import Callable
 
-from utils.logging import setup_logging
+import discord
+import pytz
+from discord import app_commands
+from discord.ext import commands
+
 from config.setting import get_settings
-from utils.stats import update_stats, get_stats
+from utils.logging import setup_logging
+from utils.stats import get_stats, update_stats
 
 settings = get_settings()
 
@@ -20,9 +19,9 @@ moderator_role_name = "Community Mod"
 dev_guild_id = settings.admin_dev_guild_id
 log_commands_channel_id = settings.admin_commands_log_channel_id
 
-with open("config/bot.json", "r", encoding="utf-8") as f:
+with open("config/bot.json", encoding="utf-8") as f:
     bot_config = json.load(f)
-with open("config/version.json", "r", encoding="utf-8") as f:
+with open("config/version.json", encoding="utf-8") as f:
     version_config = json.load(f)
 
 logger = setup_logging("D")
@@ -77,12 +76,12 @@ def log_commands():
         if guild is None:
             logger.warning(f"開発用サーバーが見つかりません: {dev_guild_id}")
             return True
-        
+
         channel = guild.get_channel(int(log_commands_channel_id))
         if channel is None:
             logger.warning(f"ログチャンネルが見つかりません: {log_commands_channel_id}")
             return True
-        
+
         e = discord.Embed(
             title="コマンド実行通知",
             description="",
@@ -148,7 +147,7 @@ def user_install():
             interaction = ctx.interaction
             if interaction:
                 await func(self, ctx)
-        
+
         wrapper = app_commands.allowed_installs(guilds=False, users=True)(wrapper)
         wrapper = app_commands.allowed_contexts(guilds=False, dms=True, private_channels=True)(wrapper)
         return wrapper
@@ -164,7 +163,7 @@ def context_menu(name: str, type: app_commands.ContextMenu):
         async def wrapper(self, interaction: discord.Interaction):
             await func(self, interaction)
         return context_menu
-            
+
 def is_dev():
     def decorator(func: Callable):
         async def wrapper(self, ctx, *args, **kwargs):
