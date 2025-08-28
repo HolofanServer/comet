@@ -1,12 +1,13 @@
-import discord
-from discord.ext import commands
 import asyncio
 from datetime import datetime, timedelta, timezone
-from utils.db_manager import db
-import httpx
 
+import discord
+import httpx
+from discord.ext import commands
+
+from utils.commands_help import is_guild, is_owner, log_commands
+from utils.db_manager import db
 from utils.logging import setup_logging
-from utils.commands_help import is_owner, log_commands, is_guild
 
 logger = setup_logging()
 
@@ -90,10 +91,10 @@ class BumpNoticeCog(commands.Cog):
         try:
             # 先にインタラクションに応答
             await ctx.defer(ephemeral=True)
-            
+
             # DB設定を保存
             await db.set_bump_notice_settings(ctx.guild.id, bot_id=bot_id.id)
-            
+
             # 遅延応答で結果を送信
             await ctx.send(f"bump通知対象BOTのIDを <@{bot_id.id}> に設定しました。", ephemeral=True)
         except Exception as e:
@@ -104,10 +105,10 @@ class BumpNoticeCog(commands.Cog):
         try:
             # 先にインタラクションに応答
             await ctx.defer(ephemeral=True)
-            
+
             # DB設定を保存
             await db.set_bump_notice_settings(ctx.guild.id, role_id=role.id)
-            
+
             # 遅延応答で結果を送信
             await ctx.send(f"bump通知時にメンションするロールを {role.mention} に設定しました。", ephemeral=True)
         except Exception as e:
@@ -129,7 +130,7 @@ class BumpNoticeCog(commands.Cog):
         if settings.get("role_id"):
             role = ctx.guild.get_role(settings["role_id"])
             desc += f"メンションロール: {role.mention if role else '不明'}"
-        
+
         await ctx.send(f"現在の設定:\n{desc}")
 
     @bumpnotice.command(name="test", description="テスト用のbumpメッセージを送信します")
@@ -152,11 +153,11 @@ class BumpNoticeCog(commands.Cog):
     async def on_message(self, message):
         if not message.guild:
             return
-        
+
         # DISBOARD BOTからのメッセージかどうかをチェック
         if message.author.id != self.DISBOARD_BOT_ID:
             return
-            
+
         # bump通知設定を確認
         settings = await db.get_bump_notice_settings(message.guild.id)
         if not settings or not settings.get('channel_id'):
@@ -172,19 +173,19 @@ class BumpNoticeCog(commands.Cog):
             if embed.image and embed.image.url:
                 if self.BUMP_IMAGE_URL in str(embed.image.url):
                     logger.info(f"Bump検知: サーバー {message.guild.name} (ID: {message.guild.id})")
-                    
+
                     self.channel = message.guild.get_channel(settings['channel_id'])
                     if not self.channel:
                         logger.error(f"通知チャンネルが見つかりません: {message.guild.name}")
                         return
-                    
+
                     self.role_id = settings.get('role_id')
                     await self.start_bump_timer(message.guild)
                     logger.info(f"bumpタイマー開始: サーバー {message.guild.name}")
         except IndexError:
             # embedがない場合は無視
             pass
-    
+
     async def start_bump_timer(self, guild):
         if self.active_task and not self.active_task.done():
             self.active_task.cancel()
@@ -208,7 +209,7 @@ class BumpNoticeCog(commands.Cog):
             description=f"<t:{next_bump_ts}:R> に再度bumpが可能になります\n<t:{next_bump_ts}>"
         )
         embed_first.set_image(url="https://images.frwi.net/data/images/3908cc04-e168-4801-8783-f5799fa92c57.png")
-        
+
         # 最初のメッセージを送信
         self.last_bump_message = await self.channel.send(embed=embed_first, silent=True)
 
@@ -227,7 +228,7 @@ class BumpNoticeCog(commands.Cog):
         # 2時間後の通知
         now = datetime.now(self.JST)
         new_embed = discord.Embed(
-            title="Bumpが可能になりました!", 
+            title="Bumpが可能になりました!",
             description="</bump:947088344167366698>を使おう!"
         )
         new_embed.set_image(url="https://images.frwi.net/data/images/3908cc04-e168-4801-8783-f5799fa92c57.png")

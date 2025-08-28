@@ -1,16 +1,15 @@
-import discord
-from discord.ext import commands
-
-import uuid
-import pytz
 import asyncio
+
 # import sentry_sdk
 import traceback
-
+import uuid
 from datetime import datetime
 
-from config.setting import get_settings
+import discord
+import pytz
+from discord.ext import commands
 
+from config.setting import get_settings
 from utils.logging import setup_logging
 from utils.stats import update_stats
 
@@ -62,7 +61,7 @@ class BugReportModal(discord.ui.Modal, title="バグ報告"):
             if self.image.value:
                 embed.set_image(url=self.image.value)
             await dev_channel.send(embed=embed)
-            
+
             await interaction.response.send_message("バグを報告しました。ありがとうございます！", ephemeral=True)
         else:
             logger.error("バグ報告チャンネルが見つかりませんでした。")
@@ -97,37 +96,37 @@ async def handle_command_error(ctx, error, error_log_channel_id):
     error_id = uuid.uuid4()
     error_message = str(error)
     traceback_text = "".join(traceback.format_exception(type(error), error, error.__traceback__))
-    
+
     if error_message == "You must own this bot to use Jishaku.":
         logger.warning(f"someone try to use jishaku commands: {ctx.author.name}")
         await ctx.send("このコマンドはBOTオーナーのみ使用可能です。", ephemeral=True)
         return True
-        
+
     if isinstance(error, commands.CommandNotFound):
         logger.warning(f"コマンドが見つかりません: {ctx.command}")
         await ctx.send("そのコマンドは存在しません。")
         return True
-        
+
     if isinstance(error, commands.MissingRequiredArgument):
         logger.warning(f"引数が不足しています: {ctx.command}")
         await ctx.send("引数が不足しています。")
         return True
-        
+
     if isinstance(error, commands.BadArgument):
         logger.warning(f"引数が不正です: {ctx.command}")
         await ctx.send("引数が不正です。")
         return True
-        
+
     if isinstance(error, commands.MissingPermissions):
         logger.warning(f"権限が不足しています: {ctx.command}")
         await ctx.send("あなたはのコマンドを実行する権限がありません。")
         return True
-        
+
     if isinstance(error, commands.BotMissingPermissions):
         logger.warning(f"BOTの権限が不足しています: {ctx.command}")
         await ctx.send("BOTがこのコマンドを実行する権限がありません。")
         return True
-        
+
     if isinstance(error, commands.CommandOnCooldown):
         logger.warning(f"コマンドがクールダウン中です: {ctx.command}")
         await ctx.send(f"このコマンドは{error.retry_after:.2f}秒後に再実行できます。")
@@ -193,35 +192,35 @@ async def handle_application_command_error(interaction, error):
         interaction.handled = True
         logger.error(f"CommandNotFound: {error}")
         return
-        
+
     if isinstance(error, commands.MissingRequiredArgument):
         logger.warning(f"引数が不足しています: {interaction.command}")
         await interaction.response.send_message("引数が不足しています。", ephemeral=True)
         interaction.handled = True
         logger.error(f"MissingRequiredArgument: {error}")
         return
-        
+
     if isinstance(error, commands.BadArgument):
         logger.warning(f"引数が不正です: {interaction.command}")
         await interaction.response.send_message("引数が不正です。", ephemeral=True)
         interaction.handled = True
         logger.error(f"BadArgument: {error}")
         return
-        
+
     if isinstance(error, commands.MissingPermissions):
         logger.warning(f"権限が不足しています: {interaction.command}")
         await interaction.response.send_message("あなたはのコマンドを実行する権限がありません。", ephemeral=True)
         interaction.handled = True
         logger.error(f"MissingPermissions: {error}")
         return
-        
+
     if isinstance(error, commands.BotMissingPermissions):
         logger.warning(f"BOTの権限が不足しています: {interaction.command}")
         await interaction.response.send_message("BOTがこのコマンドを実行する権限がありません。", ephemeral=True)
         interaction.handled = True
         logger.error(f"BotMissingPermissions: {error}")
         return
-        
+
     if isinstance(error, commands.CommandOnCooldown):
         logger.warning(f"コマンドがクールダウン中です: {interaction.command}")
         await interaction.response.send_message(f"このコマンドは{error.retry_after:.2f}秒後に再実行できます。", ephemeral=True)
@@ -232,7 +231,7 @@ async def handle_application_command_error(interaction, error):
     if not interaction.handled:
         error_id = uuid.uuid4()
         traceback_text = "".join(traceback.format_exception(type(error), error, error.__traceback__))
-            
+
         logger.error(f"UnknownError: {error}")
 
         await update_stats("errors", "total", 1)

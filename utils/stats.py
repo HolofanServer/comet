@@ -10,7 +10,7 @@ stats_json_path = "data/stats/stats.json"
 async def get_stats():
     if not os.path.exists(stats_json_path):
         return {}
-    with open(stats_json_path, "r") as f:
+    with open(stats_json_path) as f:
         return json.load(f)
 
 async def save_stats(stats):
