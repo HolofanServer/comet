@@ -4,13 +4,7 @@ from typing import Optional
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
-from discord.ui import (
-    Container,
-    LayoutView,
-    Modal,
-    TextDisplay,
-    View,
-)
+from discord.ui import Container, LayoutView, Modal, TextDisplay, View
 
 from utils.commands_help import is_guild_app, is_owner_app, log_commands
 from utils.db_manager import db

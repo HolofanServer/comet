@@ -12,10 +12,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from config.setting import get_settings
-from models.rank.voice_activity import (
-    VoicePresets,
-    VoiceTrackType,
-)
+from models.rank.voice_activity import VoicePresets, VoiceTrackType
 from utils.commands_help import is_guild, log_commands
 from utils.logging import setup_logging
 from utils.rank.voice_manager import voice_manager
