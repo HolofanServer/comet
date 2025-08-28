@@ -1,9 +1,9 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
-import pytz
-
 from datetime import datetime
+
+import discord
+import pytz
+from discord import app_commands
+from discord.ext import commands
 
 from utils.logging import setup_logging
 
@@ -54,8 +54,8 @@ class ReportUserReasonSelect(discord.ui.Select):
             self.view.stop()
 
 class OtherReasonModal(discord.ui.Modal):
-    def __init__(self, user: discord.User, mod_channel: discord.TextChannel, *args, **kwargs):
-        super().__init__(title="通報理由の詳細", *args, **kwargs)
+    def __init__(self, user: discord.User, mod_channel: discord.TextChannel, **kwargs):
+        super().__init__(title="通報理由の詳細", **kwargs)
         self.user = user
         self.mod_channel = mod_channel
         self.reason = discord.ui.TextInput(label="詳細な通報理由", style=discord.TextStyle.long, placeholder="ここに詳細な通報理由を記入してください...", required=True)
@@ -117,7 +117,7 @@ async def setup(bot):
             return
 
         if view.value == "その他":
-            return 
+            return
 
         jst = pytz.timezone('Asia/Tokyo')
         now = datetime.now(jst)
