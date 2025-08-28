@@ -3,9 +3,10 @@
 
 PostgreSQLデータベースとの接続を一貫した方法で提供するモジュールです。
 """
-import os
 import logging
-from typing import Dict, Any, Optional
+import os
+from typing import Any, Optional
+
 import asyncpg
 
 logger = logging.getLogger('database')
@@ -23,10 +24,10 @@ def get_database_url() -> Optional[str]:
         return db_url
     return None
 
-def get_db_config() -> Dict[str, Any]:
+def get_db_config() -> dict[str, Any]:
     """データベース接続設定を取得します"""
     global _db_config
-    
+
     if _db_config is None:
         # Railway環境変数を使用
         if os.environ.get('RAILWAY_ENVIRONMENT'):
@@ -49,35 +50,35 @@ def get_db_config() -> Dict[str, Any]:
                 'database': os.environ.get('DB_NAME', 'hfs_bot')
             }
             logger.info("ローカル環境の接続設定を使用します")
-    
+
     return _db_config
 
 async def get_db_pool() -> asyncpg.Pool:
     """データベース接続プールを取得します。未初期化の場合は初期化します。"""
     global _db_pool
-    
+
     if _db_pool is None:
         try:
             # DATABASE_PUBLIC_URLのみを使用
             db_url = os.environ.get('DATABASE_PUBLIC_URL')
-            
+
             if not db_url:
                 logger.error("DATABASE_PUBLIC_URL環境変数が設定されていません")
                 raise ValueError("DATABASE_PUBLIC_URL環境変数が設定されていません")
-                
+
             # 接続文字列を直接使用
             _db_pool = await asyncpg.create_pool(db_url)
             logger.info("DATABASE_PUBLIC_URLを使用してデータベース接続プールを初期化しました")
         except Exception as e:
             logger.error(f"データベース接続に失敗しました: {e}")
             raise
-    
+
     return _db_pool
 
 async def close_db_pool():
     """データベース接続プールを閉じます"""
     global _db_pool
-    
+
     if _db_pool:
         await _db_pool.close()
         _db_pool = None
@@ -86,17 +87,17 @@ async def close_db_pool():
 async def execute_query(query: str, *args, fetch_type: str = 'all') -> Any:
     """
     SQL クエリを実行して結果を返します
-    
+
     Args:
         query: 実行するSQLクエリ
         *args: クエリのパラメータ
         fetch_type: 取得タイプ ('all', 'row', 'val', 'status')
-    
+
     Returns:
         fetch_typeによって異なる結果を返します
     """
     pool = await get_db_pool()
-    
+
     try:
         async with pool.acquire() as conn:
             if fetch_type == 'all':

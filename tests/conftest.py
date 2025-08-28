@@ -2,16 +2,14 @@
 Pytest configuration and shared fixtures for COMET bot tests.
 """
 
-import pytest
 import asyncio
 import os
-import tempfile
 import sqlite3
-from unittest.mock import AsyncMock, MagicMock, patch
-from pathlib import Path
-
 import sys
-from unittest.mock import MagicMock
+import tempfile
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 discord_mock = MagicMock()
 discord_mock.Intents = MagicMock()
@@ -59,8 +57,6 @@ sys.modules['discord'] = discord_mock
 sys.modules['discord.ext'] = ext_mock
 sys.modules['discord.ext.commands'] = commands_mock
 
-import discord
-from discord.ext import commands
 
 TEST_BOT_TOKEN = "test_token_123456789"
 TEST_GUILD_ID = 123456789012345678
@@ -188,10 +184,10 @@ def temp_db():
     """Create a temporary SQLite database for testing."""
     with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
         db_path = tmp.name
-    
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS test_data (
             id INTEGER PRIMARY KEY,
@@ -200,12 +196,12 @@ def temp_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
+
     conn.commit()
     conn.close()
-    
+
     yield db_path
-    
+
     os.unlink(db_path)
 
 
@@ -237,19 +233,19 @@ def mock_logger():
 def mock_aiohttp_session():
     """Create a mock aiohttp session for testing."""
     session = MagicMock()
-    
+
     class MockHTTPMethod:
         def __init__(self):
             self.return_value = MockHTTPResponse()
-        
+
         def __call__(self, *args, **kwargs):
             return self.return_value
-    
+
     session.get = MockHTTPMethod()
     session.post = MockHTTPMethod()
     session.put = MockHTTPMethod()
     session.delete = MockHTTPMethod()
-    
+
     return session
 
 
@@ -297,32 +293,32 @@ def mock_file_system():
 
 class AsyncContextManager:
     """Helper class for async context managers in tests."""
-    
+
     def __init__(self, return_value=None):
         self.return_value = return_value
-    
+
     async def __aenter__(self):
         return self.return_value
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
 
 
 class MockHTTPResponse:
     """Mock HTTP response that supports async context manager protocol."""
-    
+
     def __init__(self):
         self.status = 200
         self.json = AsyncMock(return_value={"test": "data"})
         self.text = AsyncMock(return_value="test response")
         self.read = AsyncMock(return_value=b"test bytes")
-    
+
     async def __aenter__(self):
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
-    
+
     def __await__(self):
         async def _await():
             return self

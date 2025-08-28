@@ -1,13 +1,15 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
-from typing import Union
 import asyncio
-from datetime import datetime, timedelta
 import random
+from datetime import datetime, timedelta
+from typing import Union
+
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from utils.commands_help import is_guild_app, is_owner_app, log_commands
 from utils.db_manager import db
 from utils.logging import setup_logging
-from utils.commands_help import log_commands, is_owner_app, is_guild_app
 
 logger = setup_logging()
 
@@ -52,10 +54,10 @@ class GiveawayCog(commands.Cog):
             value = int(duration[:-1])
             unit = duration[-1].lower()
             units = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400, 'w': 604800}
-            
+
             if unit not in units:
                 return -1
-            
+
             return value * units[unit]
         except ValueError:
             return -2
@@ -87,7 +89,7 @@ class GiveawayCog(commands.Cog):
             return
 
         end_time = datetime.now() + timedelta(seconds=duration)
-        
+
         embed = discord.Embed(
             title=f"🎉 {賞品}のギブアウェイ",
             description="🎉を押して参加しよう！",
@@ -111,7 +113,7 @@ class GiveawayCog(commands.Cog):
 
         async with db.pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO giveaways 
+                INSERT INTO giveaways
                 (guild_id, channel_id, message_id, creator_id, prize, end_time)
                 VALUES ($1, $2, $3, $4, $5, $6)
             """,
@@ -129,7 +131,7 @@ class GiveawayCog(commands.Cog):
 
     async def end_giveaway_task(self, channel_id: int, message_id: int, end_time: datetime):
         await discord.utils.sleep_until(end_time)
-        
+
         channel = self.bot.get_channel(channel_id)
         if not channel:
             return
@@ -137,12 +139,12 @@ class GiveawayCog(commands.Cog):
         try:
             message = await channel.fetch_message(message_id)
             reaction = discord.utils.get(message.reactions, emoji="🎉")
-            
+
             if not reaction:
                 return
 
             users = [user async for user in reaction.users() if not user.bot]
-            
+
             if not users:
                 winner = None
                 winner_text = "参加者がいませんでした"
@@ -160,7 +162,7 @@ class GiveawayCog(commands.Cog):
 
             async with db.pool.acquire() as conn:
                 await conn.execute("""
-                    UPDATE giveaways 
+                    UPDATE giveaways
                     SET ended = TRUE, winner_id = $1
                     WHERE message_id = $2
                 """, winner.id if winner else None, message_id)
@@ -203,7 +205,7 @@ class GiveawayCog(commands.Cog):
 
             channel_id = result[0]
             channel = interaction.guild.get_channel(channel_id)
-            
+
             if not channel:
                 await interaction.response.send_message(
                     "ギブアウェイのチャンネルが見つかりません",
@@ -214,7 +216,7 @@ class GiveawayCog(commands.Cog):
             try:
                 message = await channel.fetch_message(message_id)
                 reaction = discord.utils.get(message.reactions, emoji="🎉")
-                
+
                 if not reaction:
                     await interaction.response.send_message(
                         "リアクションが見つかりません",
@@ -223,7 +225,7 @@ class GiveawayCog(commands.Cog):
                     return
 
                 users = [user async for user in reaction.users() if not user.bot]
-                
+
                 if not users:
                     await interaction.response.send_message(
                         "参加者が見つかりません",

@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -42,21 +43,21 @@ class Settings:
 
         # FastAPI
         self.fastapi_url: str = os.getenv("FASTAPI_URL", "")
-        
+
         # Sentry
         self.sentry_dsn: str = os.getenv("SENTRY_DSN", "")
         self.sentry_token: str = os.getenv("SENTRY_TOKEN", "")
-        
+
         #monitor-bot
         self.monitor_bot_api_url: str = os.getenv("MONITOR_BOT_API_URL", "")
         self.monitor_bot_api_secret: str = os.getenv("MONITOR_BOT_API_SECRET", "")
-        
+
         #homepage
         self.homepage_api_url: str = os.getenv("HOMEPAGE_API_URL", "")
         self.homepage_api_token: str = os.getenv("HOMEPAGE_API_TOKEN", "")
         self.homepage_target_guild_id: int = int(os.getenv("HOMEPAGE_TARGET_GUILD_ID", "0"))
         self.staff_api_key: str = os.getenv("STAFF_API_KEY", "")
-        
+
         # Note通知機能
         self.note_rss_url: str = os.getenv("NOTE_RSS_URL", "https://note.com/hfs_discord/rss")
         self.note_webhook_url: str = os.getenv("NOTE_WEBHOOK_URL", "")
