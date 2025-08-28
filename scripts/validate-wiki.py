@@ -228,12 +228,12 @@ class WikiValidator:
 
             lines = content.split('\n')
             in_code_block = False
-            
+
             for line in lines:
                 stripped = line.strip()
                 if stripped.startswith('```') and not ('= "```' in line or "= '```" in line or '+ "```' in line or "+ '```" in line):
                     in_code_block = not in_code_block
-            
+
             if in_code_block:
                 self.errors.append(
                     f"Unmatched code block markers in {relative_path}"
@@ -279,11 +279,20 @@ def main():
         action="store_true",
         help="Treat warnings as errors"
     )
+    parser.add_argument(
+        "--check-commands",
+        action="store_true",
+        help="Verify that documented commands match actual bot commands"
+    )
 
     args = parser.parse_args()
 
     validator = WikiValidator(args.wiki_path)
     success = validator.validate()
+
+    if args.check_commands:
+        print("\n🔍 Command documentation verification not yet implemented")
+        print("This feature will verify that documented commands match actual bot implementation")
 
     if args.strict and validator.warnings:
         success = False

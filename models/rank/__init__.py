@@ -10,13 +10,13 @@ __author__ = "HFS Homepage Management Bot"
 
 # パッケージメタデータ
 PACKAGE_INFO = {
-    "name": "rank_system_models", 
+    "name": "rank_system_models",
     "description": "Discord.py レベリングシステム - データモデル",
     "version": __version__,
     "components": [
         "level_config - AI設定システム用モデル",
         "level_formula - カスタムレベル公式モデル",
-        "quality_analysis - AI品質分析用モデル", 
+        "quality_analysis - AI品質分析用モデル",
         "voice_activity - 音声XP・トラック管理モデル"
     ]
 }
