@@ -5,9 +5,11 @@ OpenAI Structured Outputsと連携して、自然言語の設定を
 厳密なJSON構造に変換・検証するためのデータモデル。
 """
 
-from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Union
 from enum import Enum
+from typing import Optional, Union
+
+from pydantic import BaseModel, Field, validator
+
 
 class DayOfWeek(str, Enum):
     """曜日の定義"""
@@ -18,14 +20,14 @@ class DayOfWeek(str, Enum):
     FRIDAY = "friday"
     SATURDAY = "saturday"
     SUNDAY = "sunday"
-    
+
     # 日本語対応
     WEEKDAY = "weekday"  # 平日
     WEEKEND = "weekend"  # 週末
 
 class TimeWindow(BaseModel):
     """時間帯設定"""
-    day: Union[DayOfWeek, List[DayOfWeek]] = Field(
+    day: Union[DayOfWeek, list[DayOfWeek]] = Field(
         description="対象曜日（単体または複数）"
     )
     start_time: str = Field(
@@ -33,7 +35,7 @@ class TimeWindow(BaseModel):
         pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
     )
     end_time: str = Field(
-        description="終了時刻（HH:MM形式）", 
+        description="終了時刻（HH:MM形式）",
         pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
     )
     multiplier: float = Field(
@@ -49,7 +51,7 @@ class ChannelConfig(BaseModel):
     channel_name: Optional[str] = Field(default=None, description="チャンネル名")
     multiplier: float = Field(
         default=1.0,
-        ge=0.0, 
+        ge=0.0,
         le=10.0,
         description="XP倍率"
     )
@@ -85,7 +87,7 @@ class RoleConfig(BaseModel):
 
 class SpamFilter(BaseModel):
     """スパムフィルタ設定"""
-    banned_words: List[str] = Field(
+    banned_words: list[str] = Field(
         default_factory=list,
         description="禁止単語リスト"
     )
@@ -99,7 +101,7 @@ class SpamFilter(BaseModel):
         default=2000,
         ge=1,
         le=2000,
-        description="最大文字数"  
+        description="最大文字数"
     )
     repetition_threshold: float = Field(
         default=0.8,
@@ -110,7 +112,7 @@ class SpamFilter(BaseModel):
 
 class LevelConfig(BaseModel):
     """メインレベリング設定"""
-    
+
     # 基本設定
     base_xp: int = Field(
         default=10,
@@ -124,7 +126,7 @@ class LevelConfig(BaseModel):
         le=3600,
         description="基本クールダウン（秒）"
     )
-    
+
     # 倍率・ボーナス設定
     global_multiplier: float = Field(
         default=1.0,
@@ -132,54 +134,54 @@ class LevelConfig(BaseModel):
         le=10.0,
         description="全体XP倍率"
     )
-    
+
     # チャンネル設定
-    channels: List[ChannelConfig] = Field(
+    channels: list[ChannelConfig] = Field(
         default_factory=list,
         description="チャンネル別設定"
     )
-    
+
     # ロール設定
-    roles: List[RoleConfig] = Field(
+    roles: list[RoleConfig] = Field(
         default_factory=list,
         description="ロール別設定"
     )
-    
+
     # 時間帯設定
-    time_windows: List[TimeWindow] = Field(
+    time_windows: list[TimeWindow] = Field(
         default_factory=list,
         description="時間帯別設定"
     )
-    
+
     # スパムフィルタ
     spam_filter: SpamFilter = Field(
         default_factory=SpamFilter,
         description="スパムフィルタ設定"
     )
-    
+
     # 有効/無効
     enabled: bool = Field(
         default=True,
         description="設定の有効/無効"
     )
-    
+
     @validator('base_xp')
     def validate_base_xp(cls, v):
         if v <= 0:
             raise ValueError('base_xpは1以上である必要があります')
         return v
-    
+
     @validator('channels')
     def validate_channels(cls, v):
         # チャンネル名/IDの重複チェック
         channel_ids = [c.channel_id for c in v if c.channel_id]
         channel_names = [c.channel_name for c in v if c.channel_name]
-        
+
         if len(channel_ids) != len(set(channel_ids)):
             raise ValueError('チャンネルIDが重複しています')
         if len(channel_names) != len(set(channel_names)):
             raise ValueError('チャンネル名が重複しています')
-            
+
         return v
 
 class ConfigParseResult(BaseModel):

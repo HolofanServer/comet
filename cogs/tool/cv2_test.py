@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """cogs.cv2_demo_cog – **slash‑command** examples for utils.future.cv2
 
 * discord.py ≥ 2.4 / app_commands only
@@ -7,17 +6,17 @@
 from __future__ import annotations
 
 import pathlib
-from typing import Final, Sequence
+from collections.abc import Sequence
+from typing import Final
 
 import discord
+import httpx
 from discord import app_commands
 from discord.ext import commands
-import httpx
 
-from utils.future.cv2 import CV2Error, cv2
-
-from utils.logging import setup_logging
 from utils.commands_help import is_guild_app, is_owner_app
+from utils.future.cv2 import CV2Error, cv2
+from utils.logging import setup_logging
 
 logger = setup_logging("D")
 
@@ -195,16 +194,16 @@ class CV2Demo(commands.Cog):
     @is_owner_app()
     async def cv2demo(self, interaction: discord.Interaction, url1: str = "", url2: str = "", url3: str = "", url4: str = ""):
         await interaction.response.defer(ephemeral=True)
-        
+
         # 有効な URL をフィルタリング
         media_urls = [u for u in [url1, url2, url3, url4] if u and u.startswith("http")][:4]
         file_url = url4 if url4 and url4.startswith("http") else ""
-        
+
         try:
             # 1. メディアギャラリー用とファイル用のデータを準備
             file_data = None
             file_name = None
-            
+
             if file_url:
                 try:
                     async with httpx.AsyncClient(timeout=10) as client:
@@ -216,7 +215,7 @@ class CV2Demo(commands.Cog):
                         logger.error(f"ファイル取得エラー: {resp.status_code}")
                 except Exception as e:
                     logger.error(f"ファイル取得中にエラー発生: {e}")
-            
+
             logger.info("CV2デモパネルの作成開始")
             # 2. 主要コンポーネントを作成
             components = [
@@ -224,7 +223,7 @@ class CV2Demo(commands.Cog):
                 cv2.title("CV2 総合デモパネル", level=1),
                 cv2.text("すべての CV2 コンポーネント機能を一つのパネルに表示しています。"),
                 cv2.line(),
-                
+
                 # セクションコンポーネント
                 cv2.section(
                     [
@@ -234,10 +233,10 @@ class CV2Demo(commands.Cog):
                     ],
                     accessory=cv2.button("セクションボタン", custom_id="section_demo", emoji="👍"),
                 ),
-                
+
                 # セパレータで区切り
                 cv2.separator(divider=True, spacing=2),
-                
+
                 # 選択メニュー
                 cv2.select(
                     "demo_select",
@@ -250,7 +249,7 @@ class CV2Demo(commands.Cog):
                     min_values=1,
                     max_values=2,
                 ),
-                
+
                 # ユーザー選択メニュー
                 cv2.user_select(
                     "demo_user_select",
@@ -258,7 +257,7 @@ class CV2Demo(commands.Cog):
                     min_values=0,
                     max_values=1,
                 ),
-                
+
                 # ロール選択メニュー
                 cv2.role_select(
                     "demo_role_select",
@@ -266,7 +265,7 @@ class CV2Demo(commands.Cog):
                     min_values=0,
                     max_values=1,
                 ),
-                
+
                 # ボタン行
                 cv2.row([
                     cv2.button("プライマリ", custom_id="btn_primary", style="primary", emoji="🔵"),
@@ -276,9 +275,9 @@ class CV2Demo(commands.Cog):
                     cv2.button("リンク", url="https://hfs.jp/bot", style="link", emoji="🔗"),
                 ]),
             ]
-            
+
             logger.info(f"CV2デモパネルのコンポーネント作成完了: {len(components)} 個")
-            
+
             # コンポーネントの種類を詳細に記録
             component_types = []
             for comp in components:
@@ -288,12 +287,12 @@ class CV2Demo(commands.Cog):
                     component_types.append(f"{type(comp).__name__}")
                 else:
                     component_types.append(f"{type(comp).__name__}")
-            
+
             logger.info(f"コンポーネント種類: {', '.join(component_types)}")
-            
+
             # まずメディアやファイルなしで試す
             logger.info("コンポーネントのみで送信試行")
-            
+
             # UIコンポーネントのみで送信
             logger.info("UIコンポーネントのみで送信試行")
             ui_components = components.copy()
@@ -303,13 +302,13 @@ class CV2Demo(commands.Cog):
                 single_container=True
             )
             logger.info(f"UIコンポーネントのみの送信成功: {test_message}")
-            
+
             # 3. 送信実行 - 単一コンテナモードで送信
             logger.info(f"CV2送信開始: media_urls={bool(media_urls)}, file_data={bool(file_data)}, components={len(components)}個")
             try:
                 # 単一コンテナモードを有効化
                 logger.info("単一コンテナモードで送信します")
-                
+
                 # コンポーネントの種類を詳細に記録
                 component_types = []
                 for comp in components:
@@ -319,9 +318,9 @@ class CV2Demo(commands.Cog):
                         component_types.append(f"{type(comp).__name__}")
                     else:
                         component_types.append(f"{type(comp).__name__}")
-                
+
                 logger.info(f"コンポーネント種類: {', '.join(component_types)}")
-                
+
                 # すべてを含めて送信
                 logger.info("メディア・ファイル含む完全版を送信")
                 await cv2.send(
@@ -339,13 +338,13 @@ class CV2Demo(commands.Cog):
                     result_msg += f"\nメディアギャラリー: {len(media_urls)} 個の画像"
                 if file_data:
                     result_msg += f"\nFileコンポーネント: {file_name}"
-                    
+
                 await interaction.followup.send(result_msg, ephemeral=True)
                 logger.info("CV2送信成功")
             except Exception as send_error:
                 logger.error(f"CV2.send() 中にエラー発生: {send_error}")
                 await interaction.followup.send(f"CV2デモパネルの送信中にエラーが発生しました: {send_error}", ephemeral=True)
-            
+
         except CV2Error as e:
             await self._err(interaction, e)
         except Exception as e:
@@ -365,10 +364,10 @@ class CV2Demo(commands.Cog):
     @is_owner_app()
     async def cv2multi(self, interaction: discord.Interaction, url1: str = "", url2: str = ""):
         await interaction.response.defer(ephemeral=True)
-        
+
         # 有効な URL をフィルタリング
         media_urls = [u for u in [url1, url2] if u and u.startswith("http")][:2]
-        
+
         try:
             # ボタンとテキストのコンテナ
             container1 = cv2.container([
@@ -376,7 +375,7 @@ class CV2Demo(commands.Cog):
                 cv2.text("このメッセージは複数の別々のコンテナで構成されています。"),
                 cv2.text("シンプルなコンテナで構成されています。"),
             ])
-            
+
             # ボタン行のコンテナ
             container2 = cv2.container([
                 cv2.title("ボタン行", level=2),
@@ -386,7 +385,7 @@ class CV2Demo(commands.Cog):
                     cv2.button("サクセス", custom_id="btn_success_multi", style="success", emoji="🟢"),
                 ]),
             ])
-            
+
             # セレクトメニューのコンテナ
             container3 = cv2.container([
                 cv2.title("選択メニュー", level=2),
@@ -399,36 +398,36 @@ class CV2Demo(commands.Cog):
                     placeholder="選択してください",
                 ),
             ])
-            
+
             # 全コンテナの送信
             components = [container1, container2, container3]
-            
+
             if media_urls:
                 media_container = cv2.container([cv2.text("メディアギャラリー"), cv2.line()])
                 components.append(media_container)
-            
+
             logger.info(f"CV2マルチコンテナ送信開始: コンテナ数={len(components)}")
-            
+
             await cv2.send(
                 interaction.channel_id,  # type: ignore[attr-defined]
                 components=components,
                 media_urls=media_urls if media_urls else None,
                 single_container=False  # 複数コンテナモードを指定
             )
-            
+
             result_msg = "複数コンテナモードのデモパネルを送信しました ✅\n"
             if media_urls:
                 result_msg += f"\nメディアギャラリー: {len(media_urls)} 個の画像"
-                
+
             await interaction.followup.send(result_msg, ephemeral=True)
             logger.info("CV2マルチコンテナ送信成功")
-            
+
         except CV2Error as e:
             await self._err(interaction, e)
         except Exception as e:
             logger.error(f"CV2マルチコンテナ送信中にエラー発生: {e}")
             await interaction.followup.send(f"CV2デモパネルの送信中にエラーが発生しました: {e}", ephemeral=True)
-    
+
     # -----------------------------------------------------------------
     # Demo 3: メディアギャラリー特化 --------------------------------
     # -----------------------------------------------------------------
@@ -443,14 +442,14 @@ class CV2Demo(commands.Cog):
     @is_owner_app()
     async def cv2media4(self, interaction: discord.Interaction, url1: str = "", url2: str = "", url3: str = "", url4: str = ""):
         await interaction.response.defer(ephemeral=True)
-        
+
         # 有効な URL をフィルタリング
         media_urls = [u for u in [url1, url2, url3, url4] if u and u.startswith("http")][:4]
-        
+
         if not media_urls:
             await interaction.followup.send("有効なURLを少なくとも1つ指定してください。", ephemeral=True)
             return
-        
+
         try:
             # メディアギャラリーとテキストのコンテナ
             components = [
@@ -462,22 +461,22 @@ class CV2Demo(commands.Cog):
                     cv2.button("他の画像を表示", custom_id="media4_refresh", emoji="🔄"),
                 ])
             ]
-            
+
             logger.info(f"CV2メディアギャラリー送信開始: 画像数={len(media_urls)}")
-            
+
             await cv2.send(
                 interaction.channel_id,  # type: ignore[attr-defined]
                 components=components,
                 media_urls=media_urls,
                 single_container=True
             )
-            
+
             await interaction.followup.send(f"メディアギャラリーデモを送信しました ✅\n{len(media_urls)} 個の画像を表示しています", ephemeral=True)
             logger.info("CV2メディアギャラリー送信成功")
-            
+
         except CV2Error as e:
             await self._err(interaction, e)
-    
+
     # -----------------------------------------------------------------
     # Demo 4: UI要素特化 -------------------------------------------
     # -----------------------------------------------------------------
@@ -486,13 +485,13 @@ class CV2Demo(commands.Cog):
     @is_owner_app()
     async def cv2ui(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        
+
         try:
             components = [
                 cv2.title("CV2 UI要素デモ", level=1),
                 cv2.text("このデモではさまざまなボタンや選択メニューなどのUI要素を表示しています。"),
                 cv2.line(),
-                
+
                 # セクション
                 cv2.section(
                     [
@@ -502,9 +501,9 @@ class CV2Demo(commands.Cog):
                     ],
                     accessory=cv2.button("セクションボタン", custom_id="section_ui", emoji="👍"),
                 ),
-                
+
                 cv2.separator(divider=True, spacing=2),
-                
+
                 # ボタン行 - スタイルごと
                 cv2.title("ボタンスタイル全種類", level=2),
                 cv2.row([
@@ -516,9 +515,9 @@ class CV2Demo(commands.Cog):
                     cv2.button("デンジャー", custom_id="ui_danger", style="danger"),
                     cv2.button("リンク", url="https://hfs.jp/bot", style="link"),
                 ]),
-                
+
                 cv2.separator(divider=True, spacing=1),
-                
+
                 # 選択メニュー各種
                 cv2.title("選択メニュー全種類", level=2),
                 cv2.select(
@@ -531,39 +530,39 @@ class CV2Demo(commands.Cog):
                     min_values=1,
                     max_values=2,
                 ),
-                
+
                 cv2.user_select(
                     "ui_user_select",
                     placeholder="ユーザー選択メニュー",
                 ),
-                
+
                 cv2.role_select(
                     "ui_role_select",
                     placeholder="ロール選択メニュー",
                 ),
-                
+
                 cv2.channel_select(
                     "ui_channel_select",
                     placeholder="チャンネル選択メニュー",
                 ),
-                
+
                 cv2.mentionable_select(
                     "ui_mentionable_select",
                     placeholder="メンション可能選択メニュー",
                 ),
             ]
-            
+
             logger.info("CV2 UI要素デモ送信開始")
-            
+
             await cv2.send(
                 interaction.channel_id,  # type: ignore[attr-defined]
                 components=components,
                 single_container=True
             )
-            
+
             await interaction.followup.send("UI要素デモを送信しました ✅", ephemeral=True)
             logger.info("CV2 UI要素デモ送信成功")
-            
+
         except CV2Error as e:
             await self._err(interaction, e)
 

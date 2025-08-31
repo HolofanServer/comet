@@ -6,20 +6,21 @@ GPT-5/GPT-5-miniとStructured Outputsを活用して、
 """
 
 import json
-from typing import Optional, Dict, Any
+from typing import Any, Optional
+
 from openai import AsyncOpenAI
 from pydantic import ValidationError
 
-from models.rank.level_config import LevelConfig, ConfigParseResult
-from utils.logging import setup_logging
 from config.setting import get_settings
+from models.rank.level_config import ConfigParseResult, LevelConfig
+from utils.logging import setup_logging
 
 logger = setup_logging("AI_CONFIG")
 settings = get_settings()
 
 class AIConfigParser:
     """OpenAI APIを使用した自然言語設定解析クラス"""
-    
+
     def __init__(self):
         """初期化 - APIキーの設定"""
         api_key = settings.etc_api_openai_api_key
@@ -28,7 +29,7 @@ class AIConfigParser:
             self.client = None
         else:
             self.client = AsyncOpenAI(api_key=api_key)
-        
+
         # システムプロンプト
         self.system_prompt = """あなたはDiscordレベリングシステムの設定を管理するエキスパートです。
 
@@ -37,7 +38,7 @@ class AIConfigParser:
 **重要な変換ルール:**
 1. 曜日の日本語対応：
    - "平日" → "weekday"
-   - "週末" → "weekend" 
+   - "週末" → "weekend"
    - "月曜" → "monday"
    - "火曜" → "tuesday"
    - etc.
@@ -64,19 +65,19 @@ class AIConfigParser:
 **出力形式:** 必ずJSON形式で、LevelConfigスキーマに従って出力してください。"""
 
     async def parse_natural_language(
-        self, 
+        self,
         natural_input: str,
         use_gpt5: bool = True,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[dict[str, Any]] = None
     ) -> ConfigParseResult:
         """
         自然言語をLevelConfig JSONに変換
-        
+
         Args:
             natural_input: 自然言語の設定指示
             use_gpt5: True=GPT-5使用、False=GPT-5-mini使用
             context: 追加コンテキスト（チャンネル情報など）
-        
+
         Returns:
             ConfigParseResult: 解析結果
         """
@@ -87,14 +88,14 @@ class AIConfigParser:
                 original_input=natural_input,
                 confidence=0.0
             )
-        
+
         try:
             # モデル選択
             model = "gpt-5" if use_gpt5 else "gpt-5-mini"
-            
+
             # プロンプト構築
             user_prompt = self._build_user_prompt(natural_input, context)
-            
+
             # OpenAI API呼び出し
             response = await self.client.chat.completions.create(
                 model=model,
@@ -106,17 +107,17 @@ class AIConfigParser:
                 temperature=1.0,  # gpt-5/miniモデルはtemperature=1のみサポート
                 max_completion_tokens=4000
             )
-            
+
             # レスポンス解析
             content = response.choices[0].message.content
             logger.info(f"AI応答: {content[:200]}...")
-            
+
             # JSON解析
             config_dict = json.loads(content)
-            
+
             # Pydantic検証
             level_config = LevelConfig.model_validate(config_dict)
-            
+
             # 成功
             return ConfigParseResult(
                 success=True,
@@ -124,7 +125,7 @@ class AIConfigParser:
                 confidence=0.9,  # GPTの出力は一般的に高信頼度
                 original_input=natural_input
             )
-            
+
         except ValidationError as e:
             logger.error(f"Pydantic検証エラー: {e}")
             return ConfigParseResult(
@@ -133,25 +134,25 @@ class AIConfigParser:
                 original_input=natural_input,
                 confidence=0.0
             )
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"JSON解析エラー: {e}")
             # GPT-5-miniでリトライ
             if use_gpt5:
                 logger.info("GPT-5-miniでリトライします...")
                 return await self.parse_natural_language(
-                    natural_input, 
-                    use_gpt5=False, 
+                    natural_input,
+                    use_gpt5=False,
                     context=context
                 )
-            
+
             return ConfigParseResult(
                 success=False,
                 error_message="AIの応答を解析できませんでした。",
                 original_input=natural_input,
                 confidence=0.0
             )
-            
+
         except Exception as e:
             logger.error(f"予期しないエラー: {e}")
             return ConfigParseResult(
@@ -162,54 +163,54 @@ class AIConfigParser:
             )
 
     def _build_user_prompt(
-        self, 
-        natural_input: str, 
-        context: Optional[Dict[str, Any]] = None
+        self,
+        natural_input: str,
+        context: Optional[dict[str, Any]] = None
     ) -> str:
         """ユーザープロンプトの構築"""
-        
+
         prompt = f"以下の自然言語設定をLevelConfig JSONに変換してください:\n\n{natural_input}\n\n"
-        
+
         # コンテキスト情報の追加
         if context:
             prompt += "**利用可能な情報:**\n"
-            
+
             if "channels" in context:
                 channels = context["channels"]
                 prompt += f"サーバーのチャンネル: {', '.join(channels)}\n"
-            
+
             if "roles" in context:
                 roles = context["roles"]
                 prompt += f"サーバーのロール: {', '.join(roles)}\n"
-            
+
             prompt += "\n"
-        
+
         prompt += """**出力要件:**
 - 必ずLevelConfigスキーマに準拠したJSONで出力
-- 不明確な場合は安全な初期値を使用  
+- 不明確な場合は安全な初期値を使用
 - 日本語の曜日・時刻表記を正確に変換
 - チャンネル名やロール名は正確にマッピング
 
 JSON:"""
-        
+
         return prompt
 
     async def explain_config(self, config: LevelConfig) -> str:
         """
         設定内容を日本語で説明
-        
+
         Args:
             config: 設定オブジェクト
-            
+
         Returns:
             str: 日本語説明文
         """
         if not self.client:
             return "AI説明機能が利用できません。"
-        
+
         try:
             config_json = config.model_dump_json(indent=2, ensure_ascii=False)
-            
+
             prompt = f"""以下のDiscordレベリングシステム設定を、ユーザーフレンドリーな日本語で説明してください:
 
 {config_json}
@@ -228,9 +229,9 @@ JSON:"""
                 temperature=1.0,  # gpt-5/miniモデルはtemperature=1のみサポート
                 max_completion_tokens=1000
             )
-            
+
             return response.choices[0].message.content
-            
+
         except Exception as e:
             logger.error(f"設定説明生成エラー: {e}")
             return "設定の説明生成に失敗しました。"
@@ -240,15 +241,15 @@ ai_parser = AIConfigParser()
 
 async def parse_config_natural_language(
     natural_input: str,
-    context: Optional[Dict[str, Any]] = None
+    context: Optional[dict[str, Any]] = None
 ) -> ConfigParseResult:
     """
     便利関数：自然言語設定を解析
-    
+
     Args:
         natural_input: 自然言語入力
         context: コンテキスト情報
-        
+
     Returns:
         ConfigParseResult: 解析結果
     """
@@ -257,10 +258,10 @@ async def parse_config_natural_language(
 async def explain_config_japanese(config: LevelConfig) -> str:
     """
     便利関数：設定を日本語で説明
-    
+
     Args:
         config: 設定オブジェクト
-        
+
     Returns:
         str: 日本語説明
     """
