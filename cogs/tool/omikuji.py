@@ -1,16 +1,15 @@
-import discord
-from discord.ext import commands
-
 import asyncio
 import random
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Optional
 
-from utils.logging import setup_logging
-from utils.commands_help import is_guild, is_owner, is_booster, log_commands
-from utils.database import execute_query
+import discord
+from discord.ext import commands
 
 from config.setting import get_settings
+from utils.commands_help import is_booster, is_guild, is_owner, log_commands
+from utils.database import execute_query
+from utils.logging import setup_logging
 
 settings = get_settings()
 
@@ -18,7 +17,7 @@ logger = setup_logging("D")
 
 class HololiveOmikujiCog(commands.Cog):
     """ホロライブおみくじ機能を提供するCogクラス"""
-    
+
     def __init__(self, bot):
         self.bot = bot
         self.streak_reset_enabled = True
@@ -47,7 +46,7 @@ class HololiveOmikujiCog(commands.Cog):
         except Exception as e:
             logger.error(f"おみくじ履歴取得エラー: {e}")
             return None
-    
+
     async def get_user_last_fortune(self, user_id: int, guild_id: int) -> Optional[str]:
         """ユーザーの最後の運勢日付を取得"""
         try:
@@ -59,8 +58,8 @@ class HololiveOmikujiCog(commands.Cog):
         except Exception as e:
             logger.error(f"運勢履歴取得エラー: {e}")
             return None
-    
-    async def get_user_streak(self, user_id: int, guild_id: int) -> Dict[str, int]:
+
+    async def get_user_streak(self, user_id: int, guild_id: int) -> dict[str, int]:
         """ユーザーのストリーク情報を取得"""
         try:
             result = await execute_query(
@@ -77,7 +76,7 @@ class HololiveOmikujiCog(commands.Cog):
         except Exception as e:
             logger.error(f"ストリーク取得エラー: {e}")
             return {'streak': 0, 'max_streak': 0, 'last_date': None}
-    
+
     async def update_user_streak(self, user_id: int, guild_id: int, streak: int, draw_date) -> None:
         """ユーザーのストリーク情報を更新"""
         try:
@@ -86,7 +85,7 @@ class HololiveOmikujiCog(commands.Cog):
                 INSERT INTO user_omikuji_streaks (user_id, guild_id, current_streak, max_streak, last_draw_date)
                 VALUES ($1, $2, $3, $3, $4)
                 ON CONFLICT (user_id, guild_id)
-                DO UPDATE SET 
+                DO UPDATE SET
                     current_streak = $3,
                     max_streak = GREATEST(user_omikuji_streaks.max_streak, $3),
                     last_draw_date = $4,
@@ -96,8 +95,8 @@ class HololiveOmikujiCog(commands.Cog):
             )
         except Exception as e:
             logger.error(f"ストリーク更新エラー: {e}")
-    
-    async def get_fortunes(self) -> List[Dict]:
+
+    async def get_fortunes(self) -> list[dict]:
         """運勢マスターデータを取得"""
         try:
             result = await execute_query(
@@ -108,8 +107,8 @@ class HololiveOmikujiCog(commands.Cog):
         except Exception as e:
             logger.error(f"運勢マスター取得エラー: {e}")
             return []
-    
-    async def save_omikuji_result(self, user_id: int, guild_id: int, fortune_id: int, 
+
+    async def save_omikuji_result(self, user_id: int, guild_id: int, fortune_id: int,
                                   is_super_rare: bool, is_chance: bool, streak: int, draw_date) -> None:
         """おみくじ結果をDBに保存"""
         try:
@@ -122,7 +121,7 @@ class HololiveOmikujiCog(commands.Cog):
             )
         except Exception as e:
             logger.error(f"おみくじ結果保存エラー: {e}")
-    
+
     async def save_fortune_result(self, user_id: int, guild_id: int, fortune_level: str,
                                   lucky_color: str, lucky_item: str, lucky_app: str, draw_date) -> None:
         """運勢結果をDBに保存"""
@@ -136,7 +135,7 @@ class HololiveOmikujiCog(commands.Cog):
             )
         except Exception as e:
             logger.error(f"運勢結果保存エラー: {e}")
-    
+
     async def update_daily_stats(self, guild_id: int, stat_date, is_omikuji: bool = True) -> None:
         """日次統計を更新"""
         try:
@@ -146,7 +145,7 @@ class HololiveOmikujiCog(commands.Cog):
                     INSERT INTO omikuji_daily_stats (guild_id, stat_date, omikuji_count, unique_users)
                     VALUES ($1, $2, 1, 1)
                     ON CONFLICT (guild_id, stat_date)
-                    DO UPDATE SET 
+                    DO UPDATE SET
                         omikuji_count = omikuji_daily_stats.omikuji_count + 1,
                         updated_at = CURRENT_TIMESTAMP
                     """,
@@ -158,7 +157,7 @@ class HololiveOmikujiCog(commands.Cog):
                     INSERT INTO omikuji_daily_stats (guild_id, stat_date, fortune_count, unique_users)
                     VALUES ($1, $2, 1, 1)
                     ON CONFLICT (guild_id, stat_date)
-                    DO UPDATE SET 
+                    DO UPDATE SET
                         fortune_count = omikuji_daily_stats.fortune_count + 1,
                         updated_at = CURRENT_TIMESTAMP
                     """,
@@ -176,7 +175,7 @@ class HololiveOmikujiCog(commands.Cog):
             sleep_seconds = (next_midnight_jst - now_jst).total_seconds()
 
             await asyncio.sleep(sleep_seconds)
-            
+
             # DB版では自動的に日付で制御されるため、特別な処理は不要
             logger.info("ホロ神社の深夜リセットが完了しました")
 
@@ -209,7 +208,7 @@ class HololiveOmikujiCog(commands.Cog):
         # ストリーク情報を取得・更新
         streak_data = await self.get_user_streak(user_id, guild_id)
         current_streak = streak_data['streak']
-        
+
         if streak_data['last_date']:
             last_date = datetime.fromisoformat(streak_data['last_date']).date()
             if user_id == special_user_id:
@@ -250,16 +249,16 @@ class HololiveOmikujiCog(commands.Cog):
 
         # 重み付きランダム選択
         weights = [f['weight'] + (current_streak // 3) if f['is_special'] else f['weight'] for f in fortunes_data]
-        
+
         selected_fortune_data = random.choices(fortunes_data, weights=weights, k=1)[0]
         fortune_name = selected_fortune_data['display_name']
         fortune_id = selected_fortune_data['id']
-        
+
         # 特殊演出の判定
         is_super_rare = random.randint(1, 100) <= 5
         is_chance = random.randint(1, 100) <= 20
         is_rich_animation = random.randint(1, 100) <= 10
-        
+
         if is_super_rare:
             fortune_name = "✨✨ホロ超大吉✨✨"
 
@@ -292,7 +291,7 @@ class HololiveOmikujiCog(commands.Cog):
 
         embed.description += f"\n\nおみくじには**{fortune_name}**と書かれていた"
         await fm.edit(embed=embed)
-        
+
         # おみくじ結果をDBに保存
         await self.save_omikuji_result(user_id, guild_id, fortune_id, is_super_rare, is_chance, current_streak, today_jst)
         await self.update_daily_stats(guild_id, today_jst, is_omikuji=True)
@@ -384,21 +383,21 @@ class HololiveOmikujiCog(commands.Cog):
         fortune = selected_tarot["name"]
         fortune_meaning = selected_tarot["meaning"]
         tarot_color = int(selected_tarot["color"].replace("#", ""), 16)
-        
+
         # サイバー関連のラッキーアイテム
         cyber_lucky_items = [
             "タロットカード", "水晶玉", "占い本", "美少女ゲーム", "たい焼き", "アニメグッズ",
             "ゲーミングキーボード", "VRヘッドセット", "式神お守り", "電脳アクセサリー",
             "サイバーペンダント", "デジタル数珠", "ホログラム御札"
         ]
-        
+
         # サイバー関連のラッキーアプリ
         cyber_lucky_apps = [
             "YouTube", "Discord", "Twitter(X)", "Steam", "Spotify", "Netflix",
             "占いアプリ", "タロットアプリ", "瞑想アプリ", "アニメ配信アプリ",
             "ゲーム配信アプリ", "VR占いアプリ"
         ]
-        
+
         lucky_color = random.choice(self.CYBER_COLORS)
         lucky_item = random.choice(cyber_lucky_items)
         lucky_app = random.choice(cyber_lucky_apps)
@@ -417,18 +416,18 @@ class HololiveOmikujiCog(commands.Cog):
             await fm.edit(embed=embed)
 
         await asyncio.sleep(1)
-        
+
         # タロット占い結果の表示
         embed.description += f"\n\n🔮 引かれたタロットカード: **{fortune}**"
         embed.description += f"\n💫 カードの意味: {fortune_meaning}"
-        
+
         embed.add_field(name="🎨 ラッキーカラー", value=lucky_color, inline=True)
-        embed.add_field(name="🎁 ラッキーアイテム", value=lucky_item, inline=True) 
+        embed.add_field(name="🎁 ラッキーアイテム", value=lucky_item, inline=True)
         embed.add_field(name="📱 ラッキーアプリ", value=lucky_app, inline=True)
 
         embed.set_footer(text="みおしゃ: 「素敵な一日になりますように...♪」\nまた占いに来てくださいね！")
         await fm.edit(embed=embed)
-        
+
         # 運勢結果をDBに保存
         await self.save_fortune_result(user_id, guild_id, fortune, lucky_color, lucky_item, lucky_app, today_jst)
         await self.update_daily_stats(guild_id, today_jst, is_omikuji=False)
@@ -438,26 +437,26 @@ class HololiveOmikujiCog(commands.Cog):
     async def ranking(self, ctx) -> None:
         """電脳桜神社参拝の連続記録ランキングを表示するコマンドです。"""
         await ctx.defer()
-        
+
         try:
             # DBから上位5名のストリーク情報を取得
             top_users = await execute_query(
                 """
-                SELECT user_id, current_streak, max_streak 
-                FROM user_omikuji_streaks 
+                SELECT user_id, current_streak, max_streak
+                FROM user_omikuji_streaks
                 WHERE guild_id = $1 AND current_streak > 0
-                ORDER BY current_streak DESC, max_streak DESC 
+                ORDER BY current_streak DESC, max_streak DESC
                 LIMIT 5
                 """,
                 ctx.guild.id, fetch_type='all'
             )
-            
+
             e = discord.Embed(
-                title="🏆 電脳桜神社 連続参拝ランキング", 
+                title="🏆 電脳桜神社 連続参拝ランキング",
                 color=0xFF69B4,
                 description="みこちとホロメンたちも応援していますだにぇ！"
             )
-            
+
             if not top_users:
                 e.add_field(
                     name="まだランキングデータがありません",
@@ -474,10 +473,10 @@ class HololiveOmikujiCog(commands.Cog):
                             value=f"連続参拝: {user_data['current_streak']}日\n最高記録: {user_data['max_streak']}日",
                             inline=False
                         )
-            
+
             e.set_footer(text="毎日電脳桜神社に参拝して記録を伸ばそうだにぇ！")
             await ctx.send(embed=e)
-            
+
         except Exception as e:
             logger.error(f"ランキング取得エラー: {e}")
             await ctx.send("申し訳ございません。ランキングの取得中にエラーが発生しました。")
@@ -520,7 +519,7 @@ class HololiveOmikujiCog(commands.Cog):
         embed.description += f"\n\nデジタルおみくじには**{fortune}**と表示された"
         embed.set_footer(text="電脳桜神社のおみくじをありがとうございますだにぇ！\n連続参拝: N/A | デバッグモード")
         await fm.edit(embed=embed)
-        
+
         if "電脳大吉" in fortune:
             await asyncio.sleep(1)
             embed.description += "\n\nみこちとホロメンたちからの特別な祝福が届いていますだにぇ..."
@@ -532,18 +531,18 @@ class HololiveOmikujiCog(commands.Cog):
     async def add_fortune(self, ctx, fortune: str) -> None:
         """電脳桜神社のおみくじに新しい運勢を追加するコマンドです。"""
         await ctx.defer()
-        
+
         try:
             # 既存の運勢をチェック
             existing = await execute_query(
                 "SELECT id FROM omikuji_fortunes WHERE name = $1 OR display_name = $1",
                 fortune, fetch_type='row'
             )
-            
+
             if existing:
                 await ctx.send(f"「{fortune}」はすでにホロ神社のおみくじに存在します。")
                 return
-            
+
             # 新しい運勢を追加
             await execute_query(
                 """
@@ -552,10 +551,10 @@ class HololiveOmikujiCog(commands.Cog):
                 """,
                 fortune.lower().replace(' ', '_'), fortune, fetch_type='status'
             )
-            
+
             await ctx.send(f"✨ 「{fortune}」を電脳桜神社のおみくじに追加しましただにぇ！")
             logger.info(f"User {ctx.author.id} added fortune: {fortune}")
-            
+
         except Exception as e:
             logger.error(f"運勢追加エラー: {e}")
             await ctx.send("申し訳ございません。運勢の追加中にエラーが発生しました。")
@@ -566,27 +565,27 @@ class HololiveOmikujiCog(commands.Cog):
     async def remove_fortune(self, ctx, fortune: str) -> None:
         """電脳桜神社のおみくじから運勢を削除するコマンドです。"""
         await ctx.defer()
-        
+
         try:
             # 既存の運勢をチェック
             existing = await execute_query(
                 "SELECT id FROM omikuji_fortunes WHERE name = $1 OR display_name = $1",
                 fortune, fetch_type='row'
             )
-            
+
             if not existing:
                 await ctx.send(f"「{fortune}」は電脳桜神社のおみくじに存在しませんだにぇ。")
                 return
-            
+
             # 運勢を削除
             await execute_query(
                 "DELETE FROM omikuji_fortunes WHERE name = $1 OR display_name = $1",
                 fortune, fetch_type='status'
             )
-            
+
             await ctx.send(f"🗑️ 「{fortune}」を電脳桜神社のおみくじから削除しましただにぇ。")
             logger.info(f"User {ctx.author.id} removed fortune: {fortune}")
-            
+
         except Exception as e:
             logger.error(f"運勢削除エラー: {e}")
             await ctx.send("申し訳ございません。運勢の削除中にエラーが発生しました。")
@@ -607,13 +606,13 @@ class HololiveOmikujiCog(commands.Cog):
     async def list_fortunes(self, ctx) -> None:
         """電脳桜神社のおみくじ運勢一覧を表示するコマンドです。"""
         await ctx.defer()
-        
+
         try:
             fortunes = await execute_query(
                 "SELECT display_name, description, is_special FROM omikuji_fortunes ORDER BY display_name",
                 fetch_type='all'
             )
-            
+
             if not fortunes:
                 fortune_list = "現在、電脳桜神社には運勢が登録されていませんだにぇ。"
             else:
@@ -622,15 +621,15 @@ class HololiveOmikujiCog(commands.Cog):
                     special_mark = "✨" if fortune[2] else "📜"
                     fortune_lines.append(f"{special_mark} {fortune[0]} - {fortune[1]}")
                 fortune_list = "\n".join(fortune_lines)
-            
+
             embed = discord.Embed(
-                title="🌸 電脳桜神社 運勢一覧 🌸", 
-                description=fortune_list, 
+                title="🌸 電脳桜神社 運勢一覧 🌸",
+                description=fortune_list,
                 color=0xFF69B4
             )
             embed.set_footer(text="みこちとホロメンたちが見守る電脳の運勢たちだにぇ")
             await ctx.send(embed=embed)
-            
+
         except Exception as e:
             logger.error(f"運勢一覧取得エラー: {e}")
             await ctx.send("申し訳ございません。運勢一覧の取得中にエラーが発生しました。")

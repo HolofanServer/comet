@@ -1,11 +1,12 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
 import asyncio
 import io
 import time
 from collections import defaultdict
-from typing import Dict, List, Set, Optional
+from typing import Optional
+
+import discord
+from discord import app_commands
+from discord.ext import commands
 
 from utils.commands_help import is_owner, log_commands
 from utils.logging import setup_logging
@@ -17,14 +18,14 @@ class ThreadActionView(discord.ui.View):
         super().__init__(timeout=None)
         self.thread = thread
         self.original_message = original_message
-        self.delete_votes: Dict[str, Set[discord.Member]] = defaultdict(set)
-        self.close_votes: Dict[str, Set[discord.Member]] = defaultdict(set)
+        self.delete_votes: dict[str, set[discord.Member]] = defaultdict(set)
+        self.close_votes: dict[str, set[discord.Member]] = defaultdict(set)
         self.required_votes: int = 3
 
     @discord.ui.button(label="メッセージ消去", style=discord.ButtonStyle.danger)
     async def delete_message(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_id = str(interaction.user.id)
-        
+
         for votes in self.delete_votes.values():
             if interaction.user in votes and str(interaction.user.id) != user_id:
                 await interaction.response.send_message("既に投票しています。", ephemeral=True)
@@ -48,7 +49,7 @@ class ThreadActionView(discord.ui.View):
     @discord.ui.button(label="対応終了", style=discord.ButtonStyle.secondary)
     async def close_thread(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_id = str(interaction.user.id)
-        
+
         for votes in self.close_votes.values():
             if interaction.user in votes and str(interaction.user.id) != user_id:
                 await interaction.response.send_message("既に投票しています。", ephemeral=True)
@@ -73,7 +74,7 @@ class Announcement(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._announcement_views = {}
-        self._thread_views: Dict[int, ThreadActionView] = {}
+        self._thread_views: dict[int, ThreadActionView] = {}
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -104,11 +105,11 @@ class Announcement(commands.Cog):
             embed.add_field(name="実行者", value=f"{message.author.mention} (`{message.author.display_name}`)", inline=False)
 
             votes_info = ""
-            for user_id, voters in view.delete_votes.items():
+            for _user_id, voters in view.delete_votes.items():
                 if voters:
                     voters_text = ", ".join([f"`{voter.display_name}`" for voter in voters])
                     votes_info += f"\n• {voters_text}"
-            
+
             if votes_info:
                 embed.add_field(name="現在の投票状況", value=votes_info, inline=False)
             else:
@@ -126,11 +127,11 @@ class Announcement(commands.Cog):
             embed.add_field(name="実行者", value=f"{message.author.mention} (`{message.author.display_name}`)", inline=False)
 
             votes_info = ""
-            for user_id, voters in view.close_votes.items():
+            for _user_id, voters in view.close_votes.items():
                 if voters:
                     voters_text = ", ".join([f"`{voter.display_name}`" for voter in voters])
                     votes_info += f"\n• {voters_text}"
-            
+
             if votes_info:
                 embed.add_field(name="現在の投票状況", value=votes_info, inline=False)
             else:
@@ -196,7 +197,7 @@ class Announcement(commands.Cog):
         view = AnnouncementView(channel, embed)
         await interaction.response.send_message(embed=embed, view=view)
         logger.info(f"Announcement prepared for channel: {channel.name} with template: {template.value}")
-        
+
     @app_commands.command(name="send_announcement", description="BOT経由のお知らせを送信するコマンド")
     @app_commands.describe(channel="通知を送信するチャンネル")
     @is_owner()
@@ -268,7 +269,7 @@ class SimpleAnnouncementView(discord.ui.View):
         self.channel = channel
         self.message: str = ""
         self.original_message: Optional[discord.Message] = None
-        self.files: List[discord.File] = []
+        self.files: list[discord.File] = []
         self.view_id: str = view_id
 
     async def on_timeout(self):
@@ -291,18 +292,18 @@ class SimpleAnnouncementView(discord.ui.View):
                     if role:
                         converted_words.append(role.mention)
                         continue
-                    
+
                     member = discord.utils.get(self.channel.guild.members, display_name=mention_name)
                     if member:
                         converted_words.append(member.mention)
                         continue
-                    
+
                     converted_words.append(word)
                 else:
                     converted_words.append(word)
-            
+
             converted_lines.append(' '.join(converted_words))
-        
+
         return '\n'.join(converted_lines)
 
     @discord.ui.button(label="送信", style=discord.ButtonStyle.green)
@@ -310,17 +311,17 @@ class SimpleAnnouncementView(discord.ui.View):
         # メッセージ内容を取得し、メンションを変換
         message_content = self.message.split("\n\n添付ファイル:")[0]
         converted_content = await self.convert_mentions(message_content)
-        
+
         # シンプルにメッセージと添付ファイルを送信
         await self.channel.send(content=converted_content, files=self.files)
-        
+
         # ボタンを無効化
         for item in self.children:
             item.disabled = True
         await interaction.message.edit(view=self)
         await interaction.response.send_message("メッセージを送信しました！", ephemeral=True)
         logger.info(f"Simple announcement sent to channel: {self.channel.name}")
-        
+
         # ビューをクリーンアップ
         if hasattr(self.bot.cogs['Announcement'], '_announcement_views'):
             if self.view_id in self.bot.cogs['Announcement']._announcement_views:
@@ -351,7 +352,7 @@ class SimpleAnnouncementView(discord.ui.View):
                 timeout=60.0,
                 check=lambda m: m.author == interaction.user and m.channel == interaction.channel and m.attachments
             )
-            
+
             for attachment in message.attachments:
                 if attachment.size > self.MAX_FILE_SIZE:
                     await interaction.followup.send(f"ファイルサイズは25MB以下にしてください。\n{attachment.filename}: {attachment.size / 1024 / 1024:.1f}MB", ephemeral=True)
@@ -363,21 +364,21 @@ class SimpleAnnouncementView(discord.ui.View):
                 file_data = await attachment.read()
                 self.files.append(discord.File(io.BytesIO(file_data), filename=attachment.filename))
                 file_names.append(f"`{attachment.filename}`")
-            
+
             files_info = "\n\n添付ファイル:\n" + "\n".join(file_names)
             if not self.message.endswith(files_info):
                 self.message = self.message.split("\n\n添付ファイル:")[0] + files_info
-            
+
             await message.delete()
-            
+
             if len(self.files) >= self.MAX_FILES:
                 for item in self.children:
                     if item.label == "ファイル添付":
                         item.disabled = True
-            
+
             await self.original_message.edit(content=self.message, view=self)
             await interaction.followup.send(f"ファイルが添付されました。(現在: {len(self.files)}/{self.MAX_FILES}個)", ephemeral=True)
-            
+
         except asyncio.TimeoutError:
             await interaction.followup.send("タイムアウトしました。もう一度お試しください。", ephemeral=True)
 
