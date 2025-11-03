@@ -114,7 +114,8 @@ class StaffManager(commands.Cog):
             role_priority = {
                 "Administrator": 1,
                 "Moderator": 2,
-                "Staff": 3
+                "Staff": 3,
+                "Community Mod": 4
             }
 
             # メンバーデータを格納するリスト
@@ -128,9 +129,9 @@ class StaffManager(commands.Cog):
 
                 member_roles = [role.name for role in member.roles]
 
-                # 運営ロールを持つメンバーを処理
+                # 運営ロールを持つメンバーを処理（優先順位の高い順にチェック）
                 staff_role = None
-                for role_name, _priority in role_priority.items():
+                for role_name, _priority in sorted(role_priority.items(), key=lambda x: x[1]):
                     if role_name in member_roles:
                         staff_role = role_name
                         break  # 最上位のロールを優先
