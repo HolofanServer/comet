@@ -78,7 +78,7 @@ class UserAnalyzer(commands.Cog):
             self._analyze_user_messages(message, interaction.guild, user, channel_limit, message_limit)
         )
         self.analysis_tasks[user.id] = task
-        
+
     async def _analyze_user_messages(
         self,
         message: discord.Message,
@@ -273,7 +273,7 @@ class UserAnalyzer(commands.Cog):
         for i, msg in enumerate(messages):
             # メッセージの基本情報
             formatted_msg = f"[{i+1}] {msg['timestamp']} ({msg['channel']}): {msg['content']}"
-            
+
             # リアクションがある場合は追加
             if msg['reactions']:
                 reactions_text = ", ".join(msg['reactions'])
