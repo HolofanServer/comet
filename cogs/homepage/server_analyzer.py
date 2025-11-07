@@ -198,7 +198,7 @@ class ServerAnalyzer(commands.Cog):
             for user_id in data["active_users"]:
                 user_activity[user_id] += 1
 
-        active_users = [(user_id, count) for user_id, count in user_activity.most_common(10)]
+        active_users = list(user_activity.most_common(10))
 
         # 人気のロール
         popular_roles = sorted(
