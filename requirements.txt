@@ -1,5 +1,5 @@
 aiohttp==3.11.18
-discord.py==2.6.2
+discord.py==2.6.4
 feedparser==6.0.11
 Pillow==11.3.0
 psutil==7.0.0
