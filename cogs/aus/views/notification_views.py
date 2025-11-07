@@ -7,6 +7,10 @@ import re
 
 import discord
 
+from utils.logging import setup_logging
+
+logger = setup_logging()
+
 
 class NoSourceNotificationView(discord.ui.View):
     """Twitter出典未記載検出通知用View（Component V2）"""
@@ -127,13 +131,15 @@ class NoSourceNotificationView(discord.ui.View):
             if not guild:
                 return None
 
-            channel = guild.get_channel(channel_id)
-            if not channel or not isinstance(channel, discord.TextChannel):
+            # get_channel_or_threadでスレッドにも対応
+            channel = guild.get_channel_or_thread(channel_id)
+            if not channel or not isinstance(channel, (discord.TextChannel, discord.Thread, discord.ForumChannel)):
                 return None
 
             message = await channel.fetch_message(message_id)
             return message
-        except Exception:
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException) as e:
+            logger.debug(f"メッセージ取得失敗: {e}")
             return None
 
 
