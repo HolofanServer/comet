@@ -4,6 +4,7 @@ AUS Artist Verification System
 """
 
 import re
+from urllib.parse import urlparse
 
 import discord
 from discord import app_commands
@@ -155,8 +156,18 @@ class ArtistVerification(commands.Cog):
         """Twitter入力を正規化してURLを返す"""
         # 既にURLの場合
         if input_str.startswith('http'):
-            # x.comをtwitter.comに統一
-            return input_str.replace('x.com', 'twitter.com')
+            try:
+                parsed = urlparse(input_str.lower())
+                # Twitter/X.comドメインのみ許可
+                allowed_domains = ['twitter.com', 'www.twitter.com', 'x.com', 'www.x.com']
+                if parsed.netloc not in allowed_domains:
+                    logger.warning(f"⚠️ Invalid Twitter URL domain: {parsed.netloc}")
+                    return None
+                # x.comをtwitter.comに統一
+                return input_str.replace('x.com', 'twitter.com')
+            except Exception as e:
+                logger.warning(f"⚠️ URL parsing failed: {e}")
+                return None
 
         # @で始まる場合は削除
         handle = input_str.lstrip('@')
