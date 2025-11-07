@@ -69,6 +69,19 @@ class ArtistVerification(commands.Cog):
         # Twitter URLを正規化
         twitter_url = self._normalize_twitter_url(twitter_handle)
 
+        # URL正規化失敗時は警告を表示
+        if not twitter_url:
+            return await interaction.response.send_message(
+                f"⚠️ 無効なTwitter URL/ハンドル名です\n"
+                f"入力値: `{twitter_handle}`\n\n"
+                f"**正しい形式:**\n"
+                f"• `@username`\n"
+                f"• `username`\n"
+                f"• `https://twitter.com/username`\n"
+                f"• `https://x.com/username`",
+                ephemeral=True
+            )
+
         # チケットチャンネル作成
         channel = await self._create_ticket_channel(
             interaction.guild,
