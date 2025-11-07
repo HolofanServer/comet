@@ -36,3 +36,10 @@ async def setup(bot: commands.Bot):
 
     logger.info("✅ AUS System loaded successfully")
     logger.info("✅ AUS Persistent Views registered")
+
+
+async def teardown(bot: commands.Bot):
+    """AUS システムのクリーンアップ"""
+    if hasattr(bot, 'db') and bot.db:
+        await bot.db.close()
+        logger.info("✅ AUS Database pool closed")

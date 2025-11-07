@@ -272,9 +272,12 @@ class ArtistVerification(commands.Cog):
         )
 
         if artist_info['notes']:
+            notes = artist_info['notes']
+            if len(notes) > 1024:
+                notes = notes[:1021] + "…"
             embed.add_field(
                 name="備考",
-                value=artist_info['notes'],
+                value=notes,
                 inline=False
             )
 
