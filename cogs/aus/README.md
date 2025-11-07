@@ -50,7 +50,7 @@ AUS_EXCLUDED_CHANNEL_IDS=111,222,333  # 除外チャンネルID
 AUS_EXCLUDED_CATEGORY_IDS=444,555  # 除外カテゴリID
 
 # Google Cloud Vision API（オプション）
-GOOGLE_APPLICATION_CREDENTIALS=/Users/freewifi/CascadeProjects/hfs-homepage-mg-bot/config/client_secret_313458626957-4u7hqs7vpooblot1ciejfo8p3k0c7fro.apps.googleusercontent.com.json
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/your/google-credentials.json
 ```
 
 ### 3. 依存ライブラリインストール
