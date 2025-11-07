@@ -8,7 +8,7 @@ pytz==2025.2
 dateparser==1.2.0
 datetime==5.5
 openai==2.7.1
-jishaku==2.6.0
+jishaku==2.6.3
 pyfiglet==1.0.2
 flask==3.1.0
 httpx==0.28.1
