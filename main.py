@@ -92,6 +92,9 @@ class MyBot(commands.AutoShardedBot):
             await git_pull()
             await pip_install()
             await self.load_cogs('cogs')
+
+            await self.load_extension('cogs.aus')
+
             await self.load_extension('jishaku')
 
             # add_bot_endpoint(
@@ -147,6 +150,10 @@ class MyBot(commands.AutoShardedBot):
 
             if p.stem == "__init__":
                 continue
+
+            if 'aus' in p.parts:
+                continue
+
             try:
                 cog_path: str = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
                 await self.load_extension(cog_path)
