@@ -3,6 +3,9 @@ VC入室通知システム
 誰かがボイスチャンネルに参加したら特定のユーザーをメンション
 """
 
+import time
+from collections import defaultdict
+
 import discord
 from discord.ext import commands
 
@@ -27,6 +30,9 @@ class VCNotification(commands.Cog):
 
         self.notification_channel_id = None
 
+        self.last_notification_time = defaultdict(float)
+        self.cooldown_seconds = 5
+
     @commands.Cog.listener()
     async def on_voice_state_update(
         self,
@@ -43,6 +49,19 @@ class VCNotification(commands.Cog):
             if vc.id in self.excluded_vc_ids:
                 logger.debug(f"⏭️ Excluded VC: {vc.name} ({vc.id})")
                 return
+
+            is_from_excluded_vc = before.channel and before.channel.id in self.excluded_vc_ids
+
+            if not is_from_excluded_vc:
+                current_time = time.time()
+                last_time = self.last_notification_time[member.id]
+                if current_time - last_time < self.cooldown_seconds:
+                    logger.debug(f"⏭️ Cooldown: {member.display_name} (last notification {current_time - last_time:.1f}s ago)")
+                    return
+            else:
+                logger.debug(f"✅ From excluded VC, skipping cooldown for {member.display_name}")
+                current_time = time.time()
+
             notification_channel = await self._get_notification_channel(vc)
 
             if not notification_channel:
@@ -58,6 +77,7 @@ class VCNotification(commands.Cog):
                 await notification_channel.send(
                     f"{mention_user.mention} 🔔 {member.display_name} が {vc.mention} に参加しました"
                 )
+                self.last_notification_time[member.id] = current_time
                 logger.info(f"📢 VC notification sent: {member.display_name} joined {vc.name}")
             except discord.Forbidden:
                 logger.error(f"❌ Permission error: Cannot send message to {notification_channel.name}")
