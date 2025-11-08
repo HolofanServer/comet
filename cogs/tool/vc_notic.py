@@ -21,7 +21,8 @@ class VCNotification(commands.Cog):
         self.excluded_vc_ids = {
             1207357253980651520,
             1093229787620847616,
-            1408442320600436908
+            1408442320600436908,
+            1147214899840294992
         }
 
         self.notification_channel_id = None
