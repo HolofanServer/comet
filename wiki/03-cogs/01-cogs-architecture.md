@@ -35,31 +35,89 @@ COMETボットは、Discord.pyのCogsシステムを使用して機能をモジ�
 | サーバーアナライザー | `server_analyzer.py` | サーバー統計とメトリクスを分析 |
 | ウェブサイト統合 | `website_integration.py` | ボットを外部ウェブサイトと接続 |
 
-### 3. 管理Cogs (`cogs/manage/`)
+
+### 4. 管理Cogs (`cogs/manage/`)
 **目的**: ボット管理と制御
 
 | Cog | ファイル | 説明 |
 |-----|------|-------------|
 | Cog管理 | `manage_cogs.py` | 動的Cogロード/アンロード |
-| DBマイグレーションコマンド | `db_migration_commands.py` | データベーススキーマ管理 |
-| ヘルプシステム | `help.py` | カスタムヘルプコマンド実装 |
 | ボット管理 | `manage_bot.py` | ボット設定と制御 |
+| DBマイグレーション | `db_migration_commands.py` | データベーススキーマ管理 |
+| タグモデレーション | `tag_moderation.py` | サーバータグ管理・モデレーション |
+| ユーザー警告システム | `user_warning_system.py` | ユーザー警告の記録・管理 |
+| ヘルプシステム | `help.py` | カスタムヘルプコマンド実装 |
 
-### 4. ツールCogs (`cogs/tool/`)
+### 5. ツールCogs (`cogs/tool/`)
 **目的**: ユーティリティコマンドと機能
 
 | Cog | ファイル | 説明 |
 |-----|------|-------------|
 | 新アナウンス | `announcement_new.py` | 高度なアナウンスシステム |
-| レコーダー | `recorder.py` | 音声/アクティビティ記録機能 |
-| ユーザーアナライザー | `user_analyzer.py` | ユーザー行動分析 |
-| 推しロールパネル | `oshi_role_panel.py` | ロール選択インターフェース |
 | カスタムアナウンス | `custom_announcement.py` | カスタマイズ可能なアナウンス |
+| 自動リアクション | `auto_reaction.py` | 自動リアクション機能 |
+| Bump通知 | `bump_notice.py` | サーバーBump通知タイマー |
+| ギブアウェイ | `giveaway.py` | 自動抽選システム |
+| おみくじ | `omikuji.py` | ホロライブキャラクターおみくじ |
+| 推しロールパネル | `oshi_role_panel.py` | インタラクティブロール選択 |
+| ピン留め | `pin_message.py` | メッセージピン留め機能 |
 | サーバー統計 | `server_stats.py` | リアルタイムサーバー統計 |
-| CV2テスト | `cv2_test.py` | コンピュータビジョンテストツール |
+| サーバータグ | `server_tag.py` | サーバータグ管理システム |
+| ユーザーアナライザー | `user_analyzer.py` | ユーザー行動分析 |
+| VC通知 | `vc_notic.py` | ボイスチャット参加通知 |
 | ウェルカムメッセージ | `welcom_message.py` | 新メンバー歓迎システム |
+| FAQ自動送信 | `send_first_message_to_faq.py` | FAQ自動応答 |
 | MSアナ | `ms_ana.py` | メッセージ分析ツール |
+| CV2テスト | `cv2_test.py` | コンピュータビジョンテスト |
 | バグレポーター | `bug.py` | バグ報告システム |
+
+### 6. 通報Cogs (`cogs/report/`)
+**目的**: 通報・モデレーションシステム
+
+| Cog | ファイル | 説明 |
+|-----|------|-------------|
+| メッセージ通報 | `report_message.py` | 不適切なメッセージ通報 |
+| ユーザー通報 | `report_user.py` | 問題ユーザー通報 |
+| 通報設定 | `settings.py` | 通報システム設定管理 |
+
+### 7. ノートCogs (`cogs/note/`)
+**目的**: Note連携機能
+
+| Cog | ファイル | 説明 |
+|-----|------|-------------|
+| HFSボイス | `hfs_voices.py` | HFSボイス連携 |
+| ノート通知 | `note_notice.py` | Note記事通知システム |
+
+### 8. 監視Cogs (`cogs/uptimekuma/`)
+**目的**: ステータス監視
+
+| Cog | ファイル | 説明 |
+|-----|------|-------------|
+| ステータス | `status.py` | Uptime Kuma統合・ステータス監視 |
+
+### 9. AUS (無断転載検出) Cogs (`cogs/aus/`)
+**目的**: 絵師保護・無断転載検出システム
+
+| Cog | ファイル | 説明 |
+|-----|------|-------------|
+| 画像検出 | `image_detection.py` | SauceNAO + Google Vision画像検出 |
+| 絵師認証 | `artist_verification.py` | 絵師認証システム |
+| モデレーション | `moderation.py` | AUS管理コマンド |
+| データベース | `database.py` | AUSデータベース管理 |
+| 通知Views | `views/notification_views.py` | 検出通知UI |
+| 認証Views | `views/verification_views.py` | 認証チケットUI |
+
+### 10. ランクシステム (`rank/`)
+**目的**: レベリング・実績システム
+
+| Cog | ファイル | 説明 |
+|-----|------|-------------|
+| ランク | `rank.py` | メインランクシステム |
+| 実績 | `achievements.py` | 実績・アチーブメント |
+| ボイストラッカー | `voice_tracker.py` | ボイスアクティビティ追跡 |
+| ランク設定 | `rank_config.py` | ランクシステム設定 |
+| ボイス設定 | `voice_config.py` | ボイスXP設定 |
+| 公式設定 | `formula_config.py` | レベル公式設定 |
 
 ## Cogローディングシステム
 
@@ -236,4 +294,9 @@ Cogsはボットのグローバルエラーハンドリングシステムと自�
 - [ホームページCogs](03-homepage-cogs.md)
 - [管理Cogs](04-management-cogs.md)
 - [ツールCogs](05-tool-cogs.md)
+- [通報Cogs](06-report-cogs.md)
+- [ノートCogs](07-note-cogs.md)
+- [監視Cogs](08-monitoring-cogs.md)
+- [AUS (無断転載検出) Cogs](09-aus-cogs.md)
+- [ランクシステム Cogs](10-rank-cogs.md)
 - [メインボットクラス](../02-core/01-main-bot-class.md)
