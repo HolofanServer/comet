@@ -1,4 +1,4 @@
-aiohttp==3.11.18
+aiohttp==3.13.2
 discord.py==2.6.2
 feedparser==6.0.11
 Pillow==11.0.0
