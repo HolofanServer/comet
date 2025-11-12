@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """utils.future.cv2 – Async‑only Components‑V2 toolkit (rev. 2025‑05‑20)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Designed **from the ground up for discord.py v2.4+**. Every public method is an
@@ -25,7 +24,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import textwrap
-from typing import TYPE_CHECKING, Any, Mapping, MutableMapping, Sequence, TypeVar, Union
+from collections.abc import Mapping, MutableMapping, Sequence
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import httpx
 
@@ -114,7 +114,7 @@ class _Flags:
 class _CommandDecorator:
     """Simple registry for misc coroutine utilities."""
 
-    def __init__(self, cv2: "CV2") -> None:
+    def __init__(self, cv2: CV2) -> None:
         self._cv2 = cv2
         self._handlers: dict[str, Mapping[str, Any]] = {}
 
@@ -151,14 +151,14 @@ class CV2:
 
     # ---- life‑cycle -------------------------------------------------
 
-    def __init__(self, bot: "discord.Client | None" = None):
+    def __init__(self, bot: discord.Client | None = None):
         self.bot = bot
         self._http: httpx.AsyncClient | None = None
         self._lock = asyncio.Lock()
         self._ready = False
         self.command = _CommandDecorator(self)
 
-    async def initialize(self, bot: "discord.Client" | None = None):
+    async def initialize(self, bot: discord.Client | None = None):
         """Call once after your discord.py client is ready."""
         if bot:
             self.bot = bot
@@ -212,33 +212,33 @@ class CV2:
     async def send(self, channel_id: int, **kw):
         payload, files = self._build_root(**kw)
         self._validate(payload)
-        
+
         # デバッグ用にペイロードの構造をログに出力
         import json
         debug_payload = json.dumps(payload, indent=2, ensure_ascii=False)
-        
+
         # ログとファイルの両方に出力
         try:
             log.info(f"CV2 送信ペイロードサイズ: {len(debug_payload)} bytes")
             print(f"CV2 DEBUG: 送信ペイロードサイズ {len(debug_payload)} bytes")
-            
+
             # ファイルにデバッグ情報を出力
             import os
             debug_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "debug")
             os.makedirs(debug_dir, exist_ok=True)
             debug_file = os.path.join(debug_dir, "cv2_payload_debug.json")
-            
+
             with open(debug_file, "w", encoding="utf-8") as f:
                 f.write(debug_payload)
-                
+
             log.info(f"CV2ペイロードをファイルに出力しました: {debug_file}")
             print(f"CV2 DEBUG: ペイロードを保存しました: {debug_file}")
         except Exception as e:
             print(f"CV2 DEBUG ERROR: {e}")
-            
+
         return await self._request("POST", self._ep("channels/{cid}/messages", cid=channel_id), json=payload, files=files)
 
-    async def reply(self, interaction: "discord.Interaction", **kw):
+    async def reply(self, interaction: discord.Interaction, **kw):
         payload, _ = self._build_root(interaction=True, **kw)
         self._validate(payload["data"])
         return await self._request(
@@ -255,11 +255,11 @@ class CV2:
         flags = (flags or 0) | self.flags.IS_COMPONENTS_V2
         if interaction and ephemeral:
             flags |= self.flags.EPHEMERAL
-        
+
         # single_containerモード - すべてを1つのコンテナにまとめる
         if single_container:
             all_components = []
-            
+
             # UIコンポーネントを最初に追加
             if components:
                 if components[0].get("type") == self.types.CONTAINER:
@@ -270,18 +270,18 @@ class CV2:
                 else:
                     # 通常のコンポーネントの場合はそのまま追加
                     all_components.extend(components)
-            
+
             # メディアギャラリーを後に追加
             if media_urls:
                 all_components.append(self.media_gallery(media_urls))
-                
+
             # ファイルを最後に追加
             if file_bytes:
                 all_components.append(self.file(file_bytes, file_name or "upload.bin", spoiler_file))
-                    
+
             # すべてのコンポーネントを1つのコンテナに格納
             conts = [self.container(all_components)]
-        
+
         # 従来の複数コンテナモード
         else:
             conts: list[dict[str, Any]] = []
@@ -333,7 +333,7 @@ class CV2:
             name = f"SPOILER_{name}"
         return {"type": self.types.FILE, "media": {"id": 0, "filename": name}}
 
-    def button(self, label: str, *, custom_id=None, style: Union[str, int] = "primary", emoji=None, url=None, disabled=False):
+    def button(self, label: str, *, custom_id=None, style: str | int = "primary", emoji=None, url=None, disabled=False):
         style_val = self.styles.coerce(style)
         if style_val == self.styles.LINK and not url:
             raise CV2PayloadError("LINK button needs 'url'")
@@ -345,7 +345,7 @@ class CV2:
             btn["emoji"] = {"name": emoji} if isinstance(emoji, str) else dict(emoji)
         return btn
 
-    def string_select(self, custom_id: str, options: Sequence[Union[str, tuple, Mapping]], *, placeholder=None, min_values=1, max_values=1, disabled=False):
+    def string_select(self, custom_id: str, options: Sequence[str | tuple | Mapping], *, placeholder=None, min_values=1, max_values=1, disabled=False):
         opts = []
         for o in options:
             if isinstance(o, str):
@@ -390,7 +390,7 @@ class CV2:
         # アクセントカラーを完全に無視してシンプルなコンテナを返す
         return {"type": self.types.CONTAINER, "components": list(components)}
 
-    def section(self, lines: Sequence[Union[str, dict]], *, accessory=None):
+    def section(self, lines: Sequence[str | dict], *, accessory=None):
         txts = [self.text_display(line) if isinstance(line, str) else line for line in lines][:3]
         sec: MutableMapping[str, Any] = {"type": self.types.SECTION, "text": txts}
         if accessory:

@@ -1,9 +1,10 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
+
+from utils.commands_help import is_guild_app, is_owner_app, log_commands
 from utils.db_manager import db
 from utils.logging import setup_logging
-from utils.commands_help import log_commands, is_owner_app, is_guild_app
 
 logger = setup_logging()
 
@@ -60,7 +61,7 @@ class AutoReactionCog(commands.Cog):
                 "DELETE FROM auto_reactions WHERE guild_id = $1 AND trigger_word = $2",
                 interaction.guild_id, トリガーワード
             )
-            
+
             if result != "DELETE 0":
                 await interaction.response.send_message(
                     f"トリガーワード「{トリガーワード}」の自動リアクションを削除しました",
