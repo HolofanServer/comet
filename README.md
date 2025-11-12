@@ -1,10 +1,24 @@
-# COMET (C.O.M.E.T.) Discord Bot Wiki
+# C.O.M.E.T. Discord Bot Wiki
 
 <div align="center">
     <img src="https://images.frwi.net/data/images/ae990d92-087b-4500-955f-505c38bd33a6.png" alt="COMET Logo" width="200" height="200">
-    <h1>COMET Bot ドキュメント</h1>
+    <h1>C.O.M.E.T. Bot ドキュメント</h1>
     <h3> HFS専属BOT 総合ガイド</h3>
 </div>
+
+---
+
+## 🌟 COMETについて
+
+**COMET**の名前は以下の頭文字から構成されています：
+
+- **C**ommunity of
+- **O**shilove
+- **M**oderation &
+- **E**njoyment
+- **T**ogether
+
+HFS - ホロライブ非公式ファンサーバーのコミュニティを支える、推し愛とモデレーション、そして楽しさを一緒に提供するボットです。
 
 ---
 

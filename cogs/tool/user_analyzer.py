@@ -1,15 +1,17 @@
+import asyncio
 import json
 import os
-import asyncio
+from datetime import datetime
+from typing import Optional
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from datetime import datetime
-from typing import Optional, List
 from openai import AsyncOpenAI
+
 from config.setting import get_settings
-from utils.logging import setup_logging
 from utils.commands_help import is_guild_app, is_owner_app, log_commands
+from utils.logging import setup_logging
 
 # 設定を取得
 settings = get_settings()
@@ -41,71 +43,71 @@ class UserAnalyzer(commands.Cog):
     @is_owner_app()
     @log_commands()
     async def analyze_user(
-        self, 
-        interaction: discord.Interaction, 
+        self,
+        interaction: discord.Interaction,
         user: discord.Member,
         channel_limit: Optional[int] = None,
         message_limit: Optional[int] = None
     ):
         """特定のユーザーのメッセージを収集し、AIで傾向を分析します"""
-        
+
         logger.info(f"ユーザー分析コマンドが実行されました: 対象ユーザー {user.name} (ID: {user.id}), 実行者 {interaction.user.name}")
-        
+
         # 権限チェック（管理者権限があるかどうか）
         if not interaction.user.guild_permissions.administrator:
             logger.warning(f"権限のないユーザーによる分析コマンドの実行試行: {interaction.user.name}")
             await interaction.response.send_message("このコマンドを使用するには管理者権限が必要です。", ephemeral=True)
             return
-            
+
         # デフォルト値の設定
         if not message_limit or message_limit > 1000:
             message_limit = 1000
-            
+
         # 応答を開始
         await interaction.response.send_message(f"<@{user.id}> のメッセージ収集と分析を開始します。これには時間がかかる場合があります...")
         message = await interaction.original_response()
-        
+
         # すでに分析中のタスクがある場合はキャンセル
         if user.id in self.analysis_tasks:
             if not self.analysis_tasks[user.id].done():
                 logger.info(f"既存の分析タスクをキャンセル: ユーザーID {user.id}")
                 self.analysis_tasks[user.id].cancel()
-        
+
         # 非同期で分析タスクを開始
         task = asyncio.create_task(
             self._analyze_user_messages(message, interaction.guild, user, channel_limit, message_limit)
         )
         self.analysis_tasks[user.id] = task
-        
+
     async def _analyze_user_messages(
-        self, 
-        message: discord.Message, 
-        guild: discord.Guild, 
+        self,
+        message: discord.Message,
+        guild: discord.Guild,
         user: discord.Member,
         channel_limit: Optional[int],
         message_limit: int
     ):
         """ユーザーのメッセージを非同期で収集・分析するメソッド"""
-        
+
         try:
             await message.edit(content=f"<@{user.id}> のメッセージ収集を開始します... 🔍")
-            
+
             # 進捗追跡用の変数
             messages = []
             channel_count = 0
             found_msg_count = 0
-            
+
             # 検索対象チャンネルの取得
             text_channels = guild.text_channels
             if channel_limit and channel_limit < len(text_channels):
                 text_channels = text_channels[:channel_limit]
-                
+
             # 各チャンネルをスキャン
             for channel in text_channels:
                 try:
                     channel_count += 1
                     logger.info(f"チャンネルをスキャン中: {channel.name} ({channel_count}/{len(text_channels)})")
-                    
+
                     # 定期的に進捗を更新
                     if channel_count % 5 == 0 or channel_count == len(text_channels):
                         await message.edit(
@@ -113,7 +115,7 @@ class UserAnalyzer(commands.Cog):
                                    f"チャンネル: {channel_count}/{len(text_channels)}\n"
                                    f"見つかったメッセージ: {found_msg_count}/{message_limit}"
                         )
-                    
+
                     # チャンネルの履歴を取得
                     async for msg in channel.history(limit=500):  # 各チャンネルでの上限を設定
                         if msg.author.id == user.id:
@@ -126,38 +128,38 @@ class UserAnalyzer(commands.Cog):
                                 "has_attachment": bool(msg.attachments),
                                 "reference": msg.reference.message_id if msg.reference else None
                             })
-                            
+
                             found_msg_count += 1
-                            
+
                             # メッセージ制限に達したら終了
                             if found_msg_count >= message_limit:
                                 break
-                    
+
                     # メッセージ制限に達したら終了
                     if found_msg_count >= message_limit:
                         logger.info(f"メッセージ制限({message_limit})に達しました")
                         break
-                        
+
                 except discord.Forbidden:
                     logger.warning(f"チャンネル {channel.name} へのアクセス権限がありません")
                     continue
                 except Exception as e:
                     logger.error(f"チャンネル {channel.name} でメッセージ取得に失敗: {e}")
                     continue
-            
+
             # メッセージが見つからなかった場合
             if not messages:
                 await message.edit(content=f"<@{user.id}> のメッセージが見つかりませんでした。")
                 return
-            
+
             # 進捗更新
             await message.edit(
                 content=f"<@{user.id}> のメッセージを {found_msg_count}件 収集しました。分析を開始します... 🧠"
             )
-            
+
             # 分析用にメッセージを整形
             conversation_text = self._format_messages_for_analysis(messages)
-            
+
             # ユーザープロファイル情報を追加
             user_info = {
                 "name": user.name,
@@ -168,10 +170,10 @@ class UserAnalyzer(commands.Cog):
                 "roles": [role.name for role in user.roles if role.name != "@everyone"],
                 "avatar": str(user.avatar.url) if user.avatar else None,
             }
-            
+
             # システムプロンプト
             system_prompt = self._get_analysis_system_prompt()
-            
+
             # ユーザープロンプト
             user_prompt = f"""
 # ユーザー情報
@@ -189,7 +191,7 @@ class UserAnalyzer(commands.Cog):
             # OpenAI APIによる分析開始
             try:
                 logger.info(f"OpenAI APIにリクエストを送信します: ユーザー={user.name}, メッセージ数={found_msg_count}")
-                
+
                 # API呼び出し
                 response = await async_client_ai.chat.completions.create(
                     model="gpt-4o",  # 最新のモデルを指定
@@ -200,36 +202,36 @@ class UserAnalyzer(commands.Cog):
                     temperature=0.7,
                     max_tokens=4000
                 )
-                
+
                 analysis_text = response.choices[0].message.content
                 logger.info(f"OpenAI APIから応答を受け取りました: {len(analysis_text)}文字")
-                
+
                 # フォルダがなければ作成
                 os.makedirs("cache/user_analysis", exist_ok=True)
-                
+
                 # 結果を保存
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 md_filename = f"cache/user_analysis/analysis_{user.id}_{timestamp}.md"
-                
+
                 with open(md_filename, "w", encoding="utf-8") as f:
                     f.write(f"# {user.display_name} の分析\n\n")
                     f.write(f"分析日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}\n\n")
                     f.write(analysis_text)
-                
+
                 logger.info(f"分析結果を保存しました: {md_filename}")
-                
+
                 # 分析結果の報告（2000文字を超える場合は分割）
                 if len(analysis_text) > 1900:
                     # 最初のメッセージで概要とファイルを送信
                     await message.edit(
                         content=f"<@{user.id}> の分析が完了しました。詳細な結果を分割して送信します。"
                     )
-                    
+
                     # 結果を複数のメッセージに分割
                     chunks = [analysis_text[i:i+1900] for i in range(0, len(analysis_text), 1900)]
                     for i, chunk in enumerate(chunks):
                         await message.channel.send(f"**分析結果 ({i+1}/{len(chunks)}):**\n\n{chunk}")
-                    
+
                     # ファイルとして送信
                     await message.channel.send(
                         "分析結果の全文がファイルとして保存されました。",
@@ -240,55 +242,55 @@ class UserAnalyzer(commands.Cog):
                     await message.edit(
                         content=f"<@{user.id}> の分析が完了しました。結果は以下の通りです:\n\n{analysis_text}"
                     )
-                    
+
                     # ファイルとして送信
                     await message.channel.send(
                         "分析結果がファイルとして保存されました。",
                         file=discord.File(md_filename)
                     )
-                
+
             except Exception as e:
                 logger.error(f"OpenAI API呼び出し中にエラーが発生しました: {e}")
                 await message.edit(
                     content=f"エラー: <@{user.id}> の分析中に問題が発生しました。\n```{str(e)}```"
                 )
                 return
-                
+
         except asyncio.CancelledError:
             logger.info(f"ユーザーID {user.id} の分析タスクがキャンセルされました")
             await message.edit(content=f"<@{user.id}> の分析タスクがキャンセルされました。")
             return
-            
+
         except Exception as e:
             logger.error(f"ユーザー分析中にエラーが発生しました: {e}")
             await message.edit(content=f"エラー: <@{user.id}> の分析中に予期しない問題が発生しました。")
             return
-    
-    def _format_messages_for_analysis(self, messages: List[dict]) -> str:
+
+    def _format_messages_for_analysis(self, messages: list[dict]) -> str:
         """メッセージを分析用にフォーマットする"""
         formatted = []
-        
+
         for i, msg in enumerate(messages):
             # メッセージの基本情報
             formatted_msg = f"[{i+1}] {msg['timestamp']} ({msg['channel']}): {msg['content']}"
-            
+
             # リアクションがある場合は追加
             if msg['reactions']:
                 reactions_text = ", ".join(msg['reactions'])
                 formatted_msg += f"\n  リアクション: {reactions_text}"
-                
+
             # 添付ファイルがある場合は記載
             if msg['has_attachment']:
                 formatted_msg += "\n  [添付ファイルあり]"
-                
+
             # 返信の場合は記載
             if msg['reference']:
                 formatted_msg += f"\n  [返信: メッセージID {msg['reference']}]"
-                
+
             formatted.append(formatted_msg)
-            
+
         return "\n\n".join(formatted)
-    
+
     def _get_analysis_system_prompt(self) -> str:
         """分析用のシステムプロンプトを取得"""
         return """
@@ -335,6 +337,168 @@ class UserAnalyzer(commands.Cog):
 5. 分析は客観的かつ詳細に、具体的な例や根拠を示しながら行ってください。
 
 あなたの分析はユーザー理解とコミュニケーション改善のための貴重な情報として使用されます。専門的かつ尊重的な分析を提供してください。
+"""
+
+    def _get_recent_analysis_system_prompt(self) -> str:
+        """直近メッセージ分析用のシステムプロンプトを取得"""
+        return """
+あなたはDiscordサーバー分析の専門家です。提供されたサーバーの直近メッセージデータを分析し、コミュニティの全体的な雰囲気、傾向、特徴などを詳細に分析してください。分析結果は日本語で、以下のセクションを含むMarkdown形式でまとめてください。
+
+## 分析セクション
+
+1. **サーバー全体の雰囲気**
+   - コミュニティの全体的な雰囲気（活発/静穏、友好的/厳格など）
+   - メンバー間の交流の特徴
+   - 新規メンバーへの接し方
+
+2. **話題とコンテンツの傾向**
+   - 頻繁に話題に上がるテーマ
+   - 人気のあるコンテンツタイプ
+   - 議論が活発になる話題
+
+3. **活発なユーザーとリーダーシップ**
+   - よく発言するアクティブなメンバーの特徴
+   - コミュニティを牽引するユーザーの存在
+   - 影響力のあるメンバーの行動パターン
+
+4. **コミュニケーションスタイル**
+   - 一般的な会話のトーン
+   - 絵文字やリアクションの使用傾向
+   - 返信や議論の活発さ
+
+5. **チャンネル利用パターン**
+   - 各チャンネルの利用状況
+   - チャンネル別の話題の傾向
+   - メンバーの行動パターン
+
+6. **コミュニティの健全性と特徴**
+   - サーバーの健全性（荒らしやトラブルの有無）
+   - メンバー同士の関係性
+   - コミュニティとしての成熟度
+
+## 分析の注意点
+
+1. 個人を特定できる情報は避け、全体的な傾向に焦点を当ててください。
+2. 客観的で建設的な分析を心がけ、否定的な評価は控えめにしてください。
+3. データが限られている場合は、確実な傾向のみを報告してください。
+4. サーバー運営やコミュニティ改善に役立つ洞察を提供してください。
+
+あなたの分析はサーバー運営とコミュニティ理解のための貴重な情報として使用されます。専門的かつ尊重的な分析を提供してください。
+"""
+
+    def _get_ultra_detailed_analysis_system_prompt(self) -> str:
+        """超詳細分析用のシステムプロンプトを取得"""
+        return """
+あなたは高度なDiscordメッセージ分析AIエキスパートです。大量のメッセージデータと詳細統計を基に、ユーザーの深層心理、行動パターン、コミュニケーション特性を超詳細に分析してください。分析結果は日本語で、以下の包括的なセクションを含むMarkdown形式でまとめてください。
+
+# 超詳細分析レポート構成
+
+## 1. 【エグゼクティブサマリー】
+- ユーザーの核心的特徴（3行要約）
+- 主要な発見事項とユニークな特性
+- 総合的な人物像評価
+
+## 2. 【統計的プロファイル分析】
+- 活動パターンの詳細解析（時間帯、曜日、月間推移）
+- メッセージ特性の定量分析（長さ、頻度、応答率）
+- エンゲージメント指標（リアクション、返信、編集率）
+- チャンネル利用パターンと優先度分析
+
+## 3. 【コミュニケーションスタイル詳細分析】
+### 3.1 言語使用パターン
+- 語彙の豊富さと専門性レベル
+- 文体の特徴（敬語使用、カジュアル度、文章構造）
+- 頻用語句と特徴的表現の抽出
+- 絵文字・顔文字・スタンプ使用傾向
+
+### 3.2 感情表現の分析
+- 感情極性の傾向（ポジティブ/ネガティブ/中性の比率）
+- 感情の表現方法と強度
+- ユーモアのセンスと使用頻度
+- ストレス表現や不満の表出パターン
+
+### 3.3 対話スタイル
+- 会話の主導性（リーダーシップ/フォロワー傾向）
+- 質問の頻度と種類
+- 意見表明の積極性
+- 議論への参加スタイル
+
+## 4. 【社会的インタラクション分析】
+### 4.1 人間関係構築パターン
+- 他ユーザーとの関係性構築方法
+- グループ内での役割と立ち位置
+- 新規参加者への接し方
+- 衝突回避・解決パターン
+
+### 4.2 コミュニティ貢献度
+- 情報提供・共有の頻度と質
+- 他者支援行動の傾向
+- コミュニティイベントへの参加度
+- ルール遵守とモデレーション協力度
+
+## 5. 【興味・関心領域の深掘り分析】
+### 5.1 主要関心分野
+- 最も言及頻度の高いトピック（定量分析）
+- 専門知識を持つ分野の特定
+- 趣味・娯楽の嗜好パターン
+- 学習・成長への関心度
+
+### 5.2 話題転換パターン
+- 話題提起の頻度と種類
+- トレンドへの感度
+- ニッチな話題への関心度
+- 継続的関心 vs 一時的関心の分析
+
+## 6. 【行動予測とペルソナ分析】
+### 6.1 心理的特性推定
+- 性格特性（Big Five等の枠組みでの分析）
+- 価値観と優先順位
+- 意思決定パターン
+- ストレス対処法
+
+### 6.2 行動予測
+- 今後の活動パターン予測
+- 興味を持ちそうな新しいトピック
+- コミュニティでの成長可能性
+- 潜在的な課題や懸念事項
+
+## 7. 【コミュニケーション最適化提案】
+### 7.1 効果的なアプローチ方法
+- このユーザーとの理想的な会話スタイル
+- 情報提供時の最適な形式
+- モチベーション向上のアプローチ
+- 注意喚起時の配慮事項
+
+### 7.2 コミュニティ運営への提言
+- このユーザーの活用可能な強み
+- 適切な役割や責任の提案
+- 成長支援のための具体的提案
+- 潜在的問題の予防策
+
+## 8. 【詳細データ分析結果】
+- 時系列での変化トレンド
+- 特異値や異常パターンの検出
+- 他の典型的ユーザーとの比較
+- 統計的有意性のある発見事項
+
+## 9. 【総合評価と将来展望】
+- ユーザーの総合的価値評価
+- コミュニティへの貢献度評価
+- 成長ポテンシャル
+- 長期的な関係性構築の見通し
+
+---
+
+## 分析実行時の重要指針
+
+1. **データドリブン**: 統計データを基にした客観的分析を重視
+2. **多角的視点**: 複数の角度からの分析で偏りを防止
+3. **建設的アプローチ**: 成長と改善に繋がる洞察を提供
+4. **プライバシー尊重**: 個人の尊厳を保ちつつ専門的分析を実施
+5. **実用性重視**: コミュニケーション改善に直結する具体的提案
+6. **継続性考慮**: 長期的な関係性を見据えた分析
+
+この超詳細分析は、ユーザー理解の深化とコミュニティ運営の質向上を目的としています。人間の複雑性を尊重しつつ、科学的なアプローチで実用的な洞察を提供してください。
 """
 
 async def setup(bot):

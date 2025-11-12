@@ -4,15 +4,16 @@
 PostgreSQLデータベースとの接続および操作を管理するためのモジュールです。
 JSONデータからの移行機能や、推しロールパネル機能のためのデータ操作APIを提供します。
 """
-import os
+import datetime
 import json
 import logging
-import datetime
+import os
 import re
 import uuid
-from typing import List, Dict, Any
+from typing import Any
 
 import asyncpg
+
 from config.setting import get_settings
 
 settings = get_settings()
@@ -21,7 +22,7 @@ logger = logging.getLogger('db_manager')
 
 class DBManager:
     """PostgreSQLデータベース管理クラス"""
-    
+
     def __init__(self):
         self.pool = None
         self.config = {
@@ -32,18 +33,18 @@ class DBManager:
             'database': os.environ.get('DB_NAME', 'hfs_bot')
         }
         self._initialized = False
-    
+
     async def initialize(self):
         """データベース接続プールを初期化します"""
         if self._initialized:
             return
-            
+
         try:
             db_url = os.environ.get('DATABASE_PUBLIC_URL')
             if not db_url:
                 logger.error("DATABASE_PUBLIC_URL環境変数が設定されていません")
                 raise ValueError("DATABASE_PUBLIC_URL環境変数が設定されていません")
-            
+
             self.pool = await asyncpg.create_pool(db_url)
             await self._setup_tables()
             self._initialized = True
@@ -51,14 +52,14 @@ class DBManager:
         except Exception as e:
             logger.error(f"データベース接続に失敗しました: {e}")
             raise
-    
+
     async def close(self):
         """データベース接続を閉じます"""
         if self.pool:
             await self.pool.close()
             self._initialized = False
             logger.info("データベース接続プールを閉じました")
-    
+
     async def _drop_all_tables(self):
         """すべてのテーブルとシーケンスを削除します（スキーマ変更時に使用）"""
         try:
@@ -75,7 +76,7 @@ class DBManager:
                 await conn.execute("DROP TABLE IF EXISTS users CASCADE")
                 await conn.execute("DROP TABLE IF EXISTS bot_configs CASCADE")
                 await conn.execute("DROP TABLE IF EXISTS staff_info CASCADE")
-                
+
                 sequences = [
                     "role_events_id_seq",
                     "user_roles_id_seq",
@@ -84,19 +85,19 @@ class DBManager:
                     "server_stats_id_seq",
                     "role_emoji_mappings_id_seq"
                 ]
-                
+
                 for seq in sequences:
                     try:
                         await conn.execute(f"DROP SEQUENCE IF EXISTS {seq} CASCADE")
                     except Exception as e:
                         logger.warning(f"シーケンス{seq}の削除中にエラー: {e}")
-                
+
                 logger.info("すべてのテーブルとシーケンスを削除しました")
                 return True
         except Exception as e:
             logger.error(f"テーブル削除中にエラー: {e}")
             return False
-    
+
     async def _setup_tables(self):
         """
         必要なテーブルをセットアップします（毎回全テーブルをCREATE TABLE IF NOT EXISTSで流す）
@@ -196,9 +197,9 @@ class DBManager:
             for table_query in tables:
                 await conn.execute(table_query)
             logger.info("必要なテーブルを確認・作成しました")
-    
+
     # --- JSON移行関連のメソッド ---
-    
+
     async def _clear_existing_tables(self):
         """既存のテーブルデータをクリアします"""
         try:
@@ -214,45 +215,45 @@ class DBManager:
         except Exception as e:
             logger.error(f"テーブルデータのクリア中にエラー: {e}")
             raise
-    
+
     async def migrate_from_json(self):
         """JSONデータからデータベースへ移行します"""
         base_dir = os.path.join(os.getcwd(), "data", "analytics", "oshi_roles")
         data_dir = os.path.join(os.getcwd(), "data")
         config_dir = os.path.join(os.getcwd(), "config")
-        
+
         if not os.path.exists(data_dir) and not os.path.exists(config_dir):
             logger.error(f"移行元ディレクトリが存在しません: {data_dir} または {config_dir}")
             return False
-            
+
         if not self._initialized:
             await self.initialize()
-            
+
         await self._clear_existing_tables()
-        
+
         try:
             if os.path.exists(base_dir):
                 roles_path = os.path.join(base_dir, "roles.json")
                 users_path = os.path.join(base_dir, "users.json")
                 events_path = os.path.join(base_dir, "events.json")
                 summary_path = os.path.join(base_dir, "summary.json")
-                
+
                 if os.path.exists(roles_path):
                     await self._migrate_roles(roles_path)
-                
+
                 if os.path.exists(users_path):
                     await self._migrate_users(users_path)
-                
+
                 if os.path.exists(events_path):
                     await self._migrate_events(events_path)
-                
+
                 if os.path.exists(summary_path):
                     await self._migrate_summary(summary_path)
-            
+
             config_path = os.path.join(data_dir, "config.json")
             if os.path.exists(config_path):
                 await self._migrate_guild_configs(config_path)
-                
+
             role_emoji_path = os.path.join(data_dir, "role_emoji_mapping.json")
             if os.path.exists(role_emoji_path):
                 await self._migrate_role_emoji_mapping(role_emoji_path)
@@ -260,54 +261,54 @@ class DBManager:
             member_emojis_path = os.path.join(data_dir, "m__emojis.json")
             if os.path.exists(member_emojis_path):
                 await self._migrate_member_emojis(member_emojis_path)
-            
+
             custom_announcements_dir = os.path.join(data_dir, "custom_announcements")
             if os.path.exists(custom_announcements_dir):
                 await self._migrate_custom_announcements(custom_announcements_dir)
-            
-            
+
+
             bot_config_path = os.path.join(config_dir, "bot.json")
             if os.path.exists(bot_config_path):
                 await self._migrate_bot_config(bot_config_path)
-            
+
             auth_config_path = os.path.join(config_dir, "auth.json")
             if os.path.exists(auth_config_path):
                 await self._migrate_auth_config(auth_config_path)
-            
+
             members_path = os.path.join(config_dir, "members.json")
             if os.path.exists(members_path):
                 await self._migrate_members(members_path)
-            
+
             logger.info("JSONデータからの移行が完了しました")
             return True
         except Exception as e:
             logger.error(f"移行中にエラーが発生しました: {e}")
             return False
-    
+
     async def _migrate_roles(self, file_path):
         """ロールデータの移行"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 roles_data = json.load(f)
-            
+
             events_file = os.path.join(os.path.dirname(file_path), "events.json")
             role_id_mapping = {}
-            
+
             if os.path.exists(events_file):
-                with open(events_file, 'r', encoding='utf-8') as f:
+                with open(events_file, encoding='utf-8') as f:
                     try:
                         events_data = json.load(f)
-                        
+
                         for event in events_data:
                             if 'roles' in event and event['roles']:
                                 for role in event['roles']:
                                     if 'id' in role and 'name' in role:
                                         role_id_mapping[role['name']] = str(role['id'])
-                        
+
                         logger.info(f"イベントファイルから {len(role_id_mapping)} 件のロールIDマッピングを取得しました")
                     except Exception as e:
                         logger.error(f"イベントファイルからのロールIDマッピング取得中にエラー: {e}")
-            
+
             async with self.pool.acquire() as conn:
                 await conn.execute("""
                     CREATE TABLE IF NOT EXISTS roles (
@@ -318,18 +319,18 @@ class DBManager:
                         description TEXT
                     )
                 """)
-                
+
                 migrated_count = 0
                 skipped_count = 0
-                
+
                 for role_name, role_info in roles_data.items():
                     try:
                         role_id = role_id_mapping.get(role_name, role_name)
-                        
+
                         category = ''
                         if 'count' in role_info:
                             category = '推しロール'
-                        
+
                         await conn.execute(
                             """
                             INSERT INTO roles (role_id, role_name, category, emoji, description)
@@ -341,14 +342,14 @@ class DBManager:
                             role_name,
                             category,
                             '',
-                            '' 
+                            ''
                         )
                         migrated_count += 1
                     except Exception as e:
                         logger.error(f"ロールデータの移行中にエラー (role_name: {role_name}): {e}")
                         skipped_count += 1
                         continue
-                
+
                 for role_name, role_id in role_id_mapping.items():
                     try:
                         await conn.execute(
@@ -365,19 +366,19 @@ class DBManager:
                         )
                     except Exception as e:
                         logger.error(f"イベントから取得したロールの挿入中にエラー (role_name: {role_name}): {e}")
-            
+
             logger.info(f"ロールデータの移行: {len(roles_data)} 件中 {migrated_count} 件を移行、{skipped_count} 件をスキップしました")
             return True
         except Exception as e:
             logger.error(f"ロールデータ移行中にエラー: {e}")
             raise
-    
+
     async def _migrate_users(self, file_path):
         """ユーザーデータの移行"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 users_data = json.load(f)
-            
+
             async with self.pool.acquire() as conn:
                 for user_id, user_info in users_data.items():
                     try:
@@ -385,7 +386,7 @@ class DBManager:
                     except ValueError:
                         logger.warning(f"整数変換できないユーザーIDをスキップしました: {user_id}")
                         continue
-                        
+
                     await conn.execute(
                         """
                         INSERT INTO users (user_id, username, first_seen, last_updated)
@@ -398,7 +399,7 @@ class DBManager:
                         datetime.datetime.fromisoformat(user_info.get('first_seen', datetime.datetime.now().isoformat())),
                         datetime.datetime.fromisoformat(user_info.get('last_updated', datetime.datetime.now().isoformat()))
                     )
-                    
+
                     if 'roles' in user_info:
                         for role_data in user_info['roles']:
                             try:
@@ -406,24 +407,24 @@ class DBManager:
                                 if not role_id_value:
                                     logger.warning(f"role_idが空です: ユーザーID {user_id}")
                                     continue
-                                    
+
                                 try:
                                     role_id = str(role_id_value)
                                 except ValueError:
                                     logger.warning(f"整数変換できないロールIDをスキップしました: {role_id_value} (ユーザーID: {user_id})")
                                     continue
-                                    
+
                                 assigned_at = datetime.datetime.fromisoformat(role_data.get('assigned_at', datetime.datetime.now().isoformat()))
                                 removed_at = None
                                 is_active = True
-                                
+
                                 if 'removed_at' in role_data and role_data['removed_at']:
                                     removed_at = datetime.datetime.fromisoformat(role_data['removed_at'])
                                     is_active = False
                             except Exception as e:
                                 logger.error(f"ユーザーロールデータの処理中にエラー: {e} (ユーザーID: {user_id})")
                                 continue
-                            
+
                             await conn.execute(
                                 """
                                 INSERT INTO user_roles (user_id, role_id, assigned_at, removed_at, is_active)
@@ -433,21 +434,21 @@ class DBManager:
                                 """,
                                 int(user_id), role_id, assigned_at, removed_at, is_active
                             )
-            
+
             logger.info(f"{len(users_data)} 件のユーザーデータを移行しました")
         except Exception as e:
             logger.error(f"ユーザーデータ移行中にエラー: {e}")
             raise
-    
+
     async def _migrate_events(self, file_path):
         """イベントデータの移行"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 events_data = json.load(f)
-            
+
             migrated_count = 0
             skipped_count = 0
-            
+
             async with self.pool.acquire() as conn:
                 await conn.execute("""
                     CREATE TABLE IF NOT EXISTS role_events (
@@ -459,7 +460,7 @@ class DBManager:
                         interaction_id TEXT
                     )
                 """)
-                
+
                 for event in events_data:
                     try:
                         try:
@@ -468,7 +469,7 @@ class DBManager:
                             logger.warning(f"無効なユーザーIDをスキップしました: {event.get('user_id')}")
                             skipped_count += 1
                             continue
-                            
+
                         timestamp_str = event.get('timestamp')
                         if timestamp_str:
                             timestamp = None
@@ -477,33 +478,33 @@ class DBManager:
                                 "%Y-%m-%dT%H:%M:%S",
                                 "%Y-%m-%d",
                             ]
-                            
+
                             for date_format in date_formats:
                                 try:
                                     timestamp = datetime.datetime.strptime(timestamp_str, date_format)
                                     break
                                 except ValueError:
                                     continue
-                            
+
                             if timestamp is None:
                                 timestamp = datetime.datetime.now()
                                 logger.warning(f"日付形式を解析できないため現在日時を使用: {timestamp_str}")
                         else:
                             timestamp = datetime.datetime.now()
-                        
+
                         event_type = event.get('event_type', 'unknown')
-                        
+
                         roles = event.get('roles', [])
                         if roles:
                             for role in roles:
                                 try:
                                     role_id = str(role.get('id'))
-                                    
+
                                     role_exists = await conn.fetchval(
                                         "SELECT EXISTS(SELECT 1 FROM roles WHERE role_id = $1)",
                                         role_id
                                     )
-                                    
+
                                     if not role_exists:
                                         await conn.execute(
                                             """
@@ -516,7 +517,7 @@ class DBManager:
                                             '',
                                             ''
                                         )
-                                    
+
                                     await conn.execute(
                                         """
                                         INSERT INTO role_events (user_id, role_id, event_type, timestamp, interaction_id)
@@ -536,12 +537,12 @@ class DBManager:
                             try:
                                 if 'role_id' in event:
                                     role_id = str(event.get('role_id'))
-                                    
+
                                     role_exists = await conn.fetchval(
                                         "SELECT EXISTS(SELECT 1 FROM roles WHERE role_id = $1)",
                                         role_id
                                     )
-                                    
+
                                     if not role_exists:
                                         await conn.execute(
                                             """
@@ -554,7 +555,7 @@ class DBManager:
                                             '',
                                             ''
                                         )
-                                    
+
                                     await conn.execute(
                                         """
                                         INSERT INTO role_events (user_id, role_id, event_type, timestamp, interaction_id)
@@ -577,24 +578,24 @@ class DBManager:
                         logger.error(f"イベントデータ処理中の予期しないエラー: {e} - イベント: {event}")
                         skipped_count += 1
                         continue
-            
+
             logger.info(f"{len(events_data)} 件のイベントデータから {migrated_count} 件を移行しました。{skipped_count} 件をスキップしました。")
             return True
         except Exception as e:
             logger.error(f"イベントデータ移行中にエラー: {e}")
             raise
-    
+
     async def _migrate_summary(self, file_path):
         """統計サマリーデータの移行"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 summary_data = json.load(f)
-            
+
             if 'daily_stats' in summary_data:
                 async with self.pool.acquire() as conn:
                     for date_str, roles_stats in summary_data['daily_stats'].items():
                         date_obj = datetime.date.fromisoformat(date_str)
-                        
+
                         for role_id, stats in roles_stats.items():
                             await conn.execute(
                                 """
@@ -609,22 +610,22 @@ class DBManager:
                                 stats.get('adds', 0),
                                 stats.get('removes', 0)
                             )
-            
+
             logger.info("統計サマリーデータを移行しました")
         except Exception as e:
             logger.error(f"統計データ移行中にエラー: {e}")
             raise
-    
+
     async def _migrate_guild_configs(self, file_path):
         """サーバー設定データの移行"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 config_data = json.load(f)
-            
+
             async with self.pool.acquire() as conn:
                 for guild_id, config in config_data.items():
                     welcome_channel_id = config.get('welcome_channel')
-                    
+
                     await conn.execute(
                         """
                         INSERT INTO guild_configs (guild_id, welcome_channel_id, config_json)
@@ -636,26 +637,26 @@ class DBManager:
                         welcome_channel_id,
                         json.dumps(config)
                     )
-            
+
             logger.info(f"{len(config_data)}件のサーバー設定データを移行しました")
             return True
         except Exception as e:
             logger.error(f"サーバー設定データ移行中にエラー: {e}")
             raise
-    
+
     async def _migrate_role_emoji_mapping(self, file_path):
         """ロール絵文字マッピングデータの移行"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 mapping_data = json.load(f)
-            
+
             async with self.pool.acquire() as conn:
                 for role_id, emoji_data in mapping_data.items():
                     # 絵文字データの解析
                     emoji_id = None
                     emoji_name = None
                     emoji_json = None
-                    
+
                     if isinstance(emoji_data, dict):
                         emoji_id = emoji_data.get('id')
                         emoji_name = emoji_data.get('name')
@@ -665,9 +666,9 @@ class DBManager:
                         emoji_match = re.search(r'<:[^:]+:([0-9]+)>', emoji_data)
                         if emoji_match:
                             emoji_id = emoji_match.group(1)
-                    
+
                     guild_id = settings.admin_main_guild_id
-                    
+
                     await conn.execute(
                         """
                         INSERT INTO role_emoji_mappings (role_id, emoji_id, emoji_name, emoji_data, guild_id)
@@ -681,34 +682,34 @@ class DBManager:
                         emoji_json,
                         guild_id
                     )
-            
+
             logger.info(f"{len(mapping_data)}件のロール絵文字マッピングデータを移行しました")
             return True
         except Exception as e:
             logger.error(f"ロール絵文字マッピングデータ移行中にエラー: {e}")
             raise
-    
+
     async def _migrate_custom_announcements(self, directory_path):
         """カスタムアナウンステンプレートの移行"""
         try:
             # JSONファイルを検索
             json_files = [f for f in os.listdir(directory_path) if f.endswith('.json')]
-            
+
             if not json_files:
                 logger.info("カスタムアナウンステンプレートのJSONファイルが見つかりませんでした")
                 return False
-            
+
             template_count = 0
             async with self.pool.acquire() as conn:
                 for json_file in json_files:
                     file_path = os.path.join(directory_path, json_file)
-                    with open(file_path, 'r', encoding='utf-8') as f:
+                    with open(file_path, encoding='utf-8') as f:
                         templates = json.load(f)
-                    
+
                     # ファイル名からギルドIDを抽出（例: announcements_1234567890.json）
                     guild_match = re.search(r'(\d+)', json_file)
                     guild_id = int(guild_match.group(1)) if guild_match else 1092138492173242430
-                    
+
                     for template_name, template_content in templates.items():
                         await conn.execute(
                             """
@@ -722,27 +723,27 @@ class DBManager:
                             guild_id
                         )
                         template_count += 1
-            
+
             logger.info(f"{template_count}件のカスタムアナウンステンプレートを移行しました")
             return True
         except Exception as e:
             logger.error(f"カスタムアナウンスデータ移行中にエラー: {e}")
             raise
-    
+
     async def _migrate_bot_config(self, file_path):
         """ボット設定ファイル(bot.json)の移行"""
         try:
             # JSONファイルを読み込み
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 bot_config = json.load(f)
-            
+
             # データベースに保存
             async with self.pool.acquire() as conn:
                 await conn.execute(
                     """
                     INSERT INTO bot_config (name, version, owner, prefix, updated_at)
                     VALUES ($1, $2, $3, $4, NOW())
-                    ON CONFLICT (id) DO UPDATE 
+                    ON CONFLICT (id) DO UPDATE
                     SET name = $1, version = $2, owner = $3, prefix = $4, updated_at = NOW()
                     """,
                     bot_config.get('name', 'HFS Manager'),
@@ -750,49 +751,49 @@ class DBManager:
                     bot_config.get('owner', 'FreeWiFi7749'),
                     bot_config.get('prefix', 'hfs-hp/')
                 )
-            
+
             logger.info(f"ボット設定をデータベースに移行しました: {file_path}")
             return True
         except Exception as e:
             logger.error(f"ボット設定移行中にエラー: {e}")
             raise
-    
+
     async def _migrate_auth_config(self, file_path):
         """認証設定ファイル(auth.json)の移行"""
         try:
             # JSONファイルを読み込み
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 auth_config = json.load(f)
-            
+
             # データベースに保存
             async with self.pool.acquire() as conn:
                 await conn.execute(
                     """
                     INSERT INTO auth_config (id, label, auth_code, updated_at)
                     VALUES ($1, $2, $3, NOW())
-                    ON CONFLICT (id) DO UPDATE 
+                    ON CONFLICT (id) DO UPDATE
                     SET label = $2, auth_code = $3, updated_at = NOW()
                     """,
                     auth_config.get('id', str(uuid.uuid4())),
                     auth_config.get('label', 'HFS_Manager'),
                     auth_config.get('auth_code', '')
                 )
-            
+
             logger.info(f"認証設定をデータベースに移行しました: {file_path}")
             return True
         except Exception as e:
             logger.error(f"認証設定移行中にエラー: {e}")
             raise
-    
+
     async def _migrate_members(self, file_path):
         """メンバー情報ファイル(members.json)の移行"""
         try:
             # JSONファイルを読み込み
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 members_data = json.load(f)
-            
+
             total_count = 0
-            
+
             # データベースに保存
             async with self.pool.acquire() as conn:
                 # スタッフメンバーの移行
@@ -802,7 +803,7 @@ class DBManager:
                             # 日付処理
                             joined_at = None
                             joined_at_str = member.get('joinedAt')
-                            
+
                             if joined_at_str:
                                 # 複数の日付形式を試す
                                 date_formats = [
@@ -810,24 +811,24 @@ class DBManager:
                                     "%Y-%m-%dT%H:%M:%S",
                                     "%Y-%m-%d",
                                 ]
-                                
+
                                 for date_format in date_formats:
                                     try:
                                         joined_at = datetime.datetime.strptime(joined_at_str, date_format)
                                         break
                                     except ValueError:
                                         continue
-                            
+
                             await conn.execute(
                                 """
                                 INSERT INTO members (
-                                    id, name, role, avatar, message, joined_at, joined_at_jp, 
+                                    id, name, role, avatar, message, joined_at, joined_at_jp,
                                     role_color, socials, type, updated_at
                                 )
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-                                ON CONFLICT (id) DO UPDATE 
-                                SET name = $2, role = $3, avatar = $4, message = $5, 
-                                    joined_at = $6, joined_at_jp = $7, role_color = $8, 
+                                ON CONFLICT (id) DO UPDATE
+                                SET name = $2, role = $3, avatar = $4, message = $5,
+                                    joined_at = $6, joined_at_jp = $7, role_color = $8,
                                     socials = $9, type = $10, updated_at = NOW()
                                 """,
                                 int(member.get('id', 0)),
@@ -844,7 +845,7 @@ class DBManager:
                             total_count += 1
                         except Exception as e:
                             logger.error(f"メンバー情報処理中にエラー: {e} - メンバー: {member}")
-                
+
                 # specialThanksメンバーの移行
                 if 'specialThanks' in members_data:
                     for member in members_data['specialThanks']:
@@ -852,7 +853,7 @@ class DBManager:
                             # 日付処理
                             joined_at = None
                             joined_at_str = member.get('joinedAt')
-                            
+
                             if joined_at_str:
                                 # 複数の日付形式を試す
                                 date_formats = [
@@ -860,24 +861,24 @@ class DBManager:
                                     "%Y-%m-%dT%H:%M:%S",
                                     "%Y-%m-%d",
                                 ]
-                                
+
                                 for date_format in date_formats:
                                     try:
                                         joined_at = datetime.datetime.strptime(joined_at_str, date_format)
                                         break
                                     except ValueError:
                                         continue
-                            
+
                             await conn.execute(
                                 """
                                 INSERT INTO members (
-                                    id, name, role, avatar, message, joined_at, joined_at_jp, 
+                                    id, name, role, avatar, message, joined_at, joined_at_jp,
                                     role_color, socials, type, updated_at
                                 )
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-                                ON CONFLICT (id) DO UPDATE 
-                                SET name = $2, role = $3, avatar = $4, message = $5, 
-                                    joined_at = $6, joined_at_jp = $7, role_color = $8, 
+                                ON CONFLICT (id) DO UPDATE
+                                SET name = $2, role = $3, avatar = $4, message = $5,
+                                    joined_at = $6, joined_at_jp = $7, role_color = $8,
                                     socials = $9, type = $10, updated_at = NOW()
                                 """,
                                 int(member.get('id', 0)),
@@ -894,7 +895,7 @@ class DBManager:
                             total_count += 1
                         except Exception as e:
                             logger.error(f"メンバー情報処理中にエラー: {e} - メンバー: {member}")
-                
+
                 # testersメンバーの移行
                 if 'testers' in members_data:
                     for member in members_data['testers']:
@@ -902,7 +903,7 @@ class DBManager:
                             # 日付処理
                             joined_at = None
                             joined_at_str = member.get('joinedAt')
-                            
+
                             if joined_at_str:
                                 # 複数の日付形式を試す
                                 date_formats = [
@@ -910,24 +911,24 @@ class DBManager:
                                     "%Y-%m-%dT%H:%M:%S",
                                     "%Y-%m-%d",
                                 ]
-                                
+
                                 for date_format in date_formats:
                                     try:
                                         joined_at = datetime.datetime.strptime(joined_at_str, date_format)
                                         break
                                     except ValueError:
                                         continue
-                            
+
                             await conn.execute(
                                 """
                                 INSERT INTO members (
-                                    id, name, role, avatar, message, joined_at, joined_at_jp, 
+                                    id, name, role, avatar, message, joined_at, joined_at_jp,
                                     role_color, socials, type, updated_at
                                 )
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-                                ON CONFLICT (id) DO UPDATE 
-                                SET name = $2, role = $3, avatar = $4, message = $5, 
-                                    joined_at = $6, joined_at_jp = $7, role_color = $8, 
+                                ON CONFLICT (id) DO UPDATE
+                                SET name = $2, role = $3, avatar = $4, message = $5,
+                                    joined_at = $6, joined_at_jp = $7, role_color = $8,
                                     socials = $9, type = $10, updated_at = NOW()
                                 """,
                                 int(member.get('id', 0)),
@@ -944,19 +945,19 @@ class DBManager:
                             total_count += 1
                         except Exception as e:
                             logger.error(f"メンバー情報処理中にエラー: {e} - メンバー: {member}")
-            
+
             logger.info(f"{total_count}件のメンバー情報をデータベースに移行しました: {file_path}")
             return True
         except Exception as e:
             logger.error(f"メンバー情報移行中にエラー: {e}")
             raise
-    
+
     # --- role_emoji_mapping API ---
-    async def get_role_emoji_mapping_dict(self) -> Dict[str, str]:
+    async def get_role_emoji_mapping_dict(self) -> dict[str, str]:
         """role_emoji_mappings テーブルを dict で取得"""
         if not self._initialized:
             await self.initialize()
-        mapping: Dict[str, str] = {}
+        mapping: dict[str, str] = {}
         async with self.pool.acquire() as conn:
             rows = await conn.fetch("SELECT role_id, emoji_id, emoji_name, animated FROM role_emoji_mappings")
             for r in rows:
@@ -967,7 +968,7 @@ class DBManager:
                 }
         return mapping
 
-    async def upsert_role_emoji_mapping_dict(self, mapping: Dict[str, Dict[str, str]], guild_id: int):
+    async def upsert_role_emoji_mapping_dict(self, mapping: dict[str, dict[str, str]], guild_id: int):
         """辞書をテーブルに upsert"""
         if not self._initialized:
             await self.initialize()
@@ -986,7 +987,7 @@ class DBManager:
     async def _migrate_member_emojis(self, file_path):
         """m__emojis.json を member_emojis テーブルに移行"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 emojis_data = json.load(f)
 
             async with self.pool.acquire() as conn:
@@ -1015,10 +1016,10 @@ class DBManager:
         except Exception as e:
             logger.error(f"m__emojis.json からの移行に失敗: {e}")
             return False
-    
+
     # --- 推しロール操作用API ---
-    
-    async def get_user_roles(self, user_id: int) -> List[Dict[str, Any]]:
+
+    async def get_user_roles(self, user_id: int) -> list[dict[str, Any]]:
         """ユーザーの現在のロール一覧を取得します"""
         try:
             async with self.pool.acquire() as conn:
@@ -1033,7 +1034,7 @@ class DBManager:
                     """,
                     user_id
                 )
-                
+
                 result = []
                 for record in records:
                     result.append({
@@ -1043,81 +1044,81 @@ class DBManager:
                         'emoji': record['emoji'],
                         'assigned_at': record['assigned_at'].isoformat()
                     })
-                
+
                 return result
         except Exception as e:
             logger.error(f"ユーザーのロール取得中にエラー: {e}")
             return []
-    
+
     async def add_role_to_user(self, user_id: int, role_id, username: str = None, interaction_id: str = None):
         """ユーザーにロールを追加し、イベントを記録します"""
         try:
             if not self._initialized:
                 await self.initialize()
-                
+
             # role_idを文字列に変換して一貫性を確保
             role_id_str = str(role_id)
-                
+
             async with self.pool.acquire() as conn:
                 # ユーザーが存在するか確認し、存在しなければ作成
                 user_exists = await conn.fetchval(
                     "SELECT EXISTS(SELECT 1 FROM users WHERE user_id = $1)",
                     user_id
                 )
-                
+
                 if not user_exists:
                     await conn.execute(
                         "INSERT INTO users (user_id, username) VALUES ($1, $2)",
                         user_id, username or '不明'
                     )
-                
+
                 # ロールが存在するか確認
                 role_exists = await conn.fetchval(
                     "SELECT EXISTS(SELECT 1 FROM roles WHERE role_id = $1)",
                     role_id_str
                 )
-                
+
                 if not role_exists:
                     logger.warning(f"存在しないロールID: {role_id_str}")
                     return False
-                
+
                 # 既に有効なロールがあるか確認
                 active_role = await conn.fetchval(
-                    """SELECT id FROM user_roles 
+                    """SELECT id FROM user_roles
                     WHERE user_id = $1 AND role_id = $2 AND is_active = true""",
                     user_id, role_id_str
                 )
-                
+
                 if active_role:
                     logger.info(f"ユーザー {user_id} は既にロール {role_id_str} を持っています")
                     return False
-                
+
                 # 新しいロール割り当てを作成
                 now = datetime.datetime.now()
                 await conn.execute(
-                    """INSERT INTO user_roles (user_id, role_id, assigned_at, is_active) 
+                    """INSERT INTO user_roles (user_id, role_id, assigned_at, is_active)
                     VALUES ($1, $2, $3, true)""",
                     user_id, role_id_str, now
                 )
-                
+
                 # イベントを記録
                 await conn.execute(
-                    """INSERT INTO role_events (user_id, role_id, event_type, timestamp, interaction_id) 
+                    """INSERT INTO role_events (user_id, role_id, event_type, timestamp, interaction_id)
                     VALUES ($1, $2, $3, $4, $5)""",
                     user_id, role_id_str, 'add', now, interaction_id or ''
                 )
-                
+
                 return True
-                
+
         except Exception as e:
             logger.error(f"ロール追加中にエラー: {e}")
             return False
-    
+
     async def remove_role_from_user(self, user_id: int, role_id, interaction_id: str = None) -> bool:
         """ユーザーからロールを削除し、イベントを記録します"""
         try:
             now = datetime.datetime.now()
-            
+
             async with self.pool.acquire() as conn:
                 # トランザクション開始
                 async with conn.transaction():
@@ -1129,7 +1130,7 @@ class DBManager:
                         """,
                         user_id, role_id
                     )
-                    
+
                     # アクティブなロールがあれば削除
                     if user_role:
                         # ロールの非アクティブ化
@@ -1141,7 +1142,7 @@ class DBManager:
                             """,
                             user_role['id'], now
                         )
-                        
+
                         # イベントの記録
                         await conn.execute(
                             """
@@ -1150,7 +1151,7 @@ class DBManager:
                             """,
                             user_id, str(role_id), now, interaction_id
                         )
-                        
+
                         # 統計の更新
                         today = now.date()
                         await conn.execute(
@@ -1169,20 +1170,20 @@ class DBManager:
                             """,
                             role_id, today
                         )
-                    
+
                     return True
         except Exception as e:
             logger.error(f"ロール削除中にエラー: {e}")
             return False
-    
+
     # --- 統計情報取得用API ---
-    
-    async def get_role_statistics(self, days: int = 30) -> Dict[str, Any]:
+
+    async def get_role_statistics(self, days: int = 30) -> dict[str, Any]:
         """ロールの統計情報を取得します"""
         try:
             end_date = datetime.date.today()
             start_date = end_date - datetime.timedelta(days=days)
-            
+
             async with self.pool.acquire() as conn:
                 # アクティブなロール数の合計
                 total_roles = await conn.fetchval(
@@ -1190,7 +1191,7 @@ class DBManager:
                     SELECT COUNT(*) FROM user_roles WHERE is_active = true
                     """
                 )
-                
+
                 # ロールごとの統計
                 role_stats = await conn.fetch(
                     """
@@ -1208,7 +1209,7 @@ class DBManager:
                     """,
                     start_date, end_date
                 )
-                
+
                 # 日別データ
                 daily_data = await conn.fetch(
                     """
@@ -1220,7 +1221,7 @@ class DBManager:
                     """,
                     start_date, end_date
                 )
-                
+
                 return {
                     'total_active_roles': total_roles,
                     'period': {
