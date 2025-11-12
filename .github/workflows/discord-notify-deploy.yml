@@ -7,7 +7,7 @@ jobs:
   discord-notify-deploy:
     runs-on: ubuntu-latest
         environment: production
-    steps:
+      steps:
       - name: Clone repository
         uses: actions/checkout@v5
 
