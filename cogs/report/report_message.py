@@ -1,17 +1,18 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
-from discord.ui import Modal, TextInput
-import pytz
 from datetime import datetime
+
+import discord
+import pytz
+from discord import app_commands
+from discord.ext import commands
+from discord.ui import Modal, TextInput
 
 from utils.logging import setup_logging
 
 logger = setup_logging()
 
 class OtherReasonModal(Modal):
-    def __init__(self, message: discord.Message, mod_channel: discord.TextChannel, *args, **kwargs):
-        super().__init__(title="通報理由の詳細", *args, **kwargs)
+    def __init__(self, message: discord.Message, mod_channel: discord.TextChannel, **kwargs):
+        super().__init__(title="通報理由の詳細", **kwargs)
         self.message = message
         self.mod_channel = mod_channel
         self.reason = TextInput(label="詳細な通報理由", style=discord.TextStyle.long, placeholder="ここに詳細な通報理由を記入してください...", required=True)
@@ -110,7 +111,7 @@ async def setup(bot):
 
         if view.value == "その他":
             return
-            
+
         jst = pytz.timezone('Asia/Tokyo')
         now = datetime.now(jst)
         embed = discord.Embed(

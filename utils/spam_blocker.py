@@ -1,14 +1,13 @@
-import discord
-from discord.ext import commands
-
 import json
 import os
-
 from collections import Counter, defaultdict
 from typing import Union
 
-from utils.logging import setup_logging
+import discord
+from discord.ext import commands
+
 from config.setting import get_settings
+from utils.logging import setup_logging
 
 log = setup_logging("D")
 settings = get_settings()
@@ -43,7 +42,7 @@ class SpamBlocker:
             self.save_config(default_config)
             return default_config
 
-        with open(self.config_file, 'r') as f:
+        with open(self.config_file) as f:
             return json.load(f)
 
     def save_config(self, config=None):
@@ -68,7 +67,7 @@ class SpamBlocker:
     def load_blacklist(self):
         """ファイルからブラックリストを読み込み"""
         if os.path.exists(self.blacklist_file):
-            with open(self.blacklist_file, 'r') as f:
+            with open(self.blacklist_file) as f:
                 self.blacklist.update(json.load(f))
         else:
             log.info("Blacklist file does not exist. Creating a new one.")

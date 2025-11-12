@@ -1,8 +1,9 @@
-import httpx
 import json
 import os
 
-with open('config/bot.json', 'r') as f:
+import httpx
+
+with open('config/bot.json') as f:
     bot_config = json.load(f)
 
 async def get_auth():
@@ -22,7 +23,7 @@ async def get_auth():
             else:
                 raise Exception("認証情報の取得に失敗しました。")
         except Exception as e:
-            raise Exception(f"認証情報の取得に失敗しました。: {e}")
+            raise Exception(f"認証情報の取得に失敗しました。: {e}") from e
 
 def save_auth(auth: dict):
     """
@@ -38,7 +39,7 @@ def load_auth():
     保存済みの認証情報を読み込む。
     """
     if os.path.exists('config/auth.json'):
-        with open('config/auth.json', 'r') as f:
+        with open('config/auth.json') as f:
             return json.load(f)
     else:
         raise FileNotFoundError("auth.jsonが見つかりません。認証情報を取得してください。")

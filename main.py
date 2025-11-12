@@ -1,29 +1,36 @@
-import discord
-from discord.ext import commands
-# from discord.ext.prometheus import PrometheusCog
-
-import re
-import pathlib
-import logging
 import asyncio
-import traceback
 import json
+import logging
 import os
+import pathlib
+
+# from discord.ext.prometheus import PrometheusCog
+import re
+import traceback
+from datetime import datetime
+
+import discord
+
 # import sentry_sdk
 import pytz
-from datetime import datetime
+from discord.ext import commands
 from dotenv import load_dotenv
 
-
-from utils import presence
-from utils.logging import save_log
-from utils.startup import startup_send_webhook, startup_send_botinfo, startup_message, yokobou, git_pull, pip_install
-from utils.startup_status import update_status
-from utils.logging import setup_logging
-from utils.error import handle_command_error, handle_application_command_error
-from utils.auth import verify_auth, load_auth
 # from utils.prometheus_config import add_bot_endpoint, reload_prometheus
 from config.setting import get_settings
+from utils import presence
+from utils.auth import load_auth, verify_auth
+from utils.error import handle_application_command_error, handle_command_error
+from utils.logging import save_log, setup_logging
+from utils.startup import (
+    git_pull,
+    pip_install,
+    startup_message,
+    startup_send_botinfo,
+    startup_send_webhook,
+    yokobou,
+)
+from utils.startup_status import update_status
 
 # ログディレクトリの作成
 log_dir = "data/logging"
@@ -32,7 +39,7 @@ os.makedirs(log_dir, exist_ok=True)
 logger: logging.Logger = setup_logging("D")
 load_dotenv()
 
-with open('config/bot.json', 'r') as f:
+with open('config/bot.json') as f:
     bot_config: dict[str, str] = json.load(f)
 
 session_id: str = None
@@ -85,6 +92,9 @@ class MyBot(commands.AutoShardedBot):
             await git_pull()
             await pip_install()
             await self.load_cogs('cogs')
+
+            await self.load_extension('cogs.aus')
+
             await self.load_extension('jishaku')
 
             # add_bot_endpoint(
@@ -99,7 +109,7 @@ class MyBot(commands.AutoShardedBot):
         except Exception as e:
             logger.error(f"認証に失敗しました。Cogのロードをスキップします。: {e}")
             return
-        
+
         self.loop.create_task(self.after_ready())
 
     async def after_ready(self) -> None:
@@ -140,6 +150,10 @@ class MyBot(commands.AutoShardedBot):
 
             if p.stem == "__init__":
                 continue
+
+            if 'aus' in p.parts:
+                continue
+
             try:
                 cog_path: str = p.relative_to(cur).with_suffix('').as_posix().replace('/', '.')
                 await self.load_extension(cog_path)
@@ -169,7 +183,7 @@ class MyBot(commands.AutoShardedBot):
                 "name": str(ctx.author)
             }
         }
-        
+
         if ctx.guild:
             error_context["guild"] = {
                 "id": ctx.guild.id,
@@ -196,7 +210,7 @@ class MyBot(commands.AutoShardedBot):
                 "name": str(interaction.user)
             }
         }
-        
+
         if interaction.guild:
             error_context["guild"] = {
                 "id": interaction.guild.id,
