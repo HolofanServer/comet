@@ -3,11 +3,20 @@ import os
 import shutil
 import uuid
 
-from logging import getLogger, StreamHandler, Formatter, INFO, DEBUG, WARNING, ERROR, CRITICAL, FileHandler
-from typing import Optional
 #from discord.ext.prometheus import PrometheusLoggingHandler
-
 from datetime import datetime
+from logging import (
+    CRITICAL,
+    DEBUG,
+    ERROR,
+    INFO,
+    WARNING,
+    FileHandler,
+    Formatter,
+    StreamHandler,
+    getLogger,
+)
+from typing import Optional
 
 logger = getLogger(__name__)
 handler = StreamHandler()
@@ -51,7 +60,7 @@ class CustomFormatter(Formatter):
 
 def save_log(log_data):
     logger.info('Saving log data...')
-    
+
     date_str = datetime.now().strftime('%Y-%m-%d')
     time_str = datetime.now().strftime('%H-%M-%S')
     base_dir_path = 'data/logging'
@@ -76,7 +85,7 @@ def save_log(log_data):
     logger.info(f'Log saved to {file_path}')
 
 def setup_logging(mode: Optional[str] = None):
-    
+
     if logger.hasHandlers():
         logger.handlers.clear()
 
@@ -99,7 +108,7 @@ def setup_logging(mode: Optional[str] = None):
         # handler_gf.setFormatter(CustomFormatter())
         # logger_gf.addHandler(handler_gf)
         # logger_gf.propagate = False
-        
+
         # return logger
     elif mode == "api" or mode == "API":
         path = "data/logging/api"
@@ -107,17 +116,17 @@ def setup_logging(mode: Optional[str] = None):
             os.makedirs(path, exist_ok=True)
         api_logger = getLogger("API")
         api_logger.setLevel(DEBUG)
-        
+
         api_stream_handler = StreamHandler()
         api_stream_handler.setLevel(DEBUG)
         api_stream_handler.setFormatter(CustomFormatter())
         api_logger.addHandler(api_stream_handler)
-        
+
         api_file_handler = FileHandler(f'{path}/api.log')
         api_file_handler.setLevel(DEBUG)
         api_file_handler.setFormatter(CustomFormatter())
         api_logger.addHandler(api_file_handler)
-        
+
         api_logger.propagate = False
         return api_logger
     else:

@@ -1,24 +1,23 @@
-import discord
-from discord.ext import commands
-
-import pytz
-import platform
-import sys
-import psutil
-import os
-import subprocess
-import json
-import pyfiglet
-import pkg_resources
 import asyncio
-
-from pathlib import Path
+import json
+import os
+import platform
+import subprocess
+import sys
 from datetime import datetime
+from pathlib import Path
+
+import discord
+import pkg_resources
+import psutil
+import pyfiglet
+import pytz
+from discord.ext import commands
 from dotenv import load_dotenv
 
-from utils.startup_create import create_usage_bar
-from utils.logging import setup_logging
 from config.setting import get_settings
+from utils.logging import setup_logging
+from utils.startup_create import create_usage_bar
 
 logger = setup_logging("D")
 load_dotenv()
@@ -29,9 +28,9 @@ bot_owner_id = settings.bot_owner_id
 startup_channel_id = settings.admin_startup_channel_id
 startup_guild_id = settings.admin_dev_guild_id
 
-with open('config/bot.json', 'r') as f:
+with open('config/bot.json') as f:
     bot_config = json.load(f)
-with open('config/version.json', 'r') as f:
+with open('config/version.json') as f:
     version_config = json.load(f)
 
 async def load_cogs(bot, directory='./cogs'):
@@ -111,7 +110,7 @@ async def startup_send_webhook(bot, guild_id):
     def find_session_id_from_json(log_file_path):
         """JSON形式のログファイルからセッションIDを検索し、見つかった場合は返す関数"""
         try:
-            with open(log_file_path, 'r') as log_file:
+            with open(log_file_path) as log_file:
                 log_data = json.load(log_file)
                 return log_data.get('session_id')
         except FileNotFoundError:
@@ -137,7 +136,7 @@ async def startup_send_webhook(bot, guild_id):
     embed.add_field(name="Bot名", value=bot.user.name, inline=True)
     embed.add_field(name="Bot ID", value=bot.user.id, inline=True)
     embed.add_field(name="GitHub Branch", value=get_github_branch(), inline=True)
-    
+
     cogs_by_directory = {}
     for cog in bot.extensions.keys():
         parts = cog.split('.')
@@ -151,7 +150,7 @@ async def startup_send_webhook(bot, guild_id):
         if directory not in cogs_by_directory:
             cogs_by_directory[directory] = []
         cogs_by_directory[directory].append(cog)
-    
+
     cogs_description = ""
     for directory, cogs in cogs_by_directory.items():
         cogs_description += f"> **{directory.capitalize()}**\n" + '\n'.join(cogs) + "\n\n"
@@ -173,7 +172,7 @@ async def startup_send_webhook(bot, guild_id):
     else:
         webhook = await channel.create_webhook(name=webhook_name)
         await webhook.send(embed=embed)
-        await webhook.delete() 
+        await webhook.delete()
 
 async def startup_send_botinfo(bot):
     guild = bot.get_guild(startup_guild_id)
@@ -186,7 +185,7 @@ async def startup_send_botinfo(bot):
     if channel is None:
         logger.warning("指定されたチャンネルが見つかりません。")
         return
-    
+
     discord_py_hash = get_detailed_discord_version().split(discord.__version__)[1]
     os_info = f"{platform.system()} {platform.release()} ({platform.version()})"
     cpu_info = get_cpu_model_name()
@@ -199,7 +198,7 @@ async def startup_send_botinfo(bot):
     memory_usage = memory.percent
 
     total_memory_gb = round(memory.total / (1024 ** 3), 2)
-    
+
     cpu_bar = create_usage_bar(cpu_usage)
     memory_bar = create_usage_bar(memory_usage)
 
@@ -266,10 +265,10 @@ async def pip_install():
         stderr=asyncio.subprocess.PIPE
     )
     await process.communicate()
-    
+
     result = get_github_branch()
     req_file = "requirements-dev.txt" if result in ["Dev", "dev"] else "requirements.txt"
-    
+
     process = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "pip", "install", "-r", req_file,
         stdout=asyncio.subprocess.PIPE,
@@ -277,7 +276,7 @@ async def pip_install():
     )
     await process.communicate()
     logger.info("Pip install completed")
-    
+
 async def check_dev():
     result = get_github_branch()
     if result in ["Dev", "dev"]:

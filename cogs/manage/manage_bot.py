@@ -1,29 +1,28 @@
+import asyncio
+import json
+import platform
+import shlex
+import subprocess
+import sys
+import time
+
 import discord
 from discord.ext import commands
 
-import sys
-import subprocess
-import platform
-import time
-import asyncio
-import json
-import shlex
-
-from utils import api
-from utils.spam_blocker import SpamBlocker
-from utils.logging import setup_logging
-from utils.commands_help import is_owner, log_commands
-
 from config.setting import get_settings
+from utils import api
+from utils.commands_help import is_owner, log_commands
+from utils.logging import setup_logging
+from utils.spam_blocker import SpamBlocker
 
 logger = setup_logging()
 settings = get_settings()
 
 SERVICE_NAME = settings.bot_service_name
 
-with open('config/bot.json', 'r') as f:
+with open('config/bot.json') as f:
     bot_config = json.load(f)
-with open('config/version.json', 'r') as f:
+with open('config/version.json') as f:
     version_config = json.load(f)
 
 class ManagementBotCog(commands.Cog):

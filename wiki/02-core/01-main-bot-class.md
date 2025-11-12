@@ -1,8 +1,20 @@
 # メインボットクラス (MyBot)
 
+## C.O.M.E.T.について
+
+**C.O.M.E.T.**の名前は以下の頭文字から構成されています：
+
+- **C**ommunity of
+- **O**shilove
+- **M**oderation &
+- **E**njoyment
+- **T**ogether
+
+HFS - ホロライブ非公式ファンサーバーのコミュニティを支える、推し愛とモデレーション、そして楽しさを一緒に提供するボットです。
+
 ## 概要
 
-`MyBot`クラスは、COMET Discord botの中核コンポーネントで、discord.pyの`AutoShardedBot`を拡張してGizmodo Woodsコミュニティ向けの拡張機能を提供します。
+`MyBot`クラスは、COMET Discord botの中核コンポーネントで、discord.pyの`AutoShardedBot`を拡張してHFSコミュニティ向けの拡張機能を提供します。
 
 ## クラス定義
 
