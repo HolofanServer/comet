@@ -58,11 +58,26 @@ class Settings:
         self.homepage_target_guild_id: int = int(os.getenv("HOMEPAGE_TARGET_GUILD_ID", "0"))
         self.staff_api_key: str = os.getenv("STAFF_API_KEY", "")
 
+        #db
+        self.database_public_url: str = os.getenv("DATABASE_PUBLIC_URL", "")
+        self.tag_moderation_database_url: str = os.getenv("TAG_MODERATION_DATABASE_URL", "")
+        self.aus_database_url: str = os.getenv("AUS_DATABASE_URL", "")
+
         # Note通知機能
         self.note_rss_url: str = os.getenv("NOTE_RSS_URL", "https://note.com/hfs_discord/rss")
         self.note_webhook_url: str = os.getenv("NOTE_WEBHOOK_URL", "")
         self.note_channel_id: int = int(os.getenv("NOTE_CHANNEL_ID", "0"))
         self.note_notification_enabled: bool = os.getenv("NOTE_NOTIFICATION_ENABLED", "true").lower() == "true"
+
+        # AUS (Art Unauthorized-repost Shield)
+        self.aus_mod_channel_id: int = int(os.getenv("AUS_MOD_CHANNEL_ID", "0"))
+        self.aus_ticket_category_id: int = int(os.getenv("AUS_TICKET_CATEGORY_ID", "0"))
+        self.aus_mod_role_id: int = int(os.getenv("AUS_MOD_ROLE_ID", "0"))
+        self.aus_excluded_channel_ids: str = os.getenv("AUS_EXCLUDED_CHANNEL_IDS", "")
+        self.aus_excluded_category_ids: str = os.getenv("AUS_EXCLUDED_CATEGORY_IDS", "")
+        self.saucenao_api_key: str = os.getenv("SAUCENAO_API_KEY", "")
+        self.google_cloud_credentials_json: str = os.getenv("GOOGLE_CLOUD_CREDENTIALS_JSON", "")
+        self.google_application_credentials: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
 
 _settings = None
 
