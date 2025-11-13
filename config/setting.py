@@ -58,6 +58,11 @@ class Settings:
         self.homepage_target_guild_id: int = int(os.getenv("HOMEPAGE_TARGET_GUILD_ID", "0"))
         self.staff_api_key: str = os.getenv("STAFF_API_KEY", "")
 
+        # HFS Members Card
+        self.hfs_api_base_url: str = os.getenv("HFS_API_BASE_URL", "https://example.com")
+        self.hfs_api_key: str = os.getenv("HFS_API_KEY", "")
+        self.hfs_guild_id: int = int(os.getenv("HFS_GUILD_ID", "0"))
+
         #db
         self.database_public_url: str = os.getenv("DATABASE_PUBLIC_URL", "")
         self.tag_moderation_database_url: str = os.getenv("TAG_MODERATION_DATABASE_URL", "")

@@ -1,10 +1,9 @@
-import os
 from typing import Optional
 
 import aiohttp
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from config.setting import get_settings
 from utils.logging import setup_logging
@@ -19,16 +18,25 @@ class MembersCard(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         # API設定
-        self.api_base_url = os.getenv("HFS_API_BASE_URL", "https://example.com/api/bot")
-        self.api_key = os.getenv("HFS_API_KEY", "")
+        self.api_base_url = settings.hfs_api_base_url
+        self.api_key = settings.hfs_api_key
+        self.hfs_guild_id = settings.hfs_guild_id
 
         if not self.api_key:
             logger.warning("HFS_API_KEYが設定されていません。Members Card機能は動作しません。")
+
+        if not self.hfs_guild_id:
+            logger.warning("HFS_GUILD_IDが設定されていません。メンバー同期機能は動作しません。")
 
         # APIヘッダー
         self.headers = {
             "x-api-key": self.api_key
         }
+
+        # メンバー同期タスクを開始
+        if self.api_key and self.hfs_guild_id:
+            self.sync_members_task.start()
+            logger.info("メンバー同期タスクを開始しました")
 
     @staticmethod
     def format_member_number(num: int) -> str:
@@ -428,6 +436,69 @@ class MembersCard(commands.Cog):
             "• 新規登録順\n\n"
             "しばらくお待ちください。"
         )
+
+    def cog_unload(self):
+        """Cogがアンロードされるときにタスクを停止"""
+        if self.sync_members_task.is_running():
+            self.sync_members_task.cancel()
+            logger.info("メンバー同期タスクを停止しました")
+
+    async def sync_members_to_api(self):
+        """メンバーリストをAPIに送信"""
+        if not self.api_key or not self.hfs_guild_id:
+            return
+
+        try:
+            guild = self.bot.get_guild(self.hfs_guild_id)
+            if not guild:
+                logger.error(f"Guild ID {self.hfs_guild_id} が見つかりません")
+                return
+
+            # Botを除くメンバーIDのリストを作成
+            member_ids = [str(m.id) for m in guild.members if not m.bot]
+
+            # APIに送信
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.api_base_url}/sync-members",
+                    headers=self.headers,
+                    json={
+                        "guildId": str(self.hfs_guild_id),
+                        "memberIds": member_ids
+                    },
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status == 200:
+                        logger.info(f"✅ メンバーリスト同期完了: {len(member_ids)}人")
+                    else:
+                        logger.error(f"メンバー同期APIエラー: {response.status}")
+
+        except Exception as e:
+            logger.error(f"メンバー同期エラー: {e}")
+
+    @tasks.loop(seconds=10)
+    async def sync_members_task(self):
+        """10秒ごとにメンバーリストを同期"""
+        await self.sync_members_to_api()
+
+    @sync_members_task.before_loop
+    async def before_sync_members_task(self):
+        """タスク開始前にBotの準備を待つ"""
+        await self.bot.wait_until_ready()
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        """メンバーが参加したときに即座に同期"""
+        if member.guild.id == self.hfs_guild_id:
+            logger.info(f"➕ メンバー参加: {member.name} ({member.id})")
+            await self.sync_members_to_api()
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """メンバーが退出したときに即座に同期"""
+        if member.guild.id == self.hfs_guild_id:
+            logger.info(f"➖ メンバー退出: {member.name} ({member.id})")
+            await self.sync_members_to_api()
 
 
 async def setup(bot):
