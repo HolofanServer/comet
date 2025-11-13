@@ -220,7 +220,7 @@ class MembersCard(commands.Cog):
             logger.error(f"プロフィール表示エラー: {e}")
             await interaction.followup.send("❌ プロフィールの表示中にエラーが発生しました")
 
-    @app_commands.command(name="stats", description="サーバー全体の統計情報を表示")
+    @app_commands.command(name="cstats", description="サーバー全体の統計情報を表示")
     async def show_stats(self, interaction: discord.Interaction):
         """サーバー全体の統計情報を表示"""
         await interaction.response.defer()
