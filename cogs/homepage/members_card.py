@@ -403,7 +403,7 @@ class MembersCard(commands.Cog):
             logger.error(f"推し表示エラー: {e}")
             await interaction.followup.send("❌ 推しの表示中にエラーが発生しました")
 
-    @app_commands.command(name="ranking", description="各種ランキングを表示")
+    @app_commands.command(name="cranking", description="各種ランキングを表示")
     @app_commands.describe(
         種類="表示するランキングの種類"
     )
