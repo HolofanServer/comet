@@ -126,114 +126,58 @@ class MembersCard(commands.Cog):
             logger.error(f"Stats API Request Error: {e}")
             return None
 
-    @app_commands.command(name="card", description="ユーザーのプロフィールを表示")
-    @app_commands.describe(
-        ユーザー="プロフィールを表示するユーザー（省略で自分）",
-        メンバー番号="メンバー番号で検索",
-        ユーザー名="ユーザー名で検索"
-    )
+    @app_commands.command(name="card", description="HFS Members Card URLを表示")
+    @app_commands.describe(ユーザー="URLを表示するユーザー（省略で自分）")
     async def show_profile(
         self,
         interaction: discord.Interaction,
-        ユーザー: Optional[discord.Member] = None,
-        メンバー番号: Optional[int] = None,
-        ユーザー名: Optional[str] = None
+        ユーザー: Optional[discord.Member] = None
     ):
-        """ユーザーのプロフィールを表示"""
-        await interaction.response.defer()
+        """HFS Members Card URLを表示"""
+        await interaction.response.defer(ephemeral=True)
 
-        # APIキーチェック
-        if not self.api_key:
+        if not self.website_api_token:
             await interaction.followup.send(
-                "❌ Members Card機能が設定されていません。管理者に連絡してください。"
+                "❌ Members Card URL機能が設定されていません",
+                ephemeral=True
             )
             return
 
-        # パラメータ決定
-        discord_id = None
-        if メンバー番号 is None and not ユーザー名:
-            if ユーザー:
-                discord_id = str(ユーザー.id)
-            else:
-                discord_id = str(interaction.user.id)
+        target_user = ユーザー if ユーザー else interaction.user
 
-        # データ取得
-        data = await self.fetch_user_data(
-            discord_id=discord_id,
-            member_number=メンバー番号,
-            username=ユーザー名
-        )
-
-        if data is None:
-            await interaction.followup.send("❌ ユーザーが見つかりませんでした")
-            return
-
-        if isinstance(data, dict) and data.get("error") == "rate_limit":
-            await interaction.followup.send(
-                "⏰ リクエストが多すぎます。しばらく待ってから再度お試しください"
-            )
-            return
-
-        # Embedを作成
         try:
-            user_data = data.get("user", {})
-            profile_data = data.get("profile", {})
-            links = data.get("links", [])
-            oshi = data.get("oshi", [])
-            roles = data.get("roles", [])
-            badges = data.get("badges", [])
-            stats = data.get("stats", {})
-            urls = data.get("urls", {})
+            result = await self.get_member_card_url(str(target_user.id))
+            if result is None:
+                await interaction.followup.send(
+                    "❌ データの取得に失敗しました",
+                    ephemeral=True
+                )
+                return
 
-            embed = discord.Embed(
-                title=f"{profile_data.get('displayName', 'Unknown')} {self.format_member_number(user_data.get('memberNumber', 0))}",
-                description=profile_data.get('bio') or "自己紹介なし",
-                color=discord.Color.blue(),
-                url=urls.get('profile')
-            )
-
-            # アバター設定
-            if profile_data.get('avatarUrl'):
-                embed.set_thumbnail(url=profile_data['avatarUrl'])
-
-            # バッジ表示
-            if roles:
-                role_text = " · ".join([self.role_label(r) for r in roles])
-                embed.add_field(name="🛡️ ロール", value=role_text, inline=False)
-
-            if badges:
-                badge_text = " · ".join([f"{b.get('icon', '🏅')} {b.get('name', '')}" for b in badges])
-                embed.add_field(name="🏅 バッジ", value=badge_text, inline=False)
-
-            # 推し表示
-            if oshi:
-                oshi_text = " ".join([f"{o.get('emoji', '💙')} {o.get('name', '')}" for o in oshi])
-                embed.add_field(name="💙 推し", value=oshi_text, inline=False)
-
-            # リンク表示（上位5件）
-            if links:
-                links_text = "\n".join([
-                    f"[{link.get('title', 'Link')}]({link.get('url', '#')}) - {link.get('clickCount', 0)}クリック"
-                    for link in links[:5]
-                ])
-                embed.add_field(name="🔗 リンク", value=links_text, inline=False)
-
-            # 統計情報
-            embed.add_field(
-                name="📊 統計",
-                value=f"リンク: {stats.get('totalLinks', 0)} | 閲覧: {stats.get('totalViews', 0)} | クリック: {stats.get('totalLinkClicks', 0)}",
-                inline=False
-            )
-
-            # リダイレクトURL
-            if urls.get('redirect'):
-                embed.add_field(name="🔗 短縮URL", value=urls['redirect'], inline=False)
-
-            await interaction.followup.send(embed=embed)
-
+            if result.get("success"):
+                member = result.get("member", {})
+                card_url = member.get("memberCardUrl")
+                if card_url:
+                    await interaction.followup.send(
+                        card_url,
+                        ephemeral=True
+                    )
+                else:
+                    await interaction.followup.send(
+                        "❌ 未設定",
+                        ephemeral=True
+                    )
+            else:
+                await interaction.followup.send(
+                    "❌ メンバーが見つかりません",
+                    ephemeral=True
+                )
         except Exception as e:
-            logger.error(f"プロフィール表示エラー: {e}")
-            await interaction.followup.send("❌ プロフィールの表示中にエラーが発生しました")
+            logger.error(f"cardコマンドエラー: {e}")
+            await interaction.followup.send(
+                f"❌ {e}",
+                ephemeral=True
+            )
 
     @app_commands.command(name="cstats", description="サーバー全体の統計情報を表示")
     async def show_stats(self, interaction: discord.Interaction):
@@ -614,19 +558,18 @@ class MembersCard(commands.Cog):
             result = await self.set_member_card_url(str(interaction.user.id), url)
             if "error" in result:
                 await interaction.followup.send(
-                    f"❌ エラーが発生しました: {result['error']}",
+                    f"❌ {result['error']}",
                     ephemeral=True
                 )
             else:
-                member = result.get("member", {})
                 await interaction.followup.send(
-                    f"✅ HFS Members Card URLを設定しました！\n**名前:** {member.get('name', '不明')}\n**URL:** {url}",
+                    f"✅ {url}",
                     ephemeral=True
                 )
         except Exception as e:
             logger.error(f"set_card_url_slashエラー: {e}")
             await interaction.followup.send(
-                f"❌ エラーが発生しました: {e}",
+                f"❌ {e}",
                 ephemeral=True
             )
 
@@ -649,7 +592,7 @@ class MembersCard(commands.Cog):
             result = await self.get_member_card_url(str(target_user.id))
             if result is None:
                 await interaction.followup.send(
-                    "❌ データの取得に失敗しました。",
+                    "❌ データの取得に失敗しました",
                     ephemeral=True
                 )
                 return
@@ -659,23 +602,23 @@ class MembersCard(commands.Cog):
                 card_url = member.get("memberCardUrl")
                 if card_url:
                     await interaction.followup.send(
-                        f"📇 **{member.get('name', '不明')}** のHFS Members Card URL:\n{card_url}",
+                        card_url,
                         ephemeral=True
                     )
                 else:
                     await interaction.followup.send(
-                        f"📇 **{member.get('name', '不明')}** のHFS Members Card URLは未設定です。",
+                        "❌ 未設定",
                         ephemeral=True
                     )
             else:
                 await interaction.followup.send(
-                    "❌ メンバーが見つかりませんでした。",
+                    "❌ メンバーが見つかりません",
                     ephemeral=True
                 )
         except Exception as e:
             logger.error(f"get_card_url_slashエラー: {e}")
             await interaction.followup.send(
-                f"❌ エラーが発生しました: {e}",
+                f"❌ {e}",
                 ephemeral=True
             )
 
@@ -695,18 +638,18 @@ class MembersCard(commands.Cog):
             result = await self.delete_member_card_url(str(interaction.user.id))
             if "error" in result:
                 await interaction.followup.send(
-                    f"❌ エラーが発生しました: {result['error']}",
+                    f"❌ {result['error']}",
                     ephemeral=True
                 )
             else:
                 await interaction.followup.send(
-                    "✅ HFS Members Card URLを削除しました！",
+                    "✅ 削除しました",
                     ephemeral=True
                 )
         except Exception as e:
             logger.error(f"delete_card_url_slashエラー: {e}")
             await interaction.followup.send(
-                f"❌ エラーが発生しました: {e}",
+                f"❌ {e}",
                 ephemeral=True
             )
 
