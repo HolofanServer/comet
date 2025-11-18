@@ -33,6 +33,13 @@ class MembersCard(commands.Cog):
             "x-api-key": self.api_key
         }
 
+        # ウェブサイトAPI設定（Members Card URL管理用）
+        self.website_api_url = "https://hfs.jp"  # 既存のホームページAPI設定を使用
+        self.website_api_token = settings.homepage_api_token
+
+        if not self.website_api_token:
+            logger.warning("HOMEPAGE_API_TOKENが設定されていません。Members Card URL管理機能は動作しません。")
+
         # メンバー同期タスクを開始
         if self.api_key and self.hfs_guild_id:
             self.sync_members_task.start()
@@ -499,6 +506,209 @@ class MembersCard(commands.Cog):
         if member.guild.id == self.hfs_guild_id:
             logger.info(f"➖ メンバー退出: {member.name} ({member.id})")
             await self.sync_members_to_api()
+
+    # ========== Members Card URL管理機能 ==========
+
+    async def set_member_card_url(self, user_id: str, card_url: str) -> dict:
+        """メンバーカードURLを設定"""
+        if not self.website_api_token:
+            return {"error": "API認証が設定されていません"}
+
+        headers = {
+            "Authorization": f"Bearer {self.website_api_token}",
+            "Content-Type": "application/json"
+        }
+
+        data = {
+            "userId": user_id,
+            "memberCardUrl": card_url
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.website_api_url}/api/members/update-card-url",
+                    headers=headers,
+                    json=data,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    result = await response.json()
+                    if response.status == 200:
+                        return result
+                    else:
+                        return {"error": result.get("error", "不明なエラー"), "status": response.status}
+        except Exception as e:
+            logger.error(f"Members Card URL設定エラー: {e}")
+            return {"error": f"リクエストエラー: {str(e)}"}
+
+    async def get_member_card_url(self, user_id: str) -> Optional[dict]:
+        """メンバーカードURLを取得"""
+        if not self.website_api_token:
+            return None
+
+        headers = {
+            "Authorization": f"Bearer {self.website_api_token}"
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self.website_api_url}/api/members/update-card-url?userId={user_id}",
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        logger.error(f"Members Card URL取得エラー: {response.status}")
+                        return None
+        except Exception as e:
+            logger.error(f"Members Card URL取得エラー: {e}")
+            return None
+
+    async def delete_member_card_url(self, user_id: str) -> dict:
+        """メンバーカードURLを削除"""
+        if not self.website_api_token:
+            return {"error": "API認証が設定されていません"}
+
+        headers = {
+            "Authorization": f"Bearer {self.website_api_token}",
+            "Content-Type": "application/json"
+        }
+
+        data = {
+            "userId": user_id
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.delete(
+                    f"{self.website_api_url}/api/members/update-card-url",
+                    headers=headers,
+                    json=data,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    result = await response.json()
+                    if response.status == 200:
+                        return result
+                    else:
+                        return {"error": result.get("error", "不明なエラー"), "status": response.status}
+        except Exception as e:
+            logger.error(f"Members Card URL削除エラー: {e}")
+            return {"error": f"リクエストエラー: {str(e)}"}
+
+    @app_commands.command(name="set_card_url", description="HFS Members Card URLを設定します")
+    @app_commands.describe(url="HFS Members Card URL (https://card.hfs.jp/members/番号 または https://c.hfs.jp/スラッグ)")
+    async def set_card_url_slash(self, interaction: discord.Interaction, url: str):
+        """HFS Members Card URLを設定するスラッシュコマンド"""
+        await interaction.response.defer(ephemeral=True)
+
+        if not self.website_api_token:
+            await interaction.followup.send(
+                "❌ Members Card URL管理機能が設定されていません。管理者に連絡してください。",
+                ephemeral=True
+            )
+            return
+
+        try:
+            result = await self.set_member_card_url(str(interaction.user.id), url)
+            if "error" in result:
+                await interaction.followup.send(
+                    f"❌ エラーが発生しました: {result['error']}",
+                    ephemeral=True
+                )
+            else:
+                member = result.get("member", {})
+                await interaction.followup.send(
+                    f"✅ HFS Members Card URLを設定しました！\n**名前:** {member.get('name', '不明')}\n**URL:** {url}",
+                    ephemeral=True
+                )
+        except Exception as e:
+            logger.error(f"set_card_url_slashエラー: {e}")
+            await interaction.followup.send(
+                f"❌ エラーが発生しました: {e}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="get_card_url", description="HFS Members Card URLを取得します")
+    @app_commands.describe(ユーザー="URLを取得するユーザー（省略で自分）")
+    async def get_card_url_slash(self, interaction: discord.Interaction, ユーザー: Optional[discord.Member] = None):
+        """HFS Members Card URLを取得するスラッシュコマンド"""
+        await interaction.response.defer(ephemeral=True)
+
+        if not self.website_api_token:
+            await interaction.followup.send(
+                "❌ Members Card URL管理機能が設定されていません。管理者に連絡してください。",
+                ephemeral=True
+            )
+            return
+
+        target_user = ユーザー if ユーザー else interaction.user
+
+        try:
+            result = await self.get_member_card_url(str(target_user.id))
+            if result is None:
+                await interaction.followup.send(
+                    "❌ データの取得に失敗しました。",
+                    ephemeral=True
+                )
+                return
+
+            if result.get("success"):
+                member = result.get("member", {})
+                card_url = member.get("memberCardUrl")
+                if card_url:
+                    await interaction.followup.send(
+                        f"📇 **{member.get('name', '不明')}** のHFS Members Card URL:\n{card_url}",
+                        ephemeral=True
+                    )
+                else:
+                    await interaction.followup.send(
+                        f"📇 **{member.get('name', '不明')}** のHFS Members Card URLは未設定です。",
+                        ephemeral=True
+                    )
+            else:
+                await interaction.followup.send(
+                    "❌ メンバーが見つかりませんでした。",
+                    ephemeral=True
+                )
+        except Exception as e:
+            logger.error(f"get_card_url_slashエラー: {e}")
+            await interaction.followup.send(
+                f"❌ エラーが発生しました: {e}",
+                ephemeral=True
+            )
+
+    @app_commands.command(name="delete_card_url", description="HFS Members Card URLを削除します")
+    async def delete_card_url_slash(self, interaction: discord.Interaction):
+        """HFS Members Card URLを削除するスラッシュコマンド"""
+        await interaction.response.defer(ephemeral=True)
+
+        if not self.website_api_token:
+            await interaction.followup.send(
+                "❌ Members Card URL管理機能が設定されていません。管理者に連絡してください。",
+                ephemeral=True
+            )
+            return
+
+        try:
+            result = await self.delete_member_card_url(str(interaction.user.id))
+            if "error" in result:
+                await interaction.followup.send(
+                    f"❌ エラーが発生しました: {result['error']}",
+                    ephemeral=True
+                )
+            else:
+                await interaction.followup.send(
+                    "✅ HFS Members Card URLを削除しました！",
+                    ephemeral=True
+                )
+        except Exception as e:
+            logger.error(f"delete_card_url_slashエラー: {e}")
+            await interaction.followup.send(
+                f"❌ エラーが発生しました: {e}",
+                ephemeral=True
+            )
 
 
 async def setup(bot):

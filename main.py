@@ -94,6 +94,7 @@ class MyBot(commands.AutoShardedBot):
             await self.load_cogs('cogs')
 
             await self.load_extension('cogs.aus')
+            await self.load_extension('cogs.stream')
 
             await self.load_extension('jishaku')
 
@@ -152,6 +153,9 @@ class MyBot(commands.AutoShardedBot):
                 continue
 
             if 'aus' in p.parts:
+                continue
+
+            if 'stream' in p.parts:
                 continue
 
             try:
