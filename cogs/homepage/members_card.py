@@ -34,11 +34,13 @@ class MembersCard(commands.Cog):
         }
 
         # ウェブサイトAPI設定（Members Card URL管理用）
-        self.website_api_url = "https://hfs.jp"  # 既存のホームページAPI設定を使用
-        self.website_api_token = settings.homepage_api_token
+        self.website_api_url = "https://hfs.jp"
+        self.website_api_token = settings.staff_api_key  # STAFF_API_KEYを使用
 
         if not self.website_api_token:
-            logger.warning("HOMEPAGE_API_TOKENが設定されていません。Members Card URL管理機能は動作しません。")
+            logger.warning("STAFF_API_KEYが設定されていません。Members Card URL管理機能は動作しません。")
+        else:
+            logger.info(f"Members Card URL管理用API設定: URL={self.website_api_url}, Token先頭4文字={self.website_api_token[:4]}...")
 
         # メンバー同期タスクを開始
         if self.api_key and self.hfs_guild_id:
@@ -136,42 +138,49 @@ class MembersCard(commands.Cog):
         """HFS Members Card URLを表示"""
         await interaction.response.defer(ephemeral=True)
 
-        if not self.website_api_token:
+        if not self.api_key:
             await interaction.followup.send(
-                "❌ Members Card URL機能が設定されていません",
+                "❌ Members Card機能が設定されていません",
                 ephemeral=True
             )
             return
 
         target_user = ユーザー if ユーザー else interaction.user
+        discord_id = str(target_user.id)
 
         try:
-            result = await self.get_member_card_url(str(target_user.id))
-            if result is None:
+            # HFS Members Card APIからプロフィール情報を取得
+            data = await self.fetch_user_data(discord_id=discord_id)
+
+            if data is None:
                 await interaction.followup.send(
-                    "❌ データの取得に失敗しました",
+                    "❌ ユーザーが見つかりませんでした",
                     ephemeral=True
                 )
                 return
 
-            if result.get("success"):
-                member = result.get("member", {})
-                card_url = member.get("memberCardUrl")
-                if card_url:
-                    await interaction.followup.send(
-                        card_url,
-                        ephemeral=True
-                    )
-                else:
-                    await interaction.followup.send(
-                        "❌ 未設定",
-                        ephemeral=True
-                    )
-            else:
+            if isinstance(data, dict) and data.get("error") == "rate_limit":
                 await interaction.followup.send(
-                    "❌ メンバーが見つかりません",
+                    "❌ リクエストが多すぎます",
                     ephemeral=True
                 )
+                return
+
+            # プロフィールデータからMembers Card URLを取得
+            profile_data = data.get("profile", {})
+            member_card_url = profile_data.get("memberCardUrl")
+
+            if member_card_url:
+                await interaction.followup.send(
+                    member_card_url,
+                    ephemeral=True
+                )
+            else:
+                await interaction.followup.send(
+                    "❌ 未設定",
+                    ephemeral=True
+                )
+
         except Exception as e:
             logger.error(f"cardコマンドエラー: {e}")
             await interaction.followup.send(
@@ -468,10 +477,13 @@ class MembersCard(commands.Cog):
             "memberCardUrl": card_url
         }
 
+        url = f"{self.website_api_url}/api/members/update-card-url"
+        logger.debug(f"Members Card URL設定リクエスト: URL={url}, UserID={user_id}")
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.website_api_url}/api/members/update-card-url",
+                    url,
                     headers=headers,
                     json=data,
                     timeout=aiohttp.ClientTimeout(total=10)
@@ -480,6 +492,7 @@ class MembersCard(commands.Cog):
                     if response.status == 200:
                         return result
                     else:
+                        logger.error(f"Members Card URL設定エラー: {response.status}, レスポンス: {result}")
                         return {"error": result.get("error", "不明なエラー"), "status": response.status}
         except Exception as e:
             logger.error(f"Members Card URL設定エラー: {e}")
@@ -494,17 +507,21 @@ class MembersCard(commands.Cog):
             "Authorization": f"Bearer {self.website_api_token}"
         }
 
+        url = f"{self.website_api_url}/api/members/update-card-url?userId={user_id}"
+        logger.debug(f"Members Card URL取得リクエスト: URL={url}, Token先頭4文字={self.website_api_token[:4]}...")
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    f"{self.website_api_url}/api/members/update-card-url?userId={user_id}",
+                    url,
                     headers=headers,
                     timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     if response.status == 200:
                         return await response.json()
                     else:
-                        logger.error(f"Members Card URL取得エラー: {response.status}")
+                        response_text = await response.text()
+                        logger.error(f"Members Card URL取得エラー: {response.status}, レスポンス: {response_text[:200]}")
                         return None
         except Exception as e:
             logger.error(f"Members Card URL取得エラー: {e}")
