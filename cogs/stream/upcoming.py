@@ -100,19 +100,23 @@ class UpcomingStreamsManager:
         # 埋め込みメッセージを生成
         embed = self._build_embed(branch, upcoming_streams[:MAX_DISPLAY_UPCOMING])
 
-        # 既存のメッセージを探して削除してから再投稿（常に最新メッセージとして表示するため）
         try:
             existing_message = await self._find_existing_embed(channel, branch)
 
             if existing_message:
-                # 既存メッセージを削除
+                # 既存メッセージと内容を比較
+                if not self._is_embed_changed(existing_message.embeds[0], embed):
+                    logger.debug(f"{branch}のUpcomingメッセージに変更なし、スキップ")
+                    return
+
+                # 変更がある場合のみ削除して再投稿
                 try:
                     await existing_message.delete()
                     logger.debug(f"{branch}の古いUpcomingメッセージを削除しました")
                 except discord.HTTPException:
                     logger.warning(f"{branch}の古いUpcomingメッセージの削除に失敗しました")
 
-            # 新しいメッセージを送信（常に最新メッセージとして一番下に表示される）
+            # 新しいメッセージを送信
             new_message = await channel.send(embed=embed)
             self.message_cache[branch] = new_message.id
             logger.info(f"{branch}のUpcomingメッセージを更新しました（ID: {new_message.id}）")
@@ -165,6 +169,29 @@ class UpcomingStreamsManager:
             pass
 
         return None
+
+    def _is_embed_changed(self, old_embed: discord.Embed, new_embed: discord.Embed) -> bool:
+        """
+        埋め込みメッセージの内容が変更されたかを判定
+
+        Args:
+            old_embed: 既存の埋め込みメッセージ
+            new_embed: 新しい埋め込みメッセージ
+
+        Returns:
+            変更がある場合True
+        """
+        # descriptionを比較（配信リストの内容）
+        if old_embed.description != new_embed.description:
+            return True
+
+        # サムネイル画像を比較（最初の配信が変わった場合）
+        old_image = old_embed.image.url if old_embed.image else None
+        new_image = new_embed.image.url if new_embed.image else None
+        if old_image != new_image:
+            return True
+
+        return False
 
     def _build_embed(self, branch: str, upcoming_streams: list[dict]) -> discord.Embed:
         """

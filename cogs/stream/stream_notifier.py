@@ -49,6 +49,9 @@ class StreamNotifier(commands.Cog):
         # Holodexクライアントの初期化
         self.holodex_client = HolodexClient(HOLODEX_API_KEY)
 
+        # 配信通知マネージャーのDB初期化
+        await self.notification_manager.initialize()
+
         # 定期チェックタスクを開始
         self.check_streams.start()
         logger.info("配信通知システムを起動しました")
