@@ -24,7 +24,7 @@ sentry-sdk==2.44.0
 matplotlib==3.9.4
 pynacl==1.6.1
 aiofiles==25.1.0
-asyncpg==0.30.0
+asyncpg==0.31.0
 openai-whisper==20250625
 
 
