@@ -96,7 +96,7 @@ MEMBER_NAME_TO_EMOJI, MEMBER_NAME_TO_BRANCH, MEMBER_NAME_TO_NAME_JA = generate_m
 # Holodex APIのパラメータ
 MAX_UPCOMING_HOURS: int = 48  # upcoming配信の取得範囲（時間）
 MAX_DISPLAY_UPCOMING: int = 10  # 各ブランチで表示するupcoming配信の最大数
-MAX_CHANNEL_NAME_EMOJIS: int = 5  # チャンネル名に表示する絵文字の最大数
+MAX_CHANNEL_NAME_EMOJIS: int = 10  # チャンネル名に表示する絵文字の最大数
 
 # チェック間隔（秒）
 CHECK_INTERVAL_SECONDS: int = 300  # 5分

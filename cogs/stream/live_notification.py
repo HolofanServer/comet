@@ -127,6 +127,7 @@ class LiveNotificationManager:
                     embed.set_image(url=thumbnail_url)
 
                 message = await webhook.send(
+                    content=url,
                     username=channel_name_ja,
                     avatar_url=avatar_url,
                     embed=embed,

@@ -100,17 +100,22 @@ class UpcomingStreamsManager:
         # 埋め込みメッセージを生成
         embed = self._build_embed(branch, upcoming_streams[:MAX_DISPLAY_UPCOMING])
 
-        # 既存のメッセージを探して編集、なければ新規作成
+        # 既存のメッセージを探して削除してから再投稿（常に最新メッセージとして表示するため）
         try:
             existing_message = await self._find_existing_embed(channel, branch)
 
             if existing_message:
-                await existing_message.edit(embed=embed)
-                logger.info(f"{branch}のUpcomingメッセージを更新しました")
-            else:
-                new_message = await channel.send(embed=embed)
-                self.message_cache[branch] = new_message.id
-                logger.info(f"{branch}のUpcomingメッセージを新規作成しました")
+                # 既存メッセージを削除
+                try:
+                    await existing_message.delete()
+                    logger.debug(f"{branch}の古いUpcomingメッセージを削除しました")
+                except discord.HTTPException:
+                    logger.warning(f"{branch}の古いUpcomingメッセージの削除に失敗しました")
+
+            # 新しいメッセージを送信（常に最新メッセージとして一番下に表示される）
+            new_message = await channel.send(embed=embed)
+            self.message_cache[branch] = new_message.id
+            logger.info(f"{branch}のUpcomingメッセージを更新しました（ID: {new_message.id}）")
 
         except discord.HTTPException as e:
             logger.error(f"{branch}のUpcomingメッセージ更新に失敗: {e}")
@@ -193,7 +198,7 @@ class UpcomingStreamsManager:
             # チャンネル情報
             channel_info = stream.get("channel", {})
             channel_name_en = channel_info.get("english_name") or channel_info.get("name", "Unknown")
-            
+
             # 日本語名を取得（なければ英語名を使用）
             channel_name = MEMBER_NAME_TO_NAME_JA.get(channel_name_en, channel_name_en)
 
@@ -237,7 +242,7 @@ class UpcomingStreamsManager:
                     mention_ja = MEMBER_NAME_TO_NAME_JA.get(mention_en, mention_en)
                     if mention_ja:
                         collab_names.append(mention_ja)
-                
+
                 if collab_names:
                     collab_info = f" (Collab with {', '.join(collab_names)})"
 
@@ -254,7 +259,7 @@ class UpcomingStreamsManager:
         # 一番直近の配信のサムネイル画像を設定
         if upcoming_streams:
             first_stream = upcoming_streams[0]
-            
+
             # サムネイル画像を設定
             thumbnail_url = first_stream.get("thumbnail")
             if not thumbnail_url:
@@ -262,10 +267,10 @@ class UpcomingStreamsManager:
                 video_id = first_stream.get("id")
                 if video_id:
                     thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
-            
+
             if thumbnail_url:
                 embed.set_image(url=thumbnail_url)
-            
+
             # フッター：次の配信時刻
             start_time_str = first_stream.get("start_scheduled") or first_stream.get("available_at")
             if start_time_str:
