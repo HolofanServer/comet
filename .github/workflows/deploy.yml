@@ -127,7 +127,7 @@ jobs:
     
     steps:
     - name: Create deployment
-      uses: actions/github-script@v6
+      uses: actions/github-script@v8
       with:
         script: |
           const deployment = await github.rest.repos.createDeployment({
@@ -148,7 +148,7 @@ jobs:
         # Add actual production deployment commands here
 
     - name: Update deployment status
-      uses: actions/github-script@v6
+      uses: actions/github-script@v8
       if: always()
       with:
         script: |
