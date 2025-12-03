@@ -20,7 +20,7 @@ pydantic>=2.5.0
 Pygments==2.19.1
 ruff==0.14.4
 
-sentry-sdk==2.44.0
+sentry-sdk==2.47.0
 matplotlib==3.9.4
 pynacl==1.6.1
 aiofiles==25.1.0
