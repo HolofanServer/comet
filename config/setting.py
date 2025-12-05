@@ -68,6 +68,7 @@ class Settings:
         self.tag_moderation_database_url: str = os.getenv("TAG_MODERATION_DATABASE_URL", "")
         self.aus_database_url: str = os.getenv("AUS_DATABASE_URL", "")
         self.cp_database_url: str = os.getenv("CP_DATABASE_URL", "")
+        self.voice_database_url: str = os.getenv("VOICE_DATABASE_URL", "")
 
         # Note通知機能
         self.note_rss_url: str = os.getenv("NOTE_RSS_URL", "https://note.com/hfs_discord/rss")
