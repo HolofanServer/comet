@@ -79,15 +79,15 @@ class TimeoutView(discord.ui.View):
 #             )
 
 
-# class UserWarningSystem(commands.Cog):
-#     """特定ユーザーの監視と警告システム"""
+class UserWarningSystem(commands.Cog):
+    """特定ユーザーの監視と警告システム"""
 
-#     def __init__(self, bot: commands.Bot):
-#         self.bot = bot
-#         # キャッシュ用（DBから読み込み）
-#         self.monitored_users: dict[int, set[int]] = {}  # guild_id -> user_ids
-#         self.warning_channel_ids: dict[int, int] = {}  # guild_id -> channel_id
-#         self.excluded_channels: dict[int, set[int]] = {}  # guild_id -> channel_ids
+    # def __init__(self, bot: commands.Bot):
+    #     self.bot = bot
+    #     # キャッシュ用（DBから読み込み）
+    #     self.monitored_users: dict[int, set[int]] = {}  # guild_id -> user_ids
+    #     self.warning_channel_ids: dict[int, int] = {}  # guild_id -> channel_id
+    #     self.excluded_channels: dict[int, set[int]] = {}  # guild_id -> channel_ids
 
 #     async def cog_load(self):
 #         """Cog読み込み時の初期化"""
