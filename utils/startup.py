@@ -153,19 +153,29 @@ async def startup_send_webhook(bot, guild_id):
 
     cogs_description = ""
     for directory, cogs in cogs_by_directory.items():
-        cogs_description += f"> **{directory.capitalize()}**\n" + '\n'.join(cogs) + "\n\n"
+        cogs_description += f"> **{directory.capitalize()}**: {len(cogs)}個\n"
 
     if not cogs_by_directory:
         cogs_description = "ロードされているCogはありません。"
 
-    embed.add_field(name="Cogs", value=cogs_description, inline=False)
+    # 1024文字制限
+    if len(cogs_description) > 1024:
+        cogs_description = cogs_description[:1020] + "..."
+
+    embed.add_field(name=f"Cogs ({len(bot.extensions)}個)", value=cogs_description, inline=False)
     embed.set_footer(text="Botは正常に起動しました。" if not failed_cogs else "Botは正常に起動していません。")
     embed.set_author(name=session_id)
 
     if failed_cogs:
         failed_embed = discord.Embed(title="正常に読み込めなかったCogファイル一覧", color=discord.Color.red())
-        for cog, error in failed_cogs.items():
-            failed_embed.add_field(name=cog, value=error, inline=False)
+        # 最大24フィールドまで（25フィールド制限）
+        for i, (cog, error) in enumerate(failed_cogs.items()):
+            if i >= 24:
+                failed_embed.add_field(name="...", value=f"他 {len(failed_cogs) - 24} 件", inline=False)
+                break
+            # エラーメッセージも1024文字制限
+            error_msg = error[:1020] + "..." if len(error) > 1024 else error
+            failed_embed.add_field(name=cog, value=error_msg, inline=False)
         webhook = await channel.create_webhook(name=webhook_name)
         await webhook.send(embeds=[embed, failed_embed])
         await webhook.delete()
