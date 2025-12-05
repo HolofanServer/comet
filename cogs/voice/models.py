@@ -298,3 +298,8 @@ class VoiceDB:
 
 # シングルトンインスタンス
 voice_db = VoiceDB()
+
+
+async def setup(bot):
+    """ダミーsetup - このモジュールはCogではない"""
+    pass
