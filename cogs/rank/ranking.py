@@ -620,6 +620,158 @@ class RankCommands(commands.Cog):
                 ephemeral=True,
             )
 
+    # ========== XP管理コマンド ==========
+    rank_admin = app_commands.Group(
+        name="rank-admin",
+        description="ランクXP管理コマンド（モデレーター専用）",
+        guild_only=True,
+    )
+
+    @rank_admin.command(name="add", description="ユーザーにXPを追加します")
+    @is_moderator_app()
+    @app_commands.describe(
+        user="対象ユーザー",
+        amount="追加するXP量",
+    )
+    async def admin_add_xp(
+        self,
+        interaction: discord.Interaction,
+        user: discord.Member,
+        amount: app_commands.Range[int, 1, 100000],
+    ):
+        """XPを追加"""
+        result = await rank_db.modify_xp(user.id, interaction.guild_id, amount)
+        if result:
+            await interaction.response.send_message(
+                f"✅ {user.mention} に **{amount:,}** XP を追加しました\n"
+                f"現在: Lv.**{result.current_level}** / **{result.yearly_xp:,}** XP",
+                ephemeral=True,
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ XPの追加に失敗しました（ユーザーが存在しない可能性）",
+                ephemeral=True,
+            )
+
+    @rank_admin.command(name="remove", description="ユーザーからXPを減らします")
+    @is_moderator_app()
+    @app_commands.describe(
+        user="対象ユーザー",
+        amount="減らすXP量",
+    )
+    async def admin_remove_xp(
+        self,
+        interaction: discord.Interaction,
+        user: discord.Member,
+        amount: app_commands.Range[int, 1, 100000],
+    ):
+        """XPを減らす"""
+        result = await rank_db.modify_xp(user.id, interaction.guild_id, -amount)
+        if result:
+            await interaction.response.send_message(
+                f"✅ {user.mention} から **{amount:,}** XP を減らしました\n"
+                f"現在: Lv.**{result.current_level}** / **{result.yearly_xp:,}** XP",
+                ephemeral=True,
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ XPの減算に失敗しました（ユーザーが存在しない可能性）",
+                ephemeral=True,
+            )
+
+    @rank_admin.command(name="set", description="ユーザーのXPを直接設定します")
+    @is_moderator_app()
+    @app_commands.describe(
+        user="対象ユーザー",
+        yearly_xp="年間XP（省略可）",
+        lifetime_xp="累計XP（省略可）",
+    )
+    async def admin_set_xp(
+        self,
+        interaction: discord.Interaction,
+        user: discord.Member,
+        yearly_xp: app_commands.Range[int, 0, 10000000] | None = None,
+        lifetime_xp: app_commands.Range[int, 0, 100000000] | None = None,
+    ):
+        """XPを直接設定"""
+        if yearly_xp is None and lifetime_xp is None:
+            await interaction.response.send_message(
+                "❌ 少なくとも `yearly_xp` か `lifetime_xp` を指定してください",
+                ephemeral=True,
+            )
+            return
+
+        success = await rank_db.set_xp(
+            user.id, interaction.guild_id,
+            yearly_xp=yearly_xp,
+            lifetime_xp=lifetime_xp,
+        )
+        if success:
+            changes = []
+            if yearly_xp is not None:
+                changes.append(f"年間XP: **{yearly_xp:,}**")
+            if lifetime_xp is not None:
+                changes.append(f"累計XP: **{lifetime_xp:,}**")
+            await interaction.response.send_message(
+                f"✅ {user.mention} のXPを設定しました\n" + "\n".join(changes),
+                ephemeral=True,
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ XPの設定に失敗しました（ユーザーが存在しない可能性）",
+                ephemeral=True,
+            )
+
+    @rank_admin.command(name="reset", description="ユーザーのランクデータをリセットします")
+    @is_moderator_app()
+    @app_commands.describe(user="対象ユーザー")
+    async def admin_reset(
+        self,
+        interaction: discord.Interaction,
+        user: discord.Member,
+    ):
+        """ユーザーをリセット"""
+        success = await rank_db.reset_user(user.id, interaction.guild_id)
+        if success:
+            await interaction.response.send_message(
+                f"✅ {user.mention} のランクデータをリセットしました",
+                ephemeral=True,
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ リセットに失敗しました",
+                ephemeral=True,
+            )
+
+    @rank_admin.command(name="check", description="ユーザーのランク情報を確認します")
+    @is_moderator_app()
+    @app_commands.describe(user="対象ユーザー")
+    async def admin_check(
+        self,
+        interaction: discord.Interaction,
+        user: discord.Member,
+    ):
+        """ユーザー情報を確認"""
+        rank_user = await rank_db.get_user(user.id, interaction.guild_id)
+        if not rank_user:
+            await interaction.response.send_message(
+                f"❌ {user.mention} のランクデータが見つかりません",
+                ephemeral=True,
+            )
+            return
+
+        user_rank = await rank_db.get_user_rank(user.id, interaction.guild_id)
+        await interaction.response.send_message(
+            f"📊 **{user.display_name}** のランク情報\n"
+            f"順位: **#{user_rank}**\n"
+            f"レベル: **Lv.{rank_user.current_level}**\n"
+            f"年間XP: **{rank_user.yearly_xp:,}** XP\n"
+            f"累計XP: **{rank_user.lifetime_xp:,}** XP\n"
+            f"アクティブ日数: **{rank_user.active_days}**日\n"
+            f"常連: {'✅' if rank_user.is_regular else '❌'}",
+            ephemeral=True,
+        )
+
 
 async def setup(bot: commands.Bot):
     """Cog setup"""

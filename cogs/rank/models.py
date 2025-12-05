@@ -414,6 +414,110 @@ class RankDB:
             logger.error(f"XP設定更新エラー: {e}")
             return False
 
+    async def set_xp(
+        self,
+        user_id: int,
+        guild_id: int,
+        yearly_xp: int | None = None,
+        lifetime_xp: int | None = None,
+    ) -> bool:
+        """XPを直接設定（管理用）"""
+        if not checkpoint_db._initialized:
+            return False
+
+        updates = []
+        values = [user_id, guild_id]
+        idx = 3
+
+        if yearly_xp is not None:
+            updates.append(f"yearly_xp = ${idx}::INT")
+            values.append(yearly_xp)
+            idx += 1
+        if lifetime_xp is not None:
+            updates.append(f"lifetime_xp = ${idx}::BIGINT")
+            values.append(lifetime_xp)
+            idx += 1
+
+        if not updates:
+            return False
+
+        query = f"""
+            UPDATE rank_users
+            SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1 AND guild_id = $2
+            RETURNING yearly_xp
+        """
+        try:
+            async with checkpoint_db.pool.acquire() as conn:
+                row = await conn.fetchrow(query, *values)
+                if row:
+                    # レベル再計算
+                    new_level = self.calculate_level(row["yearly_xp"])
+                    await self._update_level(user_id, guild_id, new_level)
+                    return True
+            return False
+        except Exception as e:
+            logger.error(f"XP設定エラー: {e}")
+            return False
+
+    async def modify_xp(
+        self,
+        user_id: int,
+        guild_id: int,
+        amount: int,
+    ) -> RankUser | None:
+        """XPを加減算（管理用）"""
+        if not checkpoint_db._initialized:
+            return None
+
+        query = """
+            UPDATE rank_users
+            SET yearly_xp = GREATEST(0, yearly_xp + $3::INT),
+                lifetime_xp = GREATEST(0, lifetime_xp + $3::BIGINT),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1 AND guild_id = $2
+            RETURNING *
+        """
+        try:
+            async with checkpoint_db.pool.acquire() as conn:
+                row = await conn.fetchrow(query, user_id, guild_id, amount)
+                if row:
+                    new_level = self.calculate_level(row["yearly_xp"])
+                    if new_level != row["current_level"]:
+                        await self._update_level(user_id, guild_id, new_level)
+                    return RankUser(
+                        user_id=row["user_id"],
+                        guild_id=row["guild_id"],
+                        yearly_xp=row["yearly_xp"],
+                        lifetime_xp=row["lifetime_xp"],
+                        active_days=row["active_days"],
+                        current_level=new_level,
+                        is_regular=row["is_regular"],
+                    )
+            return None
+        except Exception as e:
+            logger.error(f"XP加減算エラー: {e}")
+            return None
+
+    async def reset_user(self, user_id: int, guild_id: int) -> bool:
+        """ユーザーのXPをリセット（管理用）"""
+        if not checkpoint_db._initialized:
+            return False
+
+        query = """
+            UPDATE rank_users
+            SET yearly_xp = 0, lifetime_xp = 0, active_days = 0,
+                current_level = 1, is_regular = FALSE, updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1 AND guild_id = $2
+        """
+        try:
+            async with checkpoint_db.pool.acquire() as conn:
+                await conn.execute(query, user_id, guild_id)
+            return True
+        except Exception as e:
+            logger.error(f"ユーザーリセットエラー: {e}")
+            return False
+
     async def update_regular_settings(
         self,
         guild_id: int,
