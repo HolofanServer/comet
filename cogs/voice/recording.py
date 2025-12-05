@@ -88,12 +88,21 @@ class BasicSink:
     def __init__(self, session: RecordingSession):
         self.session = session
 
-    def write(self, user: discord.User | discord.Member | None, data: bytes):
-        """音声データを受信"""
+    def write(self, user: discord.User | discord.Member | None, data):
+        """音声データを受信
+
+        Args:
+            user: 発言ユーザー
+            data: VoiceDataオブジェクト（.pcm属性にPCMデータ）
+        """
         if user is None or not self.session.is_recording:
             return
+        # VoiceDataオブジェクトからPCMデータを取得
+        pcm_data = getattr(data, 'pcm', None)
+        if pcm_data is None:
+            return
         buffer = self.session.get_or_create_buffer(user.id)
-        buffer.write(data)
+        buffer.write(pcm_data)
 
     def cleanup(self):
         """クリーンアップ"""
