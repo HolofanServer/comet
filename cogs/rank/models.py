@@ -166,12 +166,12 @@ class RankDB:
             INSERT INTO rank_users (user_id, guild_id, yearly_xp, lifetime_xp, last_active_date, updated_at
                 {', last_message_xp_at' if xp_type == 'message' else ''}
                 {', last_omikuji_xp_date' if xp_type == 'omikuji' else ''})
-            VALUES ($1, $2, $3, $3, $4, $5
+            VALUES ($1, $2, $3::INT, $3::BIGINT, $4, $5
                 {', $5' if xp_type == 'message' else ''}
                 {', $6' if xp_type == 'omikuji' else ''})
             ON CONFLICT (user_id, guild_id) DO UPDATE
-            SET yearly_xp = rank_users.yearly_xp + $3,
-                lifetime_xp = rank_users.lifetime_xp + $3,
+            SET yearly_xp = rank_users.yearly_xp + $3::INT,
+                lifetime_xp = rank_users.lifetime_xp + $3::BIGINT,
                 last_active_date = $4,
                 updated_at = $5
                 {extra_set}
