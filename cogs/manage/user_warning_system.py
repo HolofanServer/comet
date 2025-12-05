@@ -1,9 +1,7 @@
-from datetime import datetime, timedelta
 
 import discord
 from discord.ext import commands
 
-from utils.db_manager import db
 from utils.logging import setup_logging
 
 logger = setup_logging()
