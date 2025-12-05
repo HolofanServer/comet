@@ -14,17 +14,22 @@ import discord
 # import sentry_sdk
 import pytz
 
-# Linux環境でOpusライブラリを明示的にロード（VC録音に必要）
+# Opusライブラリを明示的にロード（VC録音に必要）
 if not discord.opus.is_loaded():
-    try:
-        # Debian/Ubuntu系
-        discord.opus.load_opus('libopus.so.0')
-    except OSError:
+    opus_paths = [
+        'libopus.so.0',                           # Linux (一般)
+        '/usr/lib/libopus.so.0',                  # Alpine Linux
+        '/usr/lib/x86_64-linux-gnu/libopus.so.0', # Debian/Ubuntu
+        '/opt/homebrew/lib/libopus.dylib',        # macOS (Apple Silicon)
+        '/usr/local/lib/libopus.dylib',           # macOS (Intel)
+        'opus',                                    # Windows
+    ]
+    for path in opus_paths:
         try:
-            # Alpine Linux
-            discord.opus.load_opus('/usr/lib/libopus.so.0')
+            discord.opus.load_opus(path)
+            break
         except OSError:
-            pass  # Windowsなど自動ロードされる環境ではスキップ
+            continue
 from discord.ext import commands
 from dotenv import load_dotenv
 

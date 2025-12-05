@@ -366,20 +366,25 @@ class VoiceRecording(commands.Cog):
 
                 text = transcript.text
 
-                # 結果送信
-                if len(text) > 1900:
-                    # 長い場合はファイルで
-                    await interaction.followup.send(
-                        f"📝 **文字起こし完了** ({audio_file.filename})",
-                        file=discord.File(
-                            io.BytesIO(text.encode("utf-8")),
-                            filename=f"transcript_{audio_file.filename}.txt",
-                        ),
-                    )
-                else:
-                    await interaction.followup.send(
-                        f"📝 **文字起こし結果** ({audio_file.filename})\n\n{text}"
-                    )
+                # DBに保存
+                await voice_db.add_transcript(
+                    content=text,
+                    session_id=None,  # 単体transcribeはセッション紐付けなし
+                    user_id=interaction.user.id,
+                    language=language if language != "auto" else "ja",
+                )
+
+                # 常にtxtファイルで送信 + プレビュー
+                preview = text[:500] + "..." if len(text) > 500 else text
+                await interaction.followup.send(
+                    f"📝 **文字起こし完了** ({audio_file.filename})\n"
+                    f"文字数: {len(text)}字\n\n"
+                    f"**プレビュー:**\n```\n{preview}\n```",
+                    file=discord.File(
+                        io.BytesIO(text.encode("utf-8")),
+                        filename=f"transcript_{audio_file.filename.rsplit('.', 1)[0]}.txt",
+                    ),
+                )
 
             finally:
                 # 一時ファイル削除
@@ -388,6 +393,157 @@ class VoiceRecording(commands.Cog):
         except Exception as e:
             logger.error(f"文字起こしエラー: {e}")
             await interaction.followup.send(f"❌ 文字起こしに失敗しました: {e}")
+
+    @vc_record.command(name="transcribe-all", description="録音完了メッセージの全ファイルを一括文字起こし")
+    @app_commands.describe(
+        message_url="録音完了メッセージのURL（省略時は直近の録音完了メッセージを検索）",
+        language="言語（デフォルト: 日本語）",
+    )
+    @app_commands.choices(
+        language=[
+            app_commands.Choice(name="日本語", value="ja"),
+            app_commands.Choice(name="英語", value="en"),
+            app_commands.Choice(name="自動検出", value="auto"),
+        ]
+    )
+    async def transcribe_all(
+        self,
+        interaction: discord.Interaction,
+        message_url: str | None = None,
+        language: str = "ja",
+    ):
+        """全員分を一括文字起こし"""
+        if not self.openai_client:
+            await interaction.response.send_message(
+                "❌ OpenAI APIが設定されていません",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer()
+
+        try:
+            # メッセージを取得
+            target_msg = None
+
+            if message_url:
+                # URLからメッセージを取得
+                try:
+                    parts = message_url.split("/")
+                    channel_id = int(parts[-2])
+                    message_id = int(parts[-1])
+                    channel = self.bot.get_channel(channel_id)
+                    if channel:
+                        target_msg = await channel.fetch_message(message_id)
+                except (ValueError, IndexError):
+                    await interaction.followup.send("❌ 無効なメッセージURLです", ephemeral=True)
+                    return
+            else:
+                # 直近の録音完了メッセージを検索
+                async for msg in interaction.channel.history(limit=50):
+                    if msg.author.id == self.bot.user.id and "録音完了" in msg.content and msg.attachments:
+                        target_msg = msg
+                        break
+
+            if not target_msg or not target_msg.attachments:
+                await interaction.followup.send(
+                    "❌ 録音完了メッセージが見つかりません。\n"
+                    "`message_url`パラメータでメッセージURLを指定してください",
+                    ephemeral=True,
+                )
+                return
+
+            # WAVファイルのみ抽出
+            audio_files = [a for a in target_msg.attachments if a.filename.lower().endswith(('.wav', '.mp3', '.m4a'))]
+
+            if not audio_files:
+                await interaction.followup.send("❌ 音声ファイルが見つかりません", ephemeral=True)
+                return
+
+            await interaction.followup.send(
+                f"🔄 **一括文字起こし開始**\n"
+                f"ファイル数: {len(audio_files)}件\n"
+                f"処理中...",
+            )
+
+            # 全ファイルを文字起こし
+            results = []
+            for attachment in audio_files:
+                try:
+                    # ファイル名からユーザー名を抽出
+                    username = attachment.filename.rsplit("_", 2)[0]
+
+                    # ダウンロード
+                    audio_bytes = await attachment.read()
+
+                    # 一時ファイルに保存
+                    with tempfile.NamedTemporaryFile(
+                        suffix=Path(attachment.filename).suffix, delete=False
+                    ) as tmp:
+                        tmp.write(audio_bytes)
+                        tmp_path = tmp.name
+
+                    try:
+                        # Whisper API呼び出し
+                        with open(tmp_path, "rb") as f:
+                            kwargs = {"model": "whisper-1", "file": f}
+                            if language != "auto":
+                                kwargs["language"] = language
+                            transcript = self.openai_client.audio.transcriptions.create(**kwargs)
+
+                        results.append({
+                            "username": username,
+                            "filename": attachment.filename,
+                            "text": transcript.text,
+                        })
+                    finally:
+                        Path(tmp_path).unlink(missing_ok=True)
+
+                except Exception as e:
+                    logger.error(f"文字起こしエラー ({attachment.filename}): {e}")
+                    results.append({
+                        "username": username,
+                        "filename": attachment.filename,
+                        "text": f"[エラー: {e}]",
+                    })
+
+            # 結果をまとめる
+            combined_text = "# 会議文字起こし\n\n"
+            combined_text += f"参加者: {len(results)}名\n"
+            combined_text += f"録音日時: {target_msg.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
+            combined_text += "---\n\n"
+
+            for r in results:
+                combined_text += f"## {r['username']}\n\n"
+                combined_text += f"{r['text']}\n\n"
+                combined_text += "---\n\n"
+
+            # DBに保存
+            await voice_db.add_transcript(
+                content=combined_text,
+                session_id=None,
+                user_id=interaction.user.id,
+                language=language if language != "auto" else "ja",
+            )
+
+            # プレビュー
+            preview = combined_text[:800] + "..." if len(combined_text) > 800 else combined_text
+
+            await interaction.channel.send(
+                f"✅ **一括文字起こし完了**\n"
+                f"ファイル数: {len(results)}件\n"
+                f"合計文字数: {len(combined_text)}字\n\n"
+                f"**プレビュー:**\n```\n{preview}\n```\n\n"
+                f"💡 要約: `/vc-record summarize`",
+                file=discord.File(
+                    io.BytesIO(combined_text.encode("utf-8")),
+                    filename=f"transcript_all_{target_msg.created_at.strftime('%Y%m%d_%H%M%S')}.txt",
+                ),
+            )
+
+        except Exception as e:
+            logger.error(f"一括文字起こしエラー: {e}")
+            await interaction.followup.send(f"❌ 一括文字起こしに失敗しました: {e}")
 
     @vc_record.command(name="summarize", description="文字起こしテキストを要約します")
     @app_commands.describe(
@@ -406,18 +562,12 @@ class VoiceRecording(commands.Cog):
             )
             return
 
-        # テキストが指定されていない場合、直前のメッセージを取得
+        # テキストが指定されていない場合、直前の文字起こしファイルを検索
         if not text:
-            async for msg in interaction.channel.history(limit=5):
-                if msg.author.id == self.bot.user.id and "文字起こし" in msg.content:
-                    # 文字起こし結果を抽出
-                    lines = msg.content.split("\n\n", 1)
-                    if len(lines) > 1:
-                        text = lines[1]
-                        break
-                # 添付ファイルもチェック
+            async for msg in interaction.channel.history(limit=20):
+                # 添付ファイル（transcript_*.txt）を優先チェック
                 for attachment in msg.attachments:
-                    if attachment.filename.startswith("transcript_"):
+                    if attachment.filename.startswith("transcript_") and attachment.filename.endswith(".txt"):
                         text = (await attachment.read()).decode("utf-8")
                         break
                 if text:
@@ -425,7 +575,8 @@ class VoiceRecording(commands.Cog):
 
         if not text:
             await interaction.response.send_message(
-                "❌ 要約するテキストを指定するか、先に `/vc-record transcribe` を実行してください",
+                "❌ 文字起こし結果が見つかりません。\n"
+                "先に `/vc-record transcribe` または `/vc-record transcribe-all` を実行してください",
                 ephemeral=True,
             )
             return
@@ -442,16 +593,27 @@ class VoiceRecording(commands.Cog):
                             "あなたは会議の議事録を作成するアシスタントです。"
                             "以下の会話の文字起こしを、簡潔で分かりやすい要約にまとめてください。"
                             "重要なポイント、決定事項、アクションアイテムがあれば箇条書きで記載してください。"
+                            "日本語で回答してください。"
                         ),
                     },
-                    {"role": "user", "content": text},
+                    {"role": "user", "content": text[:30000]},  # トークン制限対策
                 ],
-                max_tokens=1000,
+                max_tokens=2000,
             )
 
             summary = response.choices[0].message.content
 
-            await interaction.followup.send(f"📋 **会話の要約**\n\n{summary}")
+            # 長い場合はファイルでも送信
+            if len(summary) > 1800:
+                await interaction.followup.send(
+                    f"📋 **会話の要約**\n\n{summary[:1500]}...\n\n（全文は添付ファイルを参照）",
+                    file=discord.File(
+                        io.BytesIO(summary.encode("utf-8")),
+                        filename=f"summary_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.txt",
+                    ),
+                )
+            else:
+                await interaction.followup.send(f"📋 **会話の要約**\n\n{summary}")
 
         except Exception as e:
             logger.error(f"要約エラー: {e}")
