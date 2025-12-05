@@ -1,11 +1,14 @@
 import asyncio
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import discord
 from discord.ext import commands
 
+from cogs.cp.db import checkpoint_db
+from cogs.cp.models import OmikujiLog
+from cogs.rank.service import rank_service
 from config.setting import get_settings
 from utils.commands_help import is_booster, is_guild, is_owner, log_commands
 from utils.database import execute_query
@@ -109,7 +112,8 @@ class HololiveOmikujiCog(commands.Cog):
             return []
 
     async def save_omikuji_result(self, user_id: int, guild_id: int, fortune_id: int,
-                                  is_super_rare: bool, is_chance: bool, streak: int, draw_date) -> None:
+                                  is_super_rare: bool, is_chance: bool, streak: int, draw_date,
+                                  fortune_name: str = "") -> None:
         """おみくじ結果をDBに保存"""
         try:
             await execute_query(
@@ -119,6 +123,26 @@ class HololiveOmikujiCog(commands.Cog):
                 """,
                 user_id, guild_id, fortune_id, draw_date, is_super_rare, is_chance, streak, fetch_type='status'
             )
+
+            # Checkpoint DBにも保存
+            if checkpoint_db._initialized:
+                log = OmikujiLog(
+                    user_id=user_id,
+                    guild_id=guild_id,
+                    result=fortune_name,
+                    result_detail={
+                        "fortune_id": fortune_id,
+                        "is_super_rare": is_super_rare,
+                        "is_chance": is_chance,
+                        "streak": streak,
+                    },
+                    used_at=datetime.now(timezone.utc),
+                )
+                await checkpoint_db.log_omikuji(log)
+
+            # Rank XP付与
+            await rank_service.add_omikuji_xp(user_id, guild_id)
+
         except Exception as e:
             logger.error(f"おみくじ結果保存エラー: {e}")
 
@@ -293,7 +317,7 @@ class HololiveOmikujiCog(commands.Cog):
         await fm.edit(embed=embed)
 
         # おみくじ結果をDBに保存
-        await self.save_omikuji_result(user_id, guild_id, fortune_id, is_super_rare, is_chance, current_streak, today_jst)
+        await self.save_omikuji_result(user_id, guild_id, fortune_id, is_super_rare, is_chance, current_streak, today_jst, fortune_name)
         await self.update_daily_stats(guild_id, today_jst, is_omikuji=True)
 
         # ホロライブ絵文字（既存のカスタム絵文字を流用）
