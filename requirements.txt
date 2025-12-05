@@ -26,6 +26,7 @@ pynacl==1.6.1
 aiofiles==25.1.0
 asyncpg==0.30.0
 openai-whisper==20250625
+discord-ext-voice-recv>=0.4.2
 
 
 pysaucenao>=1.4.0
