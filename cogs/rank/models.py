@@ -37,6 +37,7 @@ class RankConfig:
     vc_xp_per_10min: int = 5
     regular_xp_threshold: int = 10000
     regular_days_threshold: int = 50
+    regular_role_id: int | None = None
     excluded_channels: list[int] | None = None
     excluded_roles: list[int] | None = None
     is_enabled: bool = True
@@ -97,6 +98,7 @@ class RankDB:
                     vc_xp_per_10min=row["vc_xp_per_10min"],
                     regular_xp_threshold=row["regular_xp_threshold"],
                     regular_days_threshold=row["regular_days_threshold"],
+                    regular_role_id=row["regular_role_id"],
                     excluded_channels=list(row["excluded_channels"]) if row["excluded_channels"] else [],
                     excluded_roles=list(row["excluded_roles"]) if row["excluded_roles"] else [],
                     is_enabled=row["is_enabled"],
@@ -410,6 +412,52 @@ class RankDB:
             return True
         except Exception as e:
             logger.error(f"XP設定更新エラー: {e}")
+            return False
+
+    async def update_regular_settings(
+        self,
+        guild_id: int,
+        role_id: int | None = None,
+        xp_threshold: int | None = None,
+        days_threshold: int | None = None,
+    ) -> bool:
+        """常連ロール設定を更新"""
+        if not checkpoint_db._initialized:
+            return False
+
+        updates = []
+        values = [guild_id]
+        idx = 2
+
+        if role_id is not None:
+            updates.append(f"regular_role_id = ${idx}")
+            values.append(role_id if role_id > 0 else None)
+            idx += 1
+        if xp_threshold is not None:
+            updates.append(f"regular_xp_threshold = ${idx}")
+            values.append(xp_threshold)
+            idx += 1
+        if days_threshold is not None:
+            updates.append(f"regular_days_threshold = ${idx}")
+            values.append(days_threshold)
+            idx += 1
+
+        if not updates:
+            return False
+
+        query = f"""
+            INSERT INTO rank_config (guild_id) VALUES ($1)
+            ON CONFLICT (guild_id) DO UPDATE
+            SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP
+        """
+        try:
+            async with checkpoint_db.pool.acquire() as conn:
+                await conn.execute(query, *values)
+            # キャッシュクリア
+            self._config_cache.pop(guild_id, None)
+            return True
+        except Exception as e:
+            logger.error(f"常連設定更新エラー: {e}")
             return False
 
 

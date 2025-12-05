@@ -336,6 +336,17 @@ class RankCommands(commands.Cog):
 
         container.add(Separator(divider=False, spacing=SeparatorSpacing.SMALL))
 
+        # 常連ロール設定
+        regular_role_text = f"<@&{config.regular_role_id}>" if config.regular_role_id else "未設定"
+        container.add_text(
+            f"**常連ロール設定**\n"
+            f"🎖️ ロール: {regular_role_text}\n"
+            f"✨ 必要XP: **{config.regular_xp_threshold:,}** XP\n"
+            f"📅 必要日数: **{config.regular_days_threshold}**日"
+        )
+
+        container.add(Separator(divider=False, spacing=SeparatorSpacing.SMALL))
+
         # 除外ロール
         if config.excluded_roles:
             role_mentions = [f"<@&{r}>" for r in config.excluded_roles]
@@ -523,7 +534,84 @@ class RankCommands(commands.Cog):
                 changes.append(f"⏱️ クールダウン: **{cooldown}**秒")
 
             await interaction.response.send_message(
-                f"✅ XP設定を更新しました\n" + "\n".join(changes),
+                "✅ XP設定を更新しました\n" + "\n".join(changes),
+                ephemeral=True,
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ 設定の更新に失敗しました",
+                ephemeral=True,
+            )
+
+    @rank_settings.command(name="regular", description="常連ロールの設定を変更します")
+    @is_moderator_app()
+    @app_commands.describe(
+        role="付与する常連ロール（解除する場合は空欄）",
+        xp_threshold="常連認定に必要なXP",
+        days_threshold="常連認定に必要なアクティブ日数",
+    )
+    async def settings_regular(
+        self,
+        interaction: discord.Interaction,
+        role: discord.Role | None = None,
+        xp_threshold: int | None = None,
+        days_threshold: int | None = None,
+    ):
+        """常連ロール設定を変更"""
+        # ロールIDの処理（Noneの場合は-1で解除とみなす）
+        role_id = role.id if role else None
+
+        if all(v is None for v in [role_id, xp_threshold, days_threshold]):
+            # 現在の設定を表示
+            config = await rank_db.get_config(interaction.guild_id)
+            role_text = f"<@&{config.regular_role_id}>" if config.regular_role_id else "未設定"
+            await interaction.response.send_message(
+                f"🎖️ **常連ロール設定**\n"
+                f"ロール: {role_text}\n"
+                f"必要XP: **{config.regular_xp_threshold:,}** XP\n"
+                f"必要日数: **{config.regular_days_threshold}**日",
+                ephemeral=True,
+            )
+            return
+
+        success = await rank_db.update_regular_settings(
+            interaction.guild_id,
+            role_id=role_id,
+            xp_threshold=xp_threshold,
+            days_threshold=days_threshold,
+        )
+
+        if success:
+            changes = []
+            if role:
+                changes.append(f"🎖️ ロール: {role.mention}")
+            if xp_threshold is not None:
+                changes.append(f"✨ 必要XP: **{xp_threshold:,}**")
+            if days_threshold is not None:
+                changes.append(f"📅 必要日数: **{days_threshold}**日")
+
+            await interaction.response.send_message(
+                "✅ 常連ロール設定を更新しました\n" + "\n".join(changes),
+                ephemeral=True,
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ 設定の更新に失敗しました",
+                ephemeral=True,
+            )
+
+    @rank_settings.command(name="regular-clear", description="常連ロールの設定を解除します")
+    @is_moderator_app()
+    async def settings_regular_clear(self, interaction: discord.Interaction):
+        """常連ロールを解除"""
+        success = await rank_db.update_regular_settings(
+            interaction.guild_id,
+            role_id=0,  # 0で解除
+        )
+
+        if success:
+            await interaction.response.send_message(
+                "✅ 常連ロールの設定を解除しました",
                 ephemeral=True,
             )
         else:
