@@ -86,6 +86,33 @@ class Settings:
         self.google_cloud_credentials_json: str = os.getenv("GOOGLE_CLOUD_CREDENTIALS_JSON", "")
         self.google_application_credentials: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
 
+        # HFS Server Config
+        self.hfs_main_guild_id: int = int(os.getenv("HFS_MAIN_GUILD_ID", "1092138492173242430"))
+        self.hfs_chat_channel_id: int = int(os.getenv("HFS_CHAT_CHANNEL_ID", "1092138493582520355"))
+        self.hfs_rules_channel_id: int = int(os.getenv("HFS_RULES_CHANNEL_ID", "1120609874158563419"))
+        self.hfs_intro_channel_id: int = int(os.getenv("HFS_INTRO_CHANNEL_ID", "1092682540986408990"))
+        self.hfs_welcome_image_channel_id: int = int(os.getenv("HFS_WELCOME_IMAGE_CHANNEL_ID", "1373853775235649639"))
+
+        # Omikuji Config
+        omikuji_ids = os.getenv("OMIKUJI_CHANNEL_IDS", "889075104481423461,1096027971900428388")
+        self.omikuji_channel_ids: list[int] = [int(x) for x in omikuji_ids.split(",") if x]
+
+        # Bump Notice
+        self.disboard_bot_id: int = int(os.getenv("DISBOARD_BOT_ID", "302050872383242240"))
+        self.bump_image_url: str = os.getenv("BUMP_IMAGE_URL", "https://images.frwi.net/data/images/3908cc04-e168-4801-8783-f5799fa92c57.png")
+
+        # Oshi Role Panel
+        self.oshi_panel_image_url: str = os.getenv("OSHI_PANEL_IMAGE_URL", "https://images.frwi.net/data/images/31dd6e9b-25e3-4a15-a783-1c7b0054b10f.png")
+
+        # Holopittan Forum
+        self.holopittan_forum_channel_id: int = int(os.getenv("HOLOPITTAN_FORUM_CHANNEL_ID", "1378760737027260466"))
+        self.holopittan_guide_channel_id: int = int(os.getenv("HOLOPITTAN_GUIDE_CHANNEL_ID", "1378761943531126937"))
+        self.holopittan_feedback_channel_id: int = int(os.getenv("HOLOPITTAN_FEEDBACK_CHANNEL_ID", "1378761627280867498"))
+
+        # API CORS
+        cors_origins = os.getenv("API_CORS_ORIGINS", "http://localhost:3000")
+        self.api_cors_origins: list[str] = [x.strip() for x in cors_origins.split(",") if x.strip()]
+
 _settings = None
 
 def get_settings() -> Settings:

@@ -75,6 +75,18 @@ class RankCommands(commands.Cog):
         empty = length - filled
         return "▓" * filled + "░" * empty
 
+    def _get_streak_bonus_text(self, streak: int) -> str:
+        """ストリークボーナスのテキストを取得"""
+        if streak >= 60:
+            return "(XP 2.0x 🔥)"
+        elif streak >= 30:
+            return "(XP 1.5x)"
+        elif streak >= 14:
+            return "(XP 1.2x)"
+        elif streak >= 7:
+            return "(XP 1.1x)"
+        return ""
+
     @app_commands.command(name="rank", description="あなたのランクを表示します")
     @app_commands.describe(user="ランクを表示するユーザー（省略時は自分）")
     @is_guild_app()
@@ -136,8 +148,11 @@ class RankCommands(commands.Cog):
 
         container.add_separator()
 
-        # サブ統計
+        # サブ統計（ストリーク追加）
+        streak_emoji = "🔥" if rank_user.current_streak >= 7 else "📅"
+        streak_bonus = self._get_streak_bonus_text(rank_user.current_streak)
         container.add_text(
+            f"{streak_emoji} 連続ログイン: **{rank_user.current_streak}日** {streak_bonus}\n"
             f"📅 アクティブ日数: **{rank_user.active_days}日**\n"
             f"🌟 通算XP: **{self._format_xp(rank_user.lifetime_xp)}**"
         )
@@ -768,9 +783,86 @@ class RankCommands(commands.Cog):
             f"年間XP: **{rank_user.yearly_xp:,}** XP\n"
             f"累計XP: **{rank_user.lifetime_xp:,}** XP\n"
             f"アクティブ日数: **{rank_user.active_days}**日\n"
+            f"連続ログイン: **{rank_user.current_streak}**日\n"
             f"常連: {'✅' if rank_user.is_regular else '❌'}",
             ephemeral=True,
         )
+
+    @rank_admin.command(name="channel-multiplier", description="チャンネルのXP倍率を設定")
+    @is_moderator_app()
+    @app_commands.describe(
+        channel="対象チャンネル",
+        multiplier="倍率（0.5〜3.0、1.0で通常）",
+    )
+    async def admin_channel_multiplier(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel,
+        multiplier: float,
+    ):
+        """チャンネル倍率を設定"""
+        if multiplier < 0.5 or multiplier > 3.0:
+            await interaction.response.send_message(
+                "❌ 倍率は0.5〜3.0の範囲で指定してください",
+                ephemeral=True,
+            )
+            return
+
+        success = await rank_db.update_channel_multiplier(
+            interaction.guild_id, channel.id, multiplier
+        )
+        if success:
+            if multiplier == 1.0:
+                await interaction.response.send_message(
+                    f"✅ {channel.mention} のXP倍率をリセットしました（通常）",
+                    ephemeral=True,
+                )
+            else:
+                await interaction.response.send_message(
+                    f"✅ {channel.mention} のXP倍率を **{multiplier}x** に設定しました",
+                    ephemeral=True,
+                )
+        else:
+            await interaction.response.send_message(
+                "❌ 設定に失敗しました",
+                ephemeral=True,
+            )
+
+    @rank_admin.command(name="event", description="イベント倍率を設定（全体に適用）")
+    @is_moderator_app()
+    @app_commands.describe(multiplier="倍率（1.0〜5.0、1.0でイベント終了）")
+    async def admin_event(
+        self,
+        interaction: discord.Interaction,
+        multiplier: float,
+    ):
+        """イベント倍率を設定"""
+        if multiplier < 1.0 or multiplier > 5.0:
+            await interaction.response.send_message(
+                "❌ 倍率は1.0〜5.0の範囲で指定してください",
+                ephemeral=True,
+            )
+            return
+
+        success = await rank_db.update_global_multiplier(
+            interaction.guild_id, multiplier
+        )
+        if success:
+            if multiplier == 1.0:
+                await interaction.response.send_message(
+                    "✅ イベント倍率を終了しました（通常モード）",
+                    ephemeral=True,
+                )
+            else:
+                await interaction.response.send_message(
+                    f"🎉 **{multiplier}x XPイベント開始！**\n"
+                    f"全てのXP獲得に {multiplier}x 倍率が適用されます",
+                )
+        else:
+            await interaction.response.send_message(
+                "❌ 設定に失敗しました",
+                ephemeral=True,
+            )
 
 
 async def setup(bot: commands.Bot):

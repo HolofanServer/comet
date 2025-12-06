@@ -18,6 +18,10 @@ settings = get_settings()
 
 logger = setup_logging("D")
 
+# 設定から取得
+OMIKUJI_CHANNEL_IDS = settings.omikuji_channel_ids
+
+
 class HololiveOmikujiCog(commands.Cog):
     """ホロライブおみくじ機能を提供するCogクラス"""
 
@@ -666,7 +670,7 @@ class HololiveOmikujiCog(commands.Cog):
             if message.guild is None:
                 await message.channel.send("このコマンドはサーバーでのみ利用できます。")
                 return
-            if message.channel.id in [889075104481423461, 1096027971900428388]:
+            if message.channel.id in OMIKUJI_CHANNEL_IDS:
                 ctx = await self.bot.get_context(message)
                 await self.omikuji(ctx)
 
@@ -674,7 +678,7 @@ class HololiveOmikujiCog(commands.Cog):
             if message.guild is None:
                 await message.channel.send("このコマンドはサーバーでのみ利用できます。")
                 return
-            if message.channel.id in [889075104481423461, 1096027971900428388]:
+            if message.channel.id in OMIKUJI_CHANNEL_IDS:
                 ctx = await self.bot.get_context(message)
                 await self.fortune(ctx)
 

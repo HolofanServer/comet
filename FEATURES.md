@@ -82,6 +82,24 @@ C.O.M.E.T. (Community of Oshilove Moderation & Enjoyment Together) は、HFS - �
 - 多言語対応のウェルカムメッセージ
 - カスタマイズ可能なメッセージテンプレート
 
+### 新規参加者フォローアップDM
+Week 1 Retention改善のための自動フォローアップシステム
+- 参加後12時間経過 + 発言なしユーザーへの自動DM
+  - 雑談への参加を促すメッセージ
+  - カスタマイズ可能な待機時間（デフォルト12時間）
+- 発言検知機能
+  - サーバー内での発言を自動検知
+  - 発言済みユーザーにはDM送信をスキップ
+- 効果測定機能
+  - 新規参加者数、DM送信数の統計
+  - DM前後の発言率追跡
+- 管理コマンド
+  - `/newcomer_followup status` - 状態確認
+  - `/newcomer_followup enable` - 有効/無効切り替え
+  - `/newcomer_followup set_delay` - 待機時間設定
+  - `/newcomer_followup test` - テスト送信
+  - `/newcomer_followup preview` - メッセージプレビュー
+
 ## ストリーム通知機能
 
 ### VTuber配信通知システム

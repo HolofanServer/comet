@@ -117,20 +117,37 @@ class MyBot(commands.AutoShardedBot):
 
             await self.load_extension('jishaku')
 
-            # add_bot_endpoint(
-            #     job_name="discord-bots",
-            #     target="localhost:8001",
-            #     labels={"bot": f"{bot_config['name']}"}
-            # )
-            # reload_prometheus()
-
-            # await self.add_cog(PrometheusCog(self, port=8001))
+            # 管理API起動
+            await self._start_api()
 
         except Exception as e:
             logger.error(f"認証に失敗しました。Cogのロードをスキップします。: {e}")
             return
 
         self.loop.create_task(self.after_ready())
+
+    async def _start_api(self) -> None:
+        """管理APIを起動"""
+        import uvicorn
+
+        from api.main import app, set_bot
+
+        # Botインスタンスを設定
+        set_bot(self)
+
+        # API設定
+        api_port = int(os.environ.get("API_PORT", 8080))
+
+        # バックグラウンドでAPI起動
+        config = uvicorn.Config(
+            app,
+            host="0.0.0.0",
+            port=api_port,
+            log_level="warning",
+        )
+        server = uvicorn.Server(config)
+        self.loop.create_task(server.serve())
+        logger.info(f"🚀 管理API起動: http://localhost:{api_port}")
 
     async def after_ready(self) -> None:
         logger.info("setup_hook is called")

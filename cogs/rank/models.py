@@ -2,7 +2,7 @@
 HFS Rank データモデル・DBアクセス
 """
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from cogs.cp.db import checkpoint_db
 from utils.logging import setup_logging
@@ -21,6 +21,7 @@ class RankUser:
     active_days: int = 0
     current_level: int = 1
     is_regular: bool = False
+    current_streak: int = 0  # 連続ログイン日数
     last_message_xp_at: datetime | None = None
     last_omikuji_xp_date: date | None = None
     last_active_date: date | None = None
@@ -41,6 +42,11 @@ class RankConfig:
     excluded_channels: list[int] | None = None
     excluded_roles: list[int] | None = None
     is_enabled: bool = True
+    # Phase 1: 新機能
+    streak_bonus_enabled: bool = True  # ストリークボーナス有効
+    quality_bonus_enabled: bool = True  # メッセージ品質ボーナス有効
+    channel_multipliers: dict[int, float] | None = None  # チャンネルごとのXP倍率
+    global_multiplier: float = 1.0  # グローバル倍率（イベント用）
 
 
 class RankDB:
@@ -102,6 +108,11 @@ class RankDB:
                     excluded_channels=list(row["excluded_channels"]) if row["excluded_channels"] else [],
                     excluded_roles=list(row["excluded_roles"]) if row["excluded_roles"] else [],
                     is_enabled=row["is_enabled"],
+                    # Phase 1: 新機能
+                    streak_bonus_enabled=row.get("streak_bonus_enabled", True),
+                    quality_bonus_enabled=row.get("quality_bonus_enabled", True),
+                    channel_multipliers=dict(row["channel_multipliers"]) if row.get("channel_multipliers") else None,
+                    global_multiplier=row.get("global_multiplier", 1.0),
                 )
             else:
                 config = RankConfig(guild_id=guild_id)
@@ -133,6 +144,7 @@ class RankDB:
                 active_days=row["active_days"],
                 current_level=row["current_level"],
                 is_regular=row["is_regular"],
+                current_streak=row.get("current_streak", 0),
                 last_message_xp_at=row["last_message_xp_at"],
                 last_omikuji_xp_date=row["last_omikuji_xp_date"],
                 last_active_date=row["last_active_date"],
@@ -220,23 +232,35 @@ class RankDB:
             logger.error(f"レベル更新エラー: {e}")
 
     async def increment_active_days(self, user_id: int, guild_id: int) -> bool:
-        """アクティブ日数をインクリメント"""
+        """
+        アクティブ日数をインクリメント
+        連続ログイン（ストリーク）も計算
+        """
         if not checkpoint_db._initialized:
             return False
 
         today = date.today()
+        yesterday = today - timedelta(days=1)
+
+        # ストリーク計算:
+        # - 昨日アクティブ → ストリーク +1
+        # - 昨日以前 or 初回 → ストリーク リセット to 1
         query = """
             UPDATE rank_users
             SET active_days = active_days + 1,
+                current_streak = CASE
+                    WHEN last_active_date = $4 THEN current_streak + 1
+                    ELSE 1
+                END,
                 last_active_date = $3,
                 updated_at = CURRENT_TIMESTAMP
             WHERE user_id = $1 AND guild_id = $2
               AND (last_active_date IS NULL OR last_active_date < $3)
-            RETURNING active_days
+            RETURNING active_days, current_streak
         """
         try:
             async with checkpoint_db.pool.acquire() as conn:
-                result = await conn.fetchval(query, user_id, guild_id, today)
+                result = await conn.fetchrow(query, user_id, guild_id, today, yesterday)
             return result is not None
         except Exception as e:
             logger.error(f"アクティブ日数更新エラー: {e}")
@@ -562,6 +586,62 @@ class RankDB:
             return True
         except Exception as e:
             logger.error(f"常連設定更新エラー: {e}")
+            return False
+
+    async def update_channel_multiplier(
+        self,
+        guild_id: int,
+        channel_id: int,
+        multiplier: float,
+    ) -> bool:
+        """チャンネル倍率を設定"""
+        if not checkpoint_db._initialized:
+            return False
+
+        # 現在の設定を取得
+        config = await self.get_config(guild_id)
+        multipliers = config.channel_multipliers or {}
+
+        if multiplier == 1.0:
+            # 1.0なら削除
+            multipliers.pop(str(channel_id), None)
+        else:
+            multipliers[str(channel_id)] = multiplier
+
+        import json
+        query = """
+            INSERT INTO rank_config (guild_id, channel_multipliers)
+            VALUES ($1, $2::jsonb)
+            ON CONFLICT (guild_id) DO UPDATE
+            SET channel_multipliers = $2::jsonb, updated_at = CURRENT_TIMESTAMP
+        """
+        try:
+            async with checkpoint_db.pool.acquire() as conn:
+                await conn.execute(query, guild_id, json.dumps(multipliers))
+            self._config_cache.pop(guild_id, None)
+            return True
+        except Exception as e:
+            logger.error(f"チャンネル倍率更新エラー: {e}")
+            return False
+
+    async def update_global_multiplier(self, guild_id: int, multiplier: float) -> bool:
+        """グローバル倍率を設定（イベント用）"""
+        if not checkpoint_db._initialized:
+            return False
+
+        query = """
+            INSERT INTO rank_config (guild_id, global_multiplier)
+            VALUES ($1, $2)
+            ON CONFLICT (guild_id) DO UPDATE
+            SET global_multiplier = $2, updated_at = CURRENT_TIMESTAMP
+        """
+        try:
+            async with checkpoint_db.pool.acquire() as conn:
+                await conn.execute(query, guild_id, multiplier)
+            self._config_cache.pop(guild_id, None)
+            return True
+        except Exception as e:
+            logger.error(f"グローバル倍率更新エラー: {e}")
             return False
 
 

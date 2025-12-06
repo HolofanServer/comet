@@ -196,7 +196,8 @@ async def startup_send_botinfo(bot):
         logger.warning("指定されたチャンネルが見つかりません。")
         return
 
-    discord_py_hash = get_detailed_discord_version().split(discord.__version__)[1]
+    version_parts = get_detailed_discord_version().split(discord.__version__)
+    discord_py_hash = version_parts[1] if len(version_parts) > 1 else ""
     os_info = f"{platform.system()} {platform.release()} ({platform.version()})"
     cpu_info = get_cpu_model_name()
     cpu_cores = f"{psutil.cpu_count(logical=True)} / {psutil.cpu_count(logical=False)}"

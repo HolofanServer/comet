@@ -5,11 +5,17 @@ import discord
 import httpx
 from discord.ext import commands
 
+from config.setting import get_settings
 from utils.commands_help import is_guild, is_owner, log_commands
 from utils.db_manager import db
 from utils.logging import setup_logging
 
 logger = setup_logging()
+settings = get_settings()
+
+# 設定から取得
+DISBOARD_BOT_ID = settings.disboard_bot_id
+BUMP_IMAGE_URL = settings.bump_image_url
 
 class CV2MessageSender:
     """
@@ -55,10 +61,8 @@ class BumpNoticeCog(commands.Cog):
     DISBOARD BOTのbump embed検知→CV2形式コンテナ送信→２時間後削除/再送信を管理します。
     深夜(JST 0-7時)はメンションを行いません。
     """
-    # DISBOARD BOTの正確なID
-    DISBOARD_BOT_ID = 302050872383242240
-    # bump成功時の特徴的な画像URL
-    BUMP_IMAGE_URL = "disboard.org/images/bot-command-image-bump.png"
+    # bump成功時の特徴的な画像URL（DISBOARD側の画像）
+    BUMP_DETECT_IMAGE_URL = "disboard.org/images/bot-command-image-bump.png"
     BUMP_INTERVAL = timedelta(hours=2)
     JST = timezone(timedelta(hours=9))
     NIGHT_START = 0
@@ -145,7 +149,7 @@ class BumpNoticeCog(commands.Cog):
             color=0x2ecc71
         )
         embed.set_footer(text="Server bumped")
-        embed.set_image(url="https://images.frwi.net/data/images/3908cc04-e168-4801-8783-f5799fa92c57.png")
+        embed.set_image(url=BUMP_IMAGE_URL)
 
         await ctx.send(embed=embed)
 
@@ -155,7 +159,7 @@ class BumpNoticeCog(commands.Cog):
             return
 
         # DISBOARD BOTからのメッセージかどうかをチェック
-        if message.author.id != self.DISBOARD_BOT_ID:
+        if message.author.id != DISBOARD_BOT_ID:
             return
 
         # bump通知設定を確認
@@ -171,7 +175,7 @@ class BumpNoticeCog(commands.Cog):
         try:
             embed = message.embeds[0]
             if embed.image and embed.image.url:
-                if self.BUMP_IMAGE_URL in str(embed.image.url):
+                if self.BUMP_DETECT_IMAGE_URL in str(embed.image.url):
                     logger.info(f"Bump検知: サーバー {message.guild.name} (ID: {message.guild.id})")
 
                     self.channel = message.guild.get_channel(settings['channel_id'])
@@ -208,7 +212,7 @@ class BumpNoticeCog(commands.Cog):
             title="Bumpを確認しました",
             description=f"<t:{next_bump_ts}:R> に再度bumpが可能になります\n<t:{next_bump_ts}>"
         )
-        embed_first.set_image(url="https://images.frwi.net/data/images/3908cc04-e168-4801-8783-f5799fa92c57.png")
+        embed_first.set_image(url=BUMP_IMAGE_URL)
 
         # 最初のメッセージを送信
         self.last_bump_message = await self.channel.send(embed=embed_first, silent=True)
@@ -231,7 +235,7 @@ class BumpNoticeCog(commands.Cog):
             title="Bumpが可能になりました!",
             description="</bump:947088344167366698>を使おう!"
         )
-        new_embed.set_image(url="https://images.frwi.net/data/images/3908cc04-e168-4801-8783-f5799fa92c57.png")
+        new_embed.set_image(url=BUMP_IMAGE_URL)
 
         # 深夜帯判定
         if self.NIGHT_START <= now.hour < self.NIGHT_END:

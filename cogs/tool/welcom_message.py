@@ -19,6 +19,13 @@ from utils.logging import setup_logging
 logger = setup_logging("D")
 settings = get_settings()
 
+# 設定から取得
+WELCOME_IMAGE_CHANNEL_ID = settings.hfs_welcome_image_channel_id
+HFS_GUILD_ID = settings.hfs_main_guild_id
+HFS_RULES_CHANNEL_ID = settings.hfs_rules_channel_id
+HFS_INTRO_CHANNEL_ID = settings.hfs_intro_channel_id
+HFS_CHAT_CHANNEL_ID = settings.hfs_chat_channel_id
+
 # OpenAI APIキーを環境変数から取得
 OPENAI_API_KEY = settings.etc_api_openai_api_key
 logger.info(f"OpenAI APIキー設定状況: {'設定済み' if OPENAI_API_KEY else '未設定'}")
@@ -102,10 +109,9 @@ class UserJoinQueue:
 
     async def _get_user_image(self, username, max_retries=2):
         """ユーザー名に対応する画像を取得"""
-        image_channel_id = 1373853775235649639
-        image_channel = self.bot.get_channel(image_channel_id)
+        image_channel = self.bot.get_channel(WELCOME_IMAGE_CHANNEL_ID)
         if not image_channel:
-            logger.warning(f"画像チャンネル(ID:{image_channel_id})が見つかりません")
+            logger.warning(f"画像チャンネル(ID:{WELCOME_IMAGE_CHANNEL_ID})が見つかりません")
             return None
 
         for retry in range(max_retries):

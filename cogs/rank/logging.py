@@ -57,8 +57,13 @@ class RankLogging(commands.Cog):
             if member_role_ids & set(config.excluded_roles):
                 return
 
-        # XP付与
-        await rank_service.add_message_xp(message.author.id, message.guild.id)
+        # XP付与（メッセージ内容とチャンネルIDを渡して品質・倍率計算）
+        await rank_service.add_message_xp(
+            message.author.id,
+            message.guild.id,
+            message.content,
+            message.channel.id,
+        )
 
     # ==================== VC XP ====================
 
@@ -99,6 +104,38 @@ class RankLogging(commands.Cog):
         ):
             # セッション継続（チャンネル変更では中断しない）
             pass
+
+    # ==================== リアクションXP ====================
+
+    @commands.Cog.listener()
+    async def on_reaction_add(
+        self,
+        reaction: discord.Reaction,
+        user: discord.User,
+    ):
+        """リアクションをもらったらXP付与（メッセージ投稿者に）"""
+        # Bot・DMは除外
+        if user.bot or not reaction.message.guild:
+            return
+
+        # メッセージ投稿者がBotなら除外
+        if reaction.message.author.bot:
+            return
+
+        # 設定取得・除外チェック
+        config = await rank_db.get_config(reaction.message.guild.id)
+        if not config.is_enabled:
+            return
+
+        if rank_service.is_channel_excluded(reaction.message.channel.id, config):
+            return
+
+        # メッセージ投稿者にXP付与
+        await rank_service.add_reaction_xp(
+            reaction.message.author.id,
+            reaction.message.guild.id,
+            user.id,
+        )
 
     @tasks.loop(minutes=10)
     async def vc_xp_task(self):
