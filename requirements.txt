@@ -33,5 +33,5 @@ pysaucenao>=1.4.0
 google-cloud-vision>=3.7.0
 boto3>=1.34.0
 
-uvicron==0.38.0
+uvicorn==0.34.0
 fastapi==0.123.9
