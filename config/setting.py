@@ -63,6 +63,14 @@ class Settings:
         self.hfs_api_key: str = os.getenv("HFS_API_KEY", "")
         self.hfs_guild_id: int = int(os.getenv("HFS_GUILD_ID", "0"))
 
+        # MyHFS Linked Roles
+        self.discord_client_id: str = os.getenv("DISCORD_CLIENT_ID", "")
+        self.discord_client_secret: str = os.getenv("DISCORD_CLIENT_SECRET", "")
+        self.myhfs_linked_roles_api_url: str = os.getenv(
+            "MYHFS_LINKED_ROLES_API_URL", "https://card.hfs.jp/api"
+        )
+        self.myhfs_linked_roles_token: str = os.getenv("MYHFS_LINKED_ROLES_TOKEN", "")
+
         #db
         self.database_public_url: str = os.getenv("DATABASE_PUBLIC_URL", "")
         self.tag_moderation_database_url: str = os.getenv("TAG_MODERATION_DATABASE_URL", "")
