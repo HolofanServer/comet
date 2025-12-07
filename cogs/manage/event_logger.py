@@ -5,6 +5,7 @@
 各イベントタイプごとにポスト（スレッド）を作成し、ログを投稿します。
 """
 
+import json
 from datetime import datetime
 from enum import IntFlag, auto
 from typing import Optional
@@ -298,7 +299,7 @@ class EventLogger(commands.Cog):
                 SET thread_ids = thread_ids || $1::jsonb
                 WHERE guild_id = $2
                 ''',
-                {category: thread.id},
+                json.dumps({category: thread.id}),
                 guild.id,
                 fetch_type='status'
             )
@@ -729,7 +730,7 @@ class EventLogger(commands.Cog):
             interaction.guild.id,
             forum_channel.id,
             int(events),
-            {},
+            json.dumps({}),
             fetch_type='status'
         )
 
