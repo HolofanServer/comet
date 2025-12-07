@@ -199,9 +199,12 @@ class CheckpointDB:
             UPDATE cp_voice_logs
             SET left_at = $1,
                 duration_seconds = EXTRACT(EPOCH FROM ($1 - joined_at))::INT
-            WHERE user_id = $2 AND guild_id = $3 AND channel_id = $4 AND left_at IS NULL
-            ORDER BY joined_at DESC
-            LIMIT 1
+            WHERE id = (
+                SELECT id FROM cp_voice_logs
+                WHERE user_id = $2 AND guild_id = $3 AND channel_id = $4 AND left_at IS NULL
+                ORDER BY joined_at DESC
+                LIMIT 1
+            )
             RETURNING duration_seconds
         """
         try:
