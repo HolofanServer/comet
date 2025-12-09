@@ -31,9 +31,10 @@ EARTHQUAKE_ROLE_NAME = "地震ch閲覧"
 class EarthquakeRoleButton(discord.ui.View):
     """地震チャンネル閲覧ロール取得ボタン"""
 
-    def __init__(self, role_id: int, disabled: bool = False):
+    def __init__(self, role_id: int, talk_channel_id: int = 0, disabled: bool = False):
         super().__init__(timeout=None)
         self.role_id = role_id
+        self.talk_channel_id = talk_channel_id
 
         # ボタンの状態を設定
         self.get_role_button.disabled = disabled
@@ -67,9 +68,17 @@ class EarthquakeRoleButton(discord.ui.View):
 
         try:
             await interaction.user.add_roles(role, reason="地震チャンネル閲覧リクエスト")
+
+            # 地震の話題チャンネルへのリンクを取得
+            cog = interaction.client.get_cog('EarthquakeChannel')
+            channel_link = ""
+            if cog and interaction.guild.id in cog._active_sessions:
+                talk_ch_id = cog._active_sessions[interaction.guild.id].get('talk_channel_id')
+                if talk_ch_id:
+                    channel_link = f"\nhttps://discord.com/channels/{interaction.guild.id}/{talk_ch_id}"
+
             await interaction.response.send_message(
-                "✅ 地震チャンネルが閲覧可能になりました！\n"
-                "https://discord.com/channels/1092138492173242430/1447758775397384394\n"
+                f"✅ 地震チャンネルが閲覧可能になりました！{channel_link}\n"
                 "24時間後に自動的にアクセス権が解除されます。",
                 ephemeral=True
             )
@@ -128,12 +137,24 @@ class EarthquakeChannel(commands.Cog):
                 guild_id BIGINT NOT NULL,
                 message_id BIGINT NOT NULL,
                 channel_id BIGINT NOT NULL,
+                talk_channel_id BIGINT,
+                info_channel_id BIGINT,
                 opened_at TIMESTAMP WITH TIME ZONE NOT NULL,
                 closes_at TIMESTAMP WITH TIME ZONE NOT NULL,
                 is_active BOOLEAN DEFAULT TRUE,
                 closed_at TIMESTAMP WITH TIME ZONE,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
+            ''',
+            fetch_type='status'
+        )
+
+        # 既存テーブルにカラムを追加（存在しない場合）
+        await execute_query(
+            '''
+            ALTER TABLE earthquake_channel_sessions
+            ADD COLUMN IF NOT EXISTS talk_channel_id BIGINT,
+            ADD COLUMN IF NOT EXISTS info_channel_id BIGINT
             ''',
             fetch_type='status'
         )
@@ -160,7 +181,7 @@ class EarthquakeChannel(commands.Cog):
         # アクティブなセッションをロード
         sessions = await execute_query(
             '''
-            SELECT guild_id, message_id, channel_id, closes_at
+            SELECT guild_id, message_id, channel_id, talk_channel_id, info_channel_id, closes_at
             FROM earthquake_channel_sessions
             WHERE is_active = TRUE
             ''',
@@ -170,6 +191,8 @@ class EarthquakeChannel(commands.Cog):
             self._active_sessions[session['guild_id']] = {
                 'message_id': session['message_id'],
                 'channel_id': session['channel_id'],
+                'talk_channel_id': session.get('talk_channel_id'),
+                'info_channel_id': session.get('info_channel_id'),
                 'closes_at': session['closes_at'],
             }
 
@@ -295,6 +318,21 @@ class EarthquakeChannel(commands.Cog):
         if channel:
             await self._disable_button(channel, session['message_id'])
 
+        # 作成したチャンネルを削除
+        deleted_channels = []
+        for ch_key in ['talk_channel_id', 'info_channel_id']:
+            ch_id = session.get(ch_key)
+            if ch_id:
+                ch = guild.get_channel(ch_id)
+                if ch:
+                    try:
+                        await ch.delete(reason="地震チャンネルクローズ")
+                        deleted_channels.append(ch.name)
+                    except discord.Forbidden:
+                        logger.warning(f"チャンネル削除権限がありません: {ch.name}")
+                    except Exception as e:
+                        logger.error(f"チャンネル削除エラー: {e}")
+
         # DBを更新
         await execute_query(
             '''
@@ -310,7 +348,7 @@ class EarthquakeChannel(commands.Cog):
         del self._active_sessions[guild.id]
 
         close_type = "自動" if auto else "手動"
-        logger.info(f"地震チャンネルを{close_type}クローズ: {guild.name}, {removed_count}人からロール剥奪")
+        logger.info(f"地震チャンネルを{close_type}クローズ: {guild.name}, {removed_count}人からロール剥奪, チャンネル削除: {deleted_channels}")
 
         return True, f"地震チャンネルを{close_type}クローズしました。\n{removed_count}人から閲覧権限を解除しました。"
 
@@ -442,13 +480,87 @@ class EarthquakeChannel(commands.Cog):
         now = datetime.now(JST)
         closes_at = now + timedelta(hours=24)
 
+        # === チャンネル作成 ===
+        try:
+            # カテゴリーの権限をコピー（地震ch閲覧ロールの権限を追加）
+            overwrites = category.overwrites.copy()
+            # 地震ch閲覧ロールに閲覧権限を付与
+            overwrites[role] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True
+            )
+
+            # 地震の話題チャンネルを作成
+            talk_channel = await interaction.guild.create_text_channel(
+                name="🌍地震の話題",
+                category=category,
+                overwrites=overwrites,
+                reason="地震チャンネルオープン"
+            )
+
+            # 地震の情報共有チャンネルを作成
+            info_channel = await interaction.guild.create_text_channel(
+                name="📢地震の情報共有",
+                category=category,
+                overwrites=overwrites,
+                reason="地震チャンネルオープン"
+            )
+
+            # 地震の話題チャンネルにルールメッセージを送信してピン留め
+            talk_rule_embed = discord.Embed(
+                title="📋 地震チャンネルのルール",
+                description=(
+                    "地震に関する話題はこのチャンネルでお願いします。\n\n"
+                    "**⚠️ 注意事項**\n"
+                    "• 他のチャンネルでは地震の話題は控えてください\n"
+                    "• みんなを不安にさせるような発言は禁止です\n"
+                    "• 落ち着いて行動しましょう\n\n"
+                    "このチャンネルは24時間後に自動で削除されます。"
+                ),
+                color=discord.Color.orange()
+            )
+            talk_rule_msg = await talk_channel.send(embed=talk_rule_embed)
+            await talk_rule_msg.pin()
+
+            # 地震の情報共有チャンネルに注意メッセージを送信してピン留め
+            info_rule_embed = discord.Embed(
+                title="📋 情報共有のルール",
+                description=(
+                    "地震に関する情報を共有するチャンネルです。\n\n"
+                    "**⚠️ 注意事項**\n"
+                    "• フェイクニュースやソースが不確かな情報は投稿しないでください\n"
+                    "• 運営が不適切と判断した情報は削除する場合があります\n"
+                    "• 信頼できる情報源からの情報のみ共有してください\n"
+                    "  （気象庁、NHK、官公庁など）\n\n"
+                    "このチャンネルは24時間後に自動で削除されます。"
+                ),
+                color=discord.Color.blue()
+            )
+            info_rule_msg = await info_channel.send(embed=info_rule_embed)
+            await info_rule_msg.pin()
+
+        except discord.Forbidden:
+            await interaction.followup.send(
+                "❌ チャンネルの作成に失敗しました。BOTにチャンネル作成権限があることを確認してください。",
+                ephemeral=True
+            )
+            return
+        except Exception as e:
+            logger.error(f"チャンネル作成エラー: {e}")
+            await interaction.followup.send(
+                f"❌ チャンネルの作成中にエラーが発生しました: {e}",
+                ephemeral=True
+            )
+            return
+
         # 通知メッセージを送信
         embed = discord.Embed(
             title="🚨 臨時の地震チャンネルが作成されました",
             description=(
                 "地震に関する情報共有のため、地震チャンネルを一時的に開放しました。\n\n"
-                "下のボタンを押すと、地震関連チャンネルを閲覧できるようになります。\n\n\n"
-                "**地震に関する話題はこのチャンネルのみにしてください。**\n\n"
+                "下のボタンを押すと、地震関連チャンネルを閲覧できるようになります。\n\n"
+                "**地震に関する話題は地震チャンネル内のみにしてください。**\n\n"
                 "**24時間後に自動的にアクセス権が解除されます。**"
             ),
             color=discord.Color.red(),
@@ -460,7 +572,7 @@ class EarthquakeChannel(commands.Cog):
             inline=False
         )
 
-        view = EarthquakeRoleButton(role.id)
+        view = EarthquakeRoleButton(role.id, talk_channel.id)
         message = await notification_channel.send(
             content=notification_role.mention,
             embed=embed,
@@ -472,12 +584,14 @@ class EarthquakeChannel(commands.Cog):
         await execute_query(
             '''
             INSERT INTO earthquake_channel_sessions
-            (guild_id, message_id, channel_id, opened_at, closes_at)
-            VALUES ($1, $2, $3, $4, $5)
+            (guild_id, message_id, channel_id, talk_channel_id, info_channel_id, opened_at, closes_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ''',
             interaction.guild.id,
             message.id,
             notification_channel.id,
+            talk_channel.id,
+            info_channel.id,
             now,
             closes_at,
             fetch_type='status'
@@ -487,6 +601,8 @@ class EarthquakeChannel(commands.Cog):
         self._active_sessions[interaction.guild.id] = {
             'message_id': message.id,
             'channel_id': notification_channel.id,
+            'talk_channel_id': talk_channel.id,
+            'info_channel_id': info_channel.id,
             'closes_at': closes_at,
         }
 
@@ -496,14 +612,16 @@ class EarthquakeChannel(commands.Cog):
             color=discord.Color.green()
         )
         embed.add_field(name="通知先", value=notification_channel.mention, inline=True)
+        embed.add_field(name="話題チャンネル", value=talk_channel.mention, inline=True)
+        embed.add_field(name="情報共有チャンネル", value=info_channel.mention, inline=True)
         embed.add_field(
             name="自動クローズ",
             value=f"<t:{int(closes_at.timestamp())}:R>",
-            inline=True
+            inline=False
         )
 
         await interaction.followup.send(embed=embed)
-        logger.info(f"地震チャンネルをオープン: {interaction.guild.name}")
+        logger.info(f"地震チャンネルをオープン: {interaction.guild.name}, チャンネル作成: {talk_channel.name}, {info_channel.name}")
 
     @earthquake_group.command(name="クローズ", description="地震チャンネルを閉鎖します")
     @is_moderator_app()
@@ -587,6 +705,15 @@ class EarthquakeChannel(commands.Cog):
                 value="**オープン中**",
                 inline=False
             )
+
+            # 作成されたチャンネル情報
+            talk_ch = interaction.guild.get_channel(session.get('talk_channel_id') or 0)
+            info_ch = interaction.guild.get_channel(session.get('info_channel_id') or 0)
+            if talk_ch:
+                embed.add_field(name="話題チャンネル", value=talk_ch.mention, inline=True)
+            if info_ch:
+                embed.add_field(name="情報共有チャンネル", value=info_ch.mention, inline=True)
+
             embed.add_field(
                 name="自動クローズ",
                 value=f"<t:{int(closes_at.timestamp())}:F> (<t:{int(closes_at.timestamp())}:R>)",
