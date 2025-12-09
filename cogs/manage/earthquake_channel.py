@@ -69,6 +69,7 @@ class EarthquakeRoleButton(discord.ui.View):
             await interaction.user.add_roles(role, reason="地震チャンネル閲覧リクエスト")
             await interaction.response.send_message(
                 "✅ 地震チャンネルが閲覧可能になりました！\n"
+                "https://discord.com/channels/1092138492173242430/1447758775397384394\n"
                 "24時間後に自動的にアクセス権が解除されます。",
                 ephemeral=True
             )
@@ -443,10 +444,11 @@ class EarthquakeChannel(commands.Cog):
 
         # 通知メッセージを送信
         embed = discord.Embed(
-            title="🚨 地震チャンネルが開放されました",
+            title="🚨 臨時の地震チャンネルが作成されました",
             description=(
-                "地震に関する情報共有のため、地震チャンネルを一時的に開放します。\n\n"
-                "下のボタンを押すと、地震関連チャンネルを閲覧できるようになります。\n"
+                "地震に関する情報共有のため、地震チャンネルを一時的に開放しました。\n\n"
+                "下のボタンを押すと、地震関連チャンネルを閲覧できるようになります。\n\n\n"
+                "**地震に関する話題はこのチャンネルのみにしてください。**\n\n"
                 "**24時間後に自動的にアクセス権が解除されます。**"
             ),
             color=discord.Color.red(),
@@ -457,7 +459,6 @@ class EarthquakeChannel(commands.Cog):
             value=f"<t:{int(closes_at.timestamp())}:F>",
             inline=False
         )
-        embed.set_footer(text=f"開放者: {interaction.user}")
 
         view = EarthquakeRoleButton(role.id)
         message = await notification_channel.send(
