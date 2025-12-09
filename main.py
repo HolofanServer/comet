@@ -32,6 +32,7 @@ if not discord.opus.is_loaded():
             continue
 from discord import app_commands
 from discord.ext import commands
+from discord.utils import MISSING
 from dotenv import load_dotenv
 
 # from utils.prometheus_config import add_bot_endpoint, reload_prometheus
@@ -86,27 +87,30 @@ dev_guild_id: int = settings.admin_dev_guild_id
 class GuildOnlyCommandTree(app_commands.CommandTree):
     """
     グローバルコマンド制限(100個)を回避するためのカスタムCommandTree
-    コマンドはグローバルに登録されるが、同期時にはギルド固有として扱う
+    すべてのコマンドをギルド固有として登録し、グローバル制限を回避する
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # グローバルコマンド数の内部チェックをバイパス
-        self._global_command_count = 0
+        # 対象ギルドIDリスト
+        self._target_guilds = [main_guild_id, dev_guild_id]
 
-    def _add_command(self, command, /, *, guild=None, guilds=None, override=False):
-        # ギルド固有コマンドとして追加する場合は通常通り
-        if guild is not None or guilds is not None:
-            return super()._add_command(command, guild=guild, guilds=guilds, override=override)
-
-        # グローバルコマンドの場合、100個制限のチェックをスキップ
-        # 実際の同期時にはギルド固有として同期するので問題なし
-        try:
-            return super()._add_command(command, guild=guild, guilds=guilds, override=override)
-        except app_commands.CommandLimitReached:
-            # 制限に達した場合でも強制的に追加（内部dictに直接追加）
-            self._global_commands[command.name] = command
-            return command
+    def add_command(
+        self,
+        command,
+        /,
+        *,
+        guild=MISSING,
+        guilds=MISSING,
+        override: bool = False,
+    ):
+        # ギルドが指定されていない場合、ターゲットギルドに追加
+        if guild is MISSING and guilds is MISSING:
+            # 両方のギルドにコマンドを追加
+            guilds = [discord.Object(id=gid) for gid in self._target_guilds if gid]
+            if guilds:
+                return super().add_command(command, guilds=guilds, override=override)
+        return super().add_command(command, guild=guild, guilds=guilds, override=override)
 
 
 startup_channel_id: int = settings.admin_startup_channel_id
@@ -184,12 +188,11 @@ class MyBot(commands.AutoShardedBot):
         logger.info(startup_message())
         await update_status(self, "Bot Startup...")
 
-        # グローバル同期ではなく、指定ギルドのみに同期（100コマンド制限回避）
+        # ギルド固有コマンドを同期（100コマンド制限回避）
         guild_ids = [main_guild_id, dev_guild_id]
         for gid in guild_ids:
             if gid:
                 guild = discord.Object(id=gid)
-                self.tree.copy_global_to(guild=guild)
                 await self.tree.sync(guild=guild)
                 logger.info(f"コマンドをギルド {gid} に同期しました")
 
