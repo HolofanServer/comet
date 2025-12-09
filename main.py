@@ -30,6 +30,7 @@ if not discord.opus.is_loaded():
             break
         except OSError:
             continue
+from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -80,6 +81,34 @@ TOKEN: str = settings.bot_token
 command_prefix: list[str] = bot_config["prefix"]
 main_guild_id: int = settings.admin_main_guild_id
 dev_guild_id: int = settings.admin_dev_guild_id
+
+
+class GuildOnlyCommandTree(app_commands.CommandTree):
+    """
+    グローバルコマンド制限(100個)を回避するためのカスタムCommandTree
+    コマンドはグローバルに登録されるが、同期時にはギルド固有として扱う
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # グローバルコマンド数の内部チェックをバイパス
+        self._global_command_count = 0
+
+    def _add_command(self, command, /, *, guild=None, guilds=None, override=False):
+        # ギルド固有コマンドとして追加する場合は通常通り
+        if guild is not None or guilds is not None:
+            return super()._add_command(command, guild=guild, guilds=guilds, override=override)
+
+        # グローバルコマンドの場合、100個制限のチェックをスキップ
+        # 実際の同期時にはギルド固有として同期するので問題なし
+        try:
+            return super()._add_command(command, guild=guild, guilds=guilds, override=override)
+        except app_commands.CommandLimitReached:
+            # 制限に達した場合でも強制的に追加（内部dictに直接追加）
+            self._global_commands[command.name] = command
+            return command
+
+
 startup_channel_id: int = settings.admin_startup_channel_id
 bug_report_channel_id: int = settings.admin_bug_report_channel_id
 error_log_channel_id: int = settings.admin_error_log_channel_id
@@ -93,7 +122,7 @@ error_log_channel_id: int = settings.admin_error_log_channel_id
 
 class MyBot(commands.AutoShardedBot):
     def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, tree_cls=GuildOnlyCommandTree, **kwargs)
         self.initialized: bool = False
         self.cog_classes: dict = {}
         self.ERROR_LOG_CHANNEL_ID: int = error_log_channel_id
@@ -108,6 +137,7 @@ class MyBot(commands.AutoShardedBot):
             logger.info("データベースの初期化が完了しました。Cogのロードを開始します。")
             await git_pull()
             await pip_install()
+
             await self.load_cogs('cogs')
 
             await self.load_extension('cogs.aus')
@@ -153,7 +183,16 @@ class MyBot(commands.AutoShardedBot):
         logger.info("setup_hook is called")
         logger.info(startup_message())
         await update_status(self, "Bot Startup...")
-        await self.tree.sync()
+
+        # グローバル同期ではなく、指定ギルドのみに同期（100コマンド制限回避）
+        guild_ids = [main_guild_id, dev_guild_id]
+        for gid in guild_ids:
+            if gid:
+                guild = discord.Object(id=gid)
+                self.tree.copy_global_to(guild=guild)
+                await self.tree.sync(guild=guild)
+                logger.info(f"コマンドをギルド {gid} に同期しました")
+
         logger.info(yokobou())
         await update_status(self, "現在の処理: tree sync")
         if not self.initialized:
