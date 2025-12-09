@@ -30,9 +30,7 @@ if not discord.opus.is_loaded():
             break
         except OSError:
             continue
-from discord import app_commands
 from discord.ext import commands
-from discord.utils import MISSING
 from dotenv import load_dotenv
 
 # from utils.prometheus_config import add_bot_endpoint, reload_prometheus
@@ -80,39 +78,7 @@ settings = get_settings()
 
 TOKEN: str = settings.bot_token
 command_prefix: list[str] = bot_config["prefix"]
-main_guild_id: int = settings.admin_main_guild_id
 dev_guild_id: int = settings.admin_dev_guild_id
-
-
-class GuildOnlyCommandTree(app_commands.CommandTree):
-    """
-    グローバルコマンド制限(100個)を回避するためのカスタムCommandTree
-    すべてのコマンドをギルド固有として登録し、グローバル制限を回避する
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # 対象ギルドIDリスト
-        self._target_guilds = [main_guild_id, dev_guild_id]
-
-    def add_command(
-        self,
-        command,
-        /,
-        *,
-        guild=MISSING,
-        guilds=MISSING,
-        override: bool = False,
-    ):
-        # ギルドが指定されていない場合、ターゲットギルドに追加
-        if guild is MISSING and guilds is MISSING:
-            # 両方のギルドにコマンドを追加
-            guilds = [discord.Object(id=gid) for gid in self._target_guilds if gid]
-            if guilds:
-                return super().add_command(command, guilds=guilds, override=override)
-        return super().add_command(command, guild=guild, guilds=guilds, override=override)
-
-
 startup_channel_id: int = settings.admin_startup_channel_id
 bug_report_channel_id: int = settings.admin_bug_report_channel_id
 error_log_channel_id: int = settings.admin_error_log_channel_id
@@ -126,7 +92,7 @@ error_log_channel_id: int = settings.admin_error_log_channel_id
 
 class MyBot(commands.AutoShardedBot):
     def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, tree_cls=GuildOnlyCommandTree, **kwargs)
+        super().__init__(*args, **kwargs)
         self.initialized: bool = False
         self.cog_classes: dict = {}
         self.ERROR_LOG_CHANNEL_ID: int = error_log_channel_id
@@ -188,13 +154,7 @@ class MyBot(commands.AutoShardedBot):
         logger.info(startup_message())
         await update_status(self, "Bot Startup...")
 
-        # ギルド固有コマンドを同期（100コマンド制限回避）
-        guild_ids = [main_guild_id, dev_guild_id]
-        for gid in guild_ids:
-            if gid:
-                guild = discord.Object(id=gid)
-                await self.tree.sync(guild=guild)
-                logger.info(f"コマンドをギルド {gid} に同期しました")
+        await self.tree.sync()
 
         logger.info(yokobou())
         await update_status(self, "現在の処理: tree sync")
