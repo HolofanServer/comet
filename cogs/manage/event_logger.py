@@ -241,7 +241,14 @@ class EventLogger(commands.Cog):
                 'events': LogEventType(setting['events']),
                 'ignore_bots': setting['ignore_bots'],
             }
-            self._thread_cache[setting['guild_id']] = setting['thread_ids'] or {}
+            # thread_idsがJSON文字列の場合はパースする
+            thread_ids = setting['thread_ids']
+            if isinstance(thread_ids, str):
+                try:
+                    thread_ids = json.loads(thread_ids)
+                except (json.JSONDecodeError, TypeError):
+                    thread_ids = {}
+            self._thread_cache[setting['guild_id']] = thread_ids or {}
         logger.info(f"イベントログ設定をロード: {len(self._settings)} サーバー")
 
     def _should_log(self, guild_id: int, event_type: LogEventType) -> bool:
