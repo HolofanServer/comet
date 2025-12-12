@@ -18,7 +18,7 @@ pyyaml==6.0.3
 annotated-types==0.7.0
 pydantic>=2.5.0
 Pygments==2.19.1
-ruff==0.14.4
+ruff==0.14.9
 
 sentry-sdk==2.44.0
 matplotlib==3.9.4
