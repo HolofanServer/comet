@@ -502,6 +502,9 @@ async def send_components_v2_to_channel(
     channel: discord.TextChannel,
     message: ComponentsV2Message,
     bot_token: str,
+    content: str | None = None,
+    view: discord.ui.View | None = None,
+    allowed_mentions: discord.AllowedMentions | None = None,
 ) -> str | None:
     """
     Components V2メッセージをチャンネルに送信（API直接）
@@ -510,6 +513,9 @@ async def send_components_v2_to_channel(
         channel: 送信先チャンネル
         message: ComponentsV2Message
         bot_token: Botトークン
+        content: メッセージコンテンツ（省略可）
+        view: discord.ui.View（省略可）
+        allowed_mentions: AllowedMentions設定（省略可）
 
     Returns:
         送信されたメッセージID
@@ -520,6 +526,22 @@ async def send_components_v2_to_channel(
         "components": [c.to_dict() for c in message.components],
         "flags": IS_COMPONENTS_V2,
     }
+
+    # コンテンツを追加
+    if content is not None:
+        payload["content"] = content
+
+    # Viewのコンポーネントを追加
+    if view is not None:
+        # discord.pyのViewをコンポーネント配列に変換
+        view_dict = view.to_components()
+        if view_dict:
+            # Components V2とV1のコンポーネントを両方含める
+            payload["components"].extend(view_dict)
+
+    # AllowedMentionsを追加
+    if allowed_mentions is not None:
+        payload["allowed_mentions"] = allowed_mentions.to_dict()
 
     headers = {
         "Authorization": f"Bot {bot_token}",
