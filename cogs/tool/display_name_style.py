@@ -14,6 +14,7 @@ from typing import Optional
 
 import aiohttp
 import discord
+from discord import ui
 from discord.ext import commands
 
 from config.setting import get_settings
@@ -23,39 +24,43 @@ from utils.logging import setup_logging
 logger = setup_logging()
 
 class DisplayNameStyle(commands.Cog):
-    """Botの表示名スタイルをギルドごとに管理します"""
+    """
+    Botの表示名スタイルをギルドごとに管理
+    https://docs.discord.food/resources/user#display-name-style-object
+    """
 
-    # フォントIDマッピング
     FONTS = {
-        "default": 0,
-        "gg_sans": 0,
-        "jujisands": 1,
-        "tempo": 2,
-        "sakura": 3,
-        "jellybean": 4,
-        "modern": 5,
-        "medieval": 6,
-        "8bit": 7,
-        "vampire": 8,
+        "default": 11,
+        "bangers": 1,
+        "bio_rhyme": 2,
+        "biorhyme": 2,
+        "cherry_bomb": 3,
+        "cherrybomb": 3,
+        "chicle": 4,
+        "compagnon": 5,
+        "museo_moderno": 6,
+        "museomoderno": 6,
+        "neo_castel": 7,
+        "neocastel": 7,
+        "pixelify": 8,
+        "pixelify_sans": 8,
+        "ribes": 9,
+        "sinistre": 10,
+        "zilla_slab": 12,
+        "zillaslab": 12,
     }
 
-    # エフェクトIDマッピング
     EFFECTS = {
-        "solid": 0,
-        "none": 0,
-        "gradient": 1,
-        "neon": 2,
-        "toon": 3,
-        "pop": 4,
+        "solid": 1,
+        "none": 1,
+        "gradient": 2,
+        "neon": 3,
+        "toon": 4,
+        "pop": 5,
+        "glow": 6,
     }
 
     def __init__(self, bot: commands.Bot):
-        """
-        DisplayNameStyle Cogを初期化します。
-
-        Args:
-            bot (commands.Bot): Botインスタンス
-        """
         self.bot = bot
         self.settings = get_settings()
 
@@ -138,26 +143,21 @@ class DisplayNameStyle(commands.Cog):
     async def style_group(self, ctx: commands.Context):
         """Botの表示名スタイルを管理します"""
         if ctx.invoked_subcommand is None:
-            embed = discord.Embed(
-                title="Bot表示名スタイルマネージャー",
-                description="ギルドごとにBotの外観をカスタマイズできます",
-                color=discord.Color.blurple()
-            )
-            embed.add_field(
-                name="使用可能なコマンド",
-                value="""
-                `!style set <font> <effect> [colors...]` - スタイルを設定
-                `!style list` - 使用可能なオプションを表示
-                `!style reset` - デフォルトにリセット
-                """,
-                inline=False
-            )
-            embed.add_field(
-                name="使用例",
-                value="`!style set sakura neon FFFFFF FF0000`",
-                inline=False
-            )
-            await ctx.send(embed=embed)
+            view = ui.LayoutView()
+            container = ui.Container(accent_colour=discord.Color.blurple())
+            container.add_item(ui.TextDisplay("# Bot表示名スタイルマネージャー"))
+            container.add_item(ui.TextDisplay("ギルドごとにBotの外観をカスタマイズできます"))
+            container.add_item(ui.Separator())
+            container.add_item(ui.TextDisplay(
+                "**使用可能なコマンド**\n"
+                "`!style set <font> <effect> [colors...]` - スタイルを設定\n"
+                "`!style list` - 使用可能なオプションを表示\n"
+                "`!style reset` - デフォルトにリセット"
+            ))
+            container.add_item(ui.Separator())
+            container.add_item(ui.TextDisplay("**使用例**\n`!style set pixelify neon FFFFFF FF0000`"))
+            view.add_item(container)
+            await ctx.send(view=view)
 
     @style_group.command(name="set")
     async def set_style(
@@ -172,43 +172,40 @@ class DisplayNameStyle(commands.Cog):
         現在のギルドでの表示名スタイルを設定します。
 
         Args:
-            font (str): フォント名（例: sakura, modern, 8bit）
-            effect (str): エフェクト名（例: neon, gradient, solid）
-            colors (Optional[str]): スペース区切りの16進数カラーコード
+            font (str): フォント名（例: pixelify, bangers, cherry_bomb）
+            effect (str): エフェクト名（例: neon, gradient, solid, glow）
+            colors (Optional[str]): スペース区切りの16進数カラーコード（最大2色）
 
         使用例:
-            !style set sakura neon FFFFFF FF0000
-            !style set modern gradient 00FF00
+            !style set pixelify neon FFFFFF FF0000
+            !style set bangers gradient 00FF00
         """
-        # フォントIDを解析
         font_lower = font.lower()
         if font_lower in self.FONTS:
             font_id = self.FONTS[font_lower]
         else:
             try:
                 font_id = int(font)
-                if not (0 <= font_id <= 8):
-                    await ctx.send(f"❌ フォントIDは0から8の間である必要があります（入力値: {font_id}）")
+                if not (1 <= font_id <= 12):
+                    await ctx.send(f"❌ フォントIDは1から12の間である必要があります（入力値: {font_id}）")
                     return
             except ValueError:
                 await ctx.send(f"❌ 不明なフォント: `{font}`\n`!style list` でオプションを確認してください")
                 return
 
-        # エフェクトIDを解析
         effect_lower = effect.lower()
         if effect_lower in self.EFFECTS:
             effect_id = self.EFFECTS[effect_lower]
         else:
             try:
                 effect_id = int(effect)
-                if not (0 <= effect_id <= 4):
-                    await ctx.send(f"❌ エフェクトIDは0から4の間である必要があります（入力値: {effect_id}）")
+                if not (1 <= effect_id <= 6):
+                    await ctx.send(f"❌ エフェクトIDは1から6の間である必要があります（入力値: {effect_id}）")
                     return
             except ValueError:
                 await ctx.send(f"❌ 不明なエフェクト: `{effect}`\n`!style list` でオプションを確認してください")
                 return
 
-        # カラーを解析
         color_list = []
         if colors:
             for color_code in colors.split():
@@ -219,10 +216,8 @@ class DisplayNameStyle(commands.Cog):
                     await ctx.send(f"❌ 無効なカラーコード: `{color_code}`")
                     return
         else:
-            # デフォルトは白
             color_list = [16777215]
 
-        # APIリクエストを送信
         success, message = await self.patch_member_style(
             ctx.guild.id,
             font_id=font_id,
@@ -231,26 +226,29 @@ class DisplayNameStyle(commands.Cog):
         )
 
         if success:
-            # カラー表示をフォーマット
             color_hex_display = " → ".join(
                 [self.int_to_hex(c) for c in color_list]
             ) if colors else "#FFFFFF"
 
-            embed = discord.Embed(
-                title="✅ スタイルを更新しました",
-                color=discord.Color.green()
-            )
-            embed.add_field(name="フォント", value=font.lower(), inline=True)
-            embed.add_field(name="エフェクト", value=effect.lower(), inline=True)
-            embed.add_field(name="カラー", value=color_hex_display, inline=False)
-            await ctx.send(embed=embed)
+            view = ui.LayoutView()
+            container = ui.Container(accent_colour=discord.Color.green())
+            container.add_item(ui.TextDisplay("# ✅ スタイルを更新しました"))
+            container.add_item(ui.Separator())
+            container.add_item(ui.TextDisplay(
+                f"**フォント:** {font.lower()}\n"
+                f"**エフェクト:** {effect.lower()}\n"
+                f"**カラー:** {color_hex_display}"
+            ))
+            view.add_item(container)
+            await ctx.send(view=view)
         else:
-            embed = discord.Embed(
-                title="❌ スタイルの更新に失敗しました",
-                description=message,
-                color=discord.Color.red()
-            )
-            await ctx.send(embed=embed)
+            view = ui.LayoutView()
+            container = ui.Container(accent_colour=discord.Color.red())
+            container.add_item(ui.TextDisplay("# ❌ スタイルの更新に失敗しました"))
+            container.add_item(ui.Separator())
+            container.add_item(ui.TextDisplay(message))
+            view.add_item(container)
+            await ctx.send(view=view)
 
     @style_group.command(name="list")
     async def list_options(self, ctx: commands.Context):
@@ -258,32 +256,21 @@ class DisplayNameStyle(commands.Cog):
         fonts_str = ", ".join(f"`{k}`" for k in sorted(self.FONTS.keys()))
         effects_str = ", ".join(f"`{k}`" for k in sorted(self.EFFECTS.keys()))
 
-        embed = discord.Embed(
-            title="使用可能な表示名スタイル",
-            color=discord.Color.blurple()
-        )
-        embed.add_field(
-            name="フォント",
-            value=fonts_str,
-            inline=False
-        )
-        embed.add_field(
-            name="エフェクト",
-            value=effects_str,
-            inline=False
-        )
-        embed.add_field(
-            name="カラー形式",
-            value="16進数コード（例: `FFFFFF`, `FF0000`, `00FF00`）",
-            inline=False
-        )
-        embed.add_field(
-            name="使用例",
-            value="`!style set sakura neon FFFFFF FF0000`",
-            inline=False
-        )
-
-        await ctx.send(embed=embed)
+        view = ui.LayoutView()
+        container = ui.Container(accent_colour=discord.Color.blurple())
+        container.add_item(ui.TextDisplay("# 使用可能な表示名スタイル"))
+        container.add_item(ui.Separator())
+        container.add_item(ui.TextDisplay(f"**フォント**\n{fonts_str}"))
+        container.add_item(ui.Separator())
+        container.add_item(ui.TextDisplay(f"**エフェクト**\n{effects_str}"))
+        container.add_item(ui.Separator())
+        container.add_item(ui.TextDisplay(
+            "**カラー形式**\n16進数コード（例: `FFFFFF`, `FF0000`, `00FF00`）\n\n"
+            "**使用例**\n`!style set pixelify neon FFFFFF FF0000`\n\n"
+            "-# カラーは最大2色まで指定可能です"
+        ))
+        view.add_item(container)
+        await ctx.send(view=view)
 
     @style_group.command(name="reset")
     async def reset_style(self, ctx: commands.Context):
@@ -296,21 +283,22 @@ class DisplayNameStyle(commands.Cog):
         )
 
         if success:
-            embed = discord.Embed(
-                title="✅ スタイルをリセットしました",
-                description="Botの表示名スタイルがデフォルトに戻りました",
-                color=discord.Color.green()
-            )
-            await ctx.send(embed=embed)
+            view = ui.LayoutView()
+            container = ui.Container(accent_colour=discord.Color.green())
+            container.add_item(ui.TextDisplay("# ✅ スタイルをリセットしました"))
+            container.add_item(ui.Separator())
+            container.add_item(ui.TextDisplay("Botの表示名スタイルがデフォルトに戻りました"))
+            view.add_item(container)
+            await ctx.send(view=view)
         else:
-            embed = discord.Embed(
-                title="❌ スタイルのリセットに失敗しました",
-                description=message,
-                color=discord.Color.red()
-            )
-            await ctx.send(embed=embed)
+            view = ui.LayoutView()
+            container = ui.Container(accent_colour=discord.Color.red())
+            container.add_item(ui.TextDisplay("# ❌ スタイルのリセットに失敗しました"))
+            container.add_item(ui.Separator())
+            container.add_item(ui.TextDisplay(message))
+            view.add_item(container)
+            await ctx.send(view=view)
 
 
 async def setup(bot: commands.Bot):
-    """Cogをロードします"""
     await bot.add_cog(DisplayNameStyle(bot))
