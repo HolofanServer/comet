@@ -641,8 +641,12 @@ class EarthquakeChannel(commands.Cog):
             allowed_mentions=discord.AllowedMentions(roles=True)
         )
         
+        if not message_id:
+            logger.error("通知メッセージの送信に失敗しました")
+            return False, "通知メッセージの送信に失敗しました。"
+        
         # メッセージオブジェクトを取得
-        message = await notification_channel.fetch_message(int(message_id)) if message_id else None
+        message = await notification_channel.fetch_message(int(message_id))
 
         # チャットチャンネルにもメンションなしで通知
         chat_channel = self.bot.get_channel(settings.hfs_chat_channel_id)
