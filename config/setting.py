@@ -117,6 +117,9 @@ class Settings:
         self.holopittan_guide_channel_id: int = int(os.getenv("HOLOPITTAN_GUIDE_CHANNEL_ID", "1378761943531126937"))
         self.holopittan_feedback_channel_id: int = int(os.getenv("HOLOPITTAN_FEEDBACK_CHANNEL_ID", "1378761627280867498"))
 
+        # P2P地震情報
+        self.p2p_earthquake_sandbox: bool = os.getenv("P2P_EARTHQUAKE_SANDBOX", "false").lower() == "true"
+
         # API CORS
         cors_origins = os.getenv("API_CORS_ORIGINS", "http://localhost:3000")
         self.api_cors_origins: list[str] = [x.strip() for x in cors_origins.split(",") if x.strip()]

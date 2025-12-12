@@ -1,5 +1,17 @@
 {
-  "staff": [],
+  "staff": [
+    {
+      "id": "707320830387814531",
+      "name": "FreeWiFi",
+      "role": "Community Mod",
+      "avatar": "https://cdn.discordapp.com/guilds/1121697597808181248/users/707320830387814531/avatars/d10a289f7d1cd7fd5fde09df853f86b1.png?size=1024",
+      "message": "",
+      "joinedAt": "2023-06-23",
+      "joinedAtJp": "2023年06月23日",
+      "roleColor": "#000000",
+      "socials": {}
+    }
+  ],
   "specialThanks": [
     {
       "id": "1029403469469192202",
