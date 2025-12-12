@@ -28,6 +28,7 @@ from utils.components_v2 import (
     TextDisplay,
     send_components_v2_followup,
     send_components_v2_response,
+    send_components_v2_to_channel,
 )
 from utils.database import execute_query
 from utils.logging import setup_logging
@@ -561,7 +562,8 @@ class EarthquakeChannel(commands.Cog):
             talk_rule_container.add(Separator())
             talk_rule_container.add(TextDisplay("-# このチャンネルは24時間後に自動で削除されます。"))
             talk_rule_msg.add(talk_rule_container)
-            talk_msg = await talk_channel.send(**talk_rule_msg.to_dict())
+            talk_msg_id = await send_components_v2_to_channel(talk_channel, talk_rule_msg, self.bot.http.token)
+            talk_msg = await talk_channel.fetch_message(int(talk_msg_id))
             await talk_msg.pin()
 
             info_rule_msg = ComponentsV2Message()
@@ -579,7 +581,8 @@ class EarthquakeChannel(commands.Cog):
             info_rule_container.add(Separator())
             info_rule_container.add(TextDisplay("-# このチャンネルは24時間後に自動で削除されます。"))
             info_rule_msg.add(info_rule_container)
-            info_msg = await info_channel.send(**info_rule_msg.to_dict())
+            info_msg_id = await send_components_v2_to_channel(info_channel, info_rule_msg, self.bot.http.token)
+            info_msg = await info_channel.fetch_message(int(info_msg_id))
             await info_msg.pin()
 
         except discord.Forbidden:
@@ -617,18 +620,30 @@ class EarthquakeChannel(commands.Cog):
         view = EarthquakeRoleButton(role.id, talk_channel.id)
 
         # Components V2 + View を送信
-        message = await notification_channel.send(
+        # viewのコンポーネントをdict形式に変換
+        view_data = [{"type": 1, "components": [c.to_dict() for c in view.children]}]
+        message_id = await send_components_v2_to_channel(
+            notification_channel,
+            notify_msg,
+            self.bot.http.token,
             content=notification_role.mention,
-            **notify_msg.to_dict(),
-            view=view,
-            allowed_mentions=discord.AllowedMentions(roles=True)
+            view_components=view_data,
+            allowed_mentions={"roles": [notification_role.id]}
         )
+        message = await notification_channel.fetch_message(int(message_id))
 
         # チャットチャンネルにもメンションなしで通知
         chat_channel = self.bot.get_channel(settings.hfs_chat_channel_id)
         if chat_channel:
             try:
-                await chat_channel.send(**notify_msg.to_dict(), view=EarthquakeRoleButton(role.id, talk_channel.id))
+                chat_view = EarthquakeRoleButton(role.id, talk_channel.id)
+                chat_view_data = [{"type": 1, "components": [c.to_dict() for c in chat_view.children]}]
+                await send_components_v2_to_channel(
+                    chat_channel,
+                    notify_msg,
+                    self.bot.http.token,
+                    view_components=chat_view_data
+                )
             except Exception as e:
                 logger.warning(f"チャットチャンネルへの通知に失敗: {e}")
 
