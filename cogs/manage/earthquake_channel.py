@@ -572,8 +572,12 @@ class EarthquakeChannel(commands.Cog):
                 try:
                     talk_msg = await talk_channel.fetch_message(int(talk_msg_id))
                     await talk_msg.pin()
-                except Exception as e:
+                except discord.NotFound:
+                    logger.warning(f"トークチャンネルのメッセージが見つかりません: {talk_msg_id}")
+                except discord.HTTPException as e:
                     logger.warning(f"トークチャンネルのメッセージピン留めに失敗: {e}")
+                except Exception as e:
+                    logger.error(f"トークチャンネルのメッセージ処理で予期しないエラー: {e}")
 
             info_rule_msg = ComponentsV2Message()
             info_rule_container = Container(color=0x3498DB)  # 青
@@ -600,8 +604,12 @@ class EarthquakeChannel(commands.Cog):
                 try:
                     info_msg = await info_channel.fetch_message(int(info_msg_id))
                     await info_msg.pin()
-                except Exception as e:
+                except discord.NotFound:
+                    logger.warning(f"情報共有チャンネルのメッセージが見つかりません: {info_msg_id}")
+                except discord.HTTPException as e:
                     logger.warning(f"情報共有チャンネルのメッセージピン留めに失敗: {e}")
+                except Exception as e:
+                    logger.error(f"情報共有チャンネルのメッセージ処理で予期しないエラー: {e}")
 
         except discord.Forbidden:
             return False, "チャンネルの作成に失敗しました。"
@@ -654,8 +662,14 @@ class EarthquakeChannel(commands.Cog):
         # メッセージオブジェクトを取得
         try:
             message = await notification_channel.fetch_message(int(message_id))
-        except Exception as e:
+        except discord.NotFound:
+            logger.error(f"通知メッセージが見つかりません: {message_id}")
+            return False, "通知メッセージが見つかりません。"
+        except discord.HTTPException as e:
             logger.error(f"通知メッセージの取得に失敗: {e}")
+            return False, "通知メッセージの取得に失敗しました。"
+        except Exception as e:
+            logger.error(f"通知メッセージ取得で予期しないエラー: {e}")
             return False, "通知メッセージの取得に失敗しました。"
 
         # チャットチャンネルにもメンションなしで通知
