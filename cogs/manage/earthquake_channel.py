@@ -569,8 +569,11 @@ class EarthquakeChannel(commands.Cog):
             )
             # メッセージをピン留め
             if talk_msg_id:
-                talk_msg = await talk_channel.fetch_message(int(talk_msg_id))
-                await talk_msg.pin()
+                try:
+                    talk_msg = await talk_channel.fetch_message(int(talk_msg_id))
+                    await talk_msg.pin()
+                except Exception as e:
+                    logger.warning(f"トークチャンネルのメッセージピン留めに失敗: {e}")
 
             info_rule_msg = ComponentsV2Message()
             info_rule_container = Container(color=0x3498DB)  # 青
@@ -594,8 +597,11 @@ class EarthquakeChannel(commands.Cog):
             )
             # メッセージをピン留め
             if info_msg_id:
-                info_msg = await info_channel.fetch_message(int(info_msg_id))
-                await info_msg.pin()
+                try:
+                    info_msg = await info_channel.fetch_message(int(info_msg_id))
+                    await info_msg.pin()
+                except Exception as e:
+                    logger.warning(f"情報共有チャンネルのメッセージピン留めに失敗: {e}")
 
         except discord.Forbidden:
             return False, "チャンネルの作成に失敗しました。"
@@ -646,7 +652,11 @@ class EarthquakeChannel(commands.Cog):
             return False, "通知メッセージの送信に失敗しました。"
         
         # メッセージオブジェクトを取得
-        message = await notification_channel.fetch_message(int(message_id))
+        try:
+            message = await notification_channel.fetch_message(int(message_id))
+        except Exception as e:
+            logger.error(f"通知メッセージの取得に失敗: {e}")
+            return False, "通知メッセージの取得に失敗しました。"
 
         # チャットチャンネルにもメンションなしで通知
         chat_channel = self.bot.get_channel(settings.hfs_chat_channel_id)
