@@ -159,13 +159,24 @@ class RankDB:
         guild_id: int,
         xp: int,
         xp_type: str = "message",
+        update_active: bool = False,
     ) -> RankUser | None:
-        """XPを追加"""
+        """
+        XPを追加
+
+        Args:
+            user_id: ユーザーID
+            guild_id: ギルドID
+            xp: 付与するXP
+            xp_type: XPタイプ (message, omikuji, vc, reaction)
+            update_active: アクティブ日数・ストリークも更新するか
+        """
         if not checkpoint_db._initialized:
             return None
 
         now = datetime.now(timezone.utc)
         today = date.today()
+        yesterday = today - timedelta(days=1)
 
         # XPタイプに応じたカラム更新
         extra_set = ""
@@ -174,30 +185,57 @@ class RankDB:
         elif xp_type == "omikuji":
             extra_set = ", last_omikuji_xp_date = $6"
 
+        # アクティブ日数・ストリーク更新を含めるか
+        if update_active:
+            # INSERT時: active_days=1, current_streak=1
+            # UPDATE時: last_active_dateが今日より前なら更新
+            active_insert = ", active_days, current_streak"
+            active_values = ", 1, 1"
+            active_update = """,
+                active_days = CASE
+                    WHEN rank_users.last_active_date IS NULL OR rank_users.last_active_date < $4 THEN rank_users.active_days + 1
+                    ELSE rank_users.active_days
+                END,
+                current_streak = CASE
+                    WHEN rank_users.last_active_date IS NULL OR rank_users.last_active_date < $4 THEN
+                        CASE
+                            WHEN rank_users.last_active_date = $6 THEN rank_users.current_streak + 1
+                            ELSE 1
+                        END
+                    ELSE rank_users.current_streak
+                END"""
+        else:
+            active_insert = ""
+            active_values = ""
+            active_update = ""
+
         query = f"""
             INSERT INTO rank_users (user_id, guild_id, yearly_xp, lifetime_xp, last_active_date, updated_at
                 {', last_message_xp_at' if xp_type == 'message' else ''}
-                {', last_omikuji_xp_date' if xp_type == 'omikuji' else ''})
+                {', last_omikuji_xp_date' if xp_type == 'omikuji' else ''}
+                {active_insert})
             VALUES ($1, $2, $3::INT, $3::BIGINT, $4, $5
                 {', $5' if xp_type == 'message' else ''}
-                {', $6' if xp_type == 'omikuji' else ''})
+                {', $6' if xp_type == 'omikuji' else ''}
+                {active_values})
             ON CONFLICT (user_id, guild_id) DO UPDATE
             SET yearly_xp = rank_users.yearly_xp + $3::INT,
                 lifetime_xp = rank_users.lifetime_xp + $3::BIGINT,
                 last_active_date = $4,
                 updated_at = $5
                 {extra_set}
+                {active_update}
             RETURNING *
         """
 
         try:
             async with checkpoint_db.pool.acquire() as conn:
                 if xp_type == "message":
-                    row = await conn.fetchrow(query, user_id, guild_id, xp, today, now)
+                    row = await conn.fetchrow(query, user_id, guild_id, xp, today, now, yesterday)
                 elif xp_type == "omikuji":
-                    row = await conn.fetchrow(query, user_id, guild_id, xp, today, now, today)
+                    row = await conn.fetchrow(query, user_id, guild_id, xp, today, now, today if not update_active else yesterday)
                 else:
-                    row = await conn.fetchrow(query, user_id, guild_id, xp, today, now)
+                    row = await conn.fetchrow(query, user_id, guild_id, xp, today, now, yesterday)
 
             if row:
                 # レベル再計算
@@ -213,6 +251,7 @@ class RankDB:
                     active_days=row["active_days"],
                     current_level=new_level,
                     is_regular=row["is_regular"],
+                    current_streak=row.get("current_streak", 0),
                 )
             return None
         except Exception as e:

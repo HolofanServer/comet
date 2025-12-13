@@ -157,12 +157,10 @@ class RankService:
             "total": final_xp,
         }
 
-        # XP付与
-        result = await rank_db.add_xp(user_id, guild_id, final_xp, "message")
+        # XP付与（アクティブ日数・ストリークも同時更新）
+        result = await rank_db.add_xp(user_id, guild_id, final_xp, "message", update_active=True)
         if result:
             self._message_cooldowns[user_id] = now
-            # アクティブ日数・ストリーク更新
-            await rank_db.increment_active_days(user_id, guild_id)
 
         return result, xp_details
 
@@ -180,10 +178,8 @@ class RankService:
             if user.last_omikuji_xp_date >= date.today():
                 return None
 
-        # XP付与
-        result = await rank_db.add_xp(user_id, guild_id, config.omikuji_xp, "omikuji")
-        if result:
-            await rank_db.increment_active_days(user_id, guild_id)
+        # XP付与（アクティブ日数・ストリークも同時更新）
+        result = await rank_db.add_xp(user_id, guild_id, config.omikuji_xp, "omikuji", update_active=True)
 
         return result
 
@@ -244,9 +240,8 @@ class RankService:
             return None
 
         xp = xp_units * config.vc_xp_per_10min
-        result = await rank_db.add_xp(user_id, guild_id, xp, "vc")
-        if result:
-            await rank_db.increment_active_days(user_id, guild_id)
+        # XP付与（アクティブ日数・ストリークも同時更新）
+        result = await rank_db.add_xp(user_id, guild_id, xp, "vc", update_active=True)
 
         return result
 
