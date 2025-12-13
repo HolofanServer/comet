@@ -13,6 +13,23 @@ import discord
 
 # import sentry_sdk
 import pytz
+
+# Opusライブラリを明示的にロード（VC録音に必要）
+if not discord.opus.is_loaded():
+    opus_paths = [
+        'libopus.so.0',                           # Linux (一般)
+        '/usr/lib/libopus.so.0',                  # Alpine Linux
+        '/usr/lib/x86_64-linux-gnu/libopus.so.0', # Debian/Ubuntu
+        '/opt/homebrew/lib/libopus.dylib',        # macOS (Apple Silicon)
+        '/usr/local/lib/libopus.dylib',           # macOS (Intel)
+        'opus',                                    # Windows
+    ]
+    for path in opus_paths:
+        try:
+            discord.opus.load_opus(path)
+            break
+        except OSError:
+            continue
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -61,7 +78,6 @@ settings = get_settings()
 
 TOKEN: str = settings.bot_token
 command_prefix: list[str] = bot_config["prefix"]
-main_guild_id: int = settings.admin_main_guild_id
 dev_guild_id: int = settings.admin_dev_guild_id
 startup_channel_id: int = settings.admin_startup_channel_id
 bug_report_channel_id: int = settings.admin_bug_report_channel_id
@@ -91,20 +107,18 @@ class MyBot(commands.AutoShardedBot):
             logger.info("データベースの初期化が完了しました。Cogのロードを開始します。")
             await git_pull()
             await pip_install()
+
             await self.load_cogs('cogs')
 
             await self.load_extension('cogs.aus')
+            await self.load_extension('cogs.stream')
+            await self.load_extension('cogs.cp')
+            await self.load_extension('cogs.rank')
 
             await self.load_extension('jishaku')
 
-            # add_bot_endpoint(
-            #     job_name="discord-bots",
-            #     target="localhost:8001",
-            #     labels={"bot": f"{bot_config['name']}"}
-            # )
-            # reload_prometheus()
-
-            # await self.add_cog(PrometheusCog(self, port=8001))
+            # 管理API起動
+            await self._start_api()
 
         except Exception as e:
             logger.error(f"認証に失敗しました。Cogのロードをスキップします。: {e}")
@@ -112,11 +126,36 @@ class MyBot(commands.AutoShardedBot):
 
         self.loop.create_task(self.after_ready())
 
+    async def _start_api(self) -> None:
+        """管理APIを起動"""
+        import uvicorn
+
+        from api.main import app, set_bot
+
+        # Botインスタンスを設定
+        set_bot(self)
+
+        # API設定
+        api_port = int(os.environ.get("API_PORT", 8080))
+
+        # バックグラウンドでAPI起動
+        config = uvicorn.Config(
+            app,
+            host="0.0.0.0",
+            port=api_port,
+            log_level="warning",
+        )
+        server = uvicorn.Server(config)
+        self.loop.create_task(server.serve())
+        logger.info(f"🚀 管理API起動: http://localhost:{api_port}")
+
     async def after_ready(self) -> None:
         logger.info("setup_hook is called")
         logger.info(startup_message())
         await update_status(self, "Bot Startup...")
+
         await self.tree.sync()
+
         logger.info(yokobou())
         await update_status(self, "現在の処理: tree sync")
         if not self.initialized:
@@ -152,6 +191,15 @@ class MyBot(commands.AutoShardedBot):
                 continue
 
             if 'aus' in p.parts:
+                continue
+
+            if 'stream' in p.parts:
+                continue
+
+            if 'cp' in p.parts:
+                continue
+
+            if 'rank' in p.parts:
                 continue
 
             try:
