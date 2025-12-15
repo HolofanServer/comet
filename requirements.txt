@@ -7,7 +7,7 @@ python-dotenv>=0.21.0
 pytz==2025.2
 dateparser==1.2.2
 datetime==5.5
-openai==2.7.2
+openai==2.12.0
 jishaku==2.6.3
 pyfiglet==1.0.4
 flask==3.1.2
