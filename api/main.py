@@ -29,7 +29,13 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)):
     if not api_key:
         raise HTTPException(status_code=401, detail="API key required")
     # タイミング攻撃を防ぐため、secrets.compare_digestを使用
-    if not secrets.compare_digest(api_key.encode('utf-8'), expected_key.encode('utf-8')):
+    try:
+        api_key_bytes = api_key.encode("utf-8")
+        expected_key_bytes = expected_key.encode("utf-8")
+    except (UnicodeError, AttributeError, TypeError):
+        # 不正な形式のAPIキーや環境変数の場合も認証失敗として扱う
+        raise HTTPException(status_code=401, detail="Invalid API key") from None
+    if not secrets.compare_digest(api_key_bytes, expected_key_bytes):
         raise HTTPException(status_code=401, detail="Invalid API key")
     return api_key
 

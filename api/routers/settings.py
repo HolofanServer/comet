@@ -161,10 +161,11 @@ def _check_extension_allowed(extension_name: str) -> None:
             status_code=403,
             detail="Extension management is disabled. Set EXTENSION_MANAGEMENT_ENABLED=true to enable."
         )
-    if ALLOWED_EXTENSIONS and extension_name not in ALLOWED_EXTENSIONS:
+    # ALLOWED_EXTENSIONSが空の場合もすべて拒否（セキュリティファースト）
+    if extension_name not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=403,
-            detail=f"Extension '{extension_name}' is not in the allowed list"
+            detail=f"Extension '{extension_name}' is not in the allowed list. Configure ALLOWED_EXTENSIONS to allow specific extensions."
         )
 
 

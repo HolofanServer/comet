@@ -25,9 +25,11 @@ load_dotenv()
 settings = get_settings()
 
 # セキュリティ: 起動時の自動更新を制御するフラグ
-# サプライチェーン攻撃を防ぐため、本番環境ではFalseに設定することを推奨
-AUTO_GIT_PULL_ENABLED = os.environ.get("AUTO_GIT_PULL_ENABLED", "true").lower() == "true"
-AUTO_PIP_INSTALL_ENABLED = os.environ.get("AUTO_PIP_INSTALL_ENABLED", "true").lower() == "true"
+# デフォルトはfalse（セキュリティファースト）
+# 開発環境で自動更新が必要な場合は明示的にtrueを設定してください
+# BREAKING CHANGE: 以前のデフォルトはtrueでした
+AUTO_GIT_PULL_ENABLED = os.environ.get("AUTO_GIT_PULL_ENABLED", "false").lower() == "true"
+AUTO_PIP_INSTALL_ENABLED = os.environ.get("AUTO_PIP_INSTALL_ENABLED", "false").lower() == "true"
 
 bot_owner_id = settings.bot_owner_id
 startup_channel_id = settings.admin_startup_channel_id
