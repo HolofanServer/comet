@@ -299,4 +299,8 @@ Cogsはボットのグローバルエラーハンドリングシステムと自�
 - [監視Cogs](08-monitoring-cogs.md)
 - [AUS (無断転載検出) Cogs](09-aus-cogs.md)
 - [ランクシステム Cogs](10-rank-cogs.md)
+- [ストリームCogs](11-stream-cogs.md)
+- [ボイスCogs](12-voice-cogs.md)
+- [CP Cogs](13-cp-cogs.md)
+- [Linked Roles Cogs](14-linked-roles-cogs.md)
 - [メインボットクラス](../02-core/01-main-bot-class.md)
