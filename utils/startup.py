@@ -24,6 +24,11 @@ load_dotenv()
 
 settings = get_settings()
 
+# セキュリティ: 起動時の自動更新を制御するフラグ
+# サプライチェーン攻撃を防ぐため、本番環境ではFalseに設定することを推奨
+AUTO_GIT_PULL_ENABLED = os.environ.get("AUTO_GIT_PULL_ENABLED", "true").lower() == "true"
+AUTO_PIP_INSTALL_ENABLED = os.environ.get("AUTO_PIP_INSTALL_ENABLED", "true").lower() == "true"
+
 bot_owner_id = settings.bot_owner_id
 startup_channel_id = settings.admin_startup_channel_id
 startup_guild_id = settings.admin_dev_guild_id
@@ -259,6 +264,16 @@ def rainbow_text(text):
     return colored_text + reset
 
 async def git_pull():
+    """
+    起動時にgit pullを実行する
+
+    セキュリティ: AUTO_GIT_PULL_ENABLED=falseで無効化可能
+    サプライチェーン攻撃を防ぐため、本番環境では無効化を推奨
+    """
+    if not AUTO_GIT_PULL_ENABLED:
+        logger.info("Git pull is disabled (AUTO_GIT_PULL_ENABLED=false)")
+        return
+
     logger.info("Git pull started")
     process = await asyncio.create_subprocess_exec(
         "git", "pull",
@@ -268,7 +283,18 @@ async def git_pull():
     await process.communicate()
     logger.info("Git pull completed")
 
+
 async def pip_install():
+    """
+    起動時にpip installを実行する
+
+    セキュリティ: AUTO_PIP_INSTALL_ENABLED=falseで無効化可能
+    サプライチェーン攻撃を防ぐため、本番環境では無効化を推奨
+    """
+    if not AUTO_PIP_INSTALL_ENABLED:
+        logger.info("Pip install is disabled (AUTO_PIP_INSTALL_ENABLED=false)")
+        return
+
     logger.info("Pip install started")
     process = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "pip", "install", "--upgrade", "pip",

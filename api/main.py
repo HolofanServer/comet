@@ -4,6 +4,7 @@ HFS Bot 管理API
 ダッシュボードからBotの全機能を管理するためのFastAPI
 """
 import os
+import secrets
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Security
@@ -19,12 +20,16 @@ settings = get_settings()
 # APIキー認証
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
+
 async def verify_api_key(api_key: str = Security(API_KEY_HEADER)):
-    """APIキーを検証"""
+    """APIキーを検証（タイミング攻撃対策済み）"""
     expected_key = os.environ.get("DASHBOARD_API_KEY")
     if not expected_key:
         raise HTTPException(status_code=500, detail="API key not configured")
-    if api_key != expected_key:
+    if not api_key:
+        raise HTTPException(status_code=401, detail="API key required")
+    # タイミング攻撃を防ぐため、secrets.compare_digestを使用
+    if not secrets.compare_digest(api_key.encode('utf-8'), expected_key.encode('utf-8')):
         raise HTTPException(status_code=401, detail="Invalid API key")
     return api_key
 

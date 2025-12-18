@@ -136,18 +136,20 @@ class MyBot(commands.AutoShardedBot):
         set_bot(self)
 
         # API設定
+        # セキュリティ: デフォルトはlocalhostにバインド（外部公開が必要な場合は環境変数で設定）
+        api_host = os.environ.get("API_HOST", "127.0.0.1")
         api_port = int(os.environ.get("API_PORT", 8080))
 
         # バックグラウンドでAPI起動
         config = uvicorn.Config(
             app,
-            host="0.0.0.0",
+            host=api_host,
             port=api_port,
             log_level="warning",
         )
         server = uvicorn.Server(config)
         self.loop.create_task(server.serve())
-        logger.info(f"🚀 管理API起動: http://localhost:{api_port}")
+        logger.info(f"🚀 管理API起動: http://{api_host}:{api_port}")
 
     async def after_ready(self) -> None:
         logger.info("setup_hook is called")

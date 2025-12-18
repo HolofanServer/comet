@@ -3,6 +3,8 @@ Bot設定 API ルーター
 
 各Cogの設定を管理
 """
+import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -10,6 +12,18 @@ from api.main import get_bot, verify_api_key
 from utils.database import get_db_pool
 
 router = APIRouter()
+
+# セキュリティ: Extension操作の許可リスト
+# 環境変数で設定可能（カンマ区切り）、未設定の場合はすべて拒否
+_allowed_extensions_env = os.environ.get("ALLOWED_EXTENSIONS", "")
+ALLOWED_EXTENSIONS: set[str] = {
+    ext.strip() for ext in _allowed_extensions_env.split(",") if ext.strip()
+} if _allowed_extensions_env else set()
+
+# セキュリティ: Extension操作を完全に無効化するフラグ
+EXTENSION_MANAGEMENT_ENABLED = os.environ.get(
+    "EXTENSION_MANAGEMENT_ENABLED", "false"
+).lower() == "true"
 
 
 # ========== モデル ==========
@@ -132,9 +146,32 @@ async def get_extensions():
     return {"extensions": extensions}
 
 
+def _check_extension_allowed(extension_name: str) -> None:
+    """
+    Extension操作が許可されているかチェックする
+
+    Args:
+        extension_name: チェックするExtension名
+
+    Raises:
+        HTTPException: 操作が許可されていない場合
+    """
+    if not EXTENSION_MANAGEMENT_ENABLED:
+        raise HTTPException(
+            status_code=403,
+            detail="Extension management is disabled. Set EXTENSION_MANAGEMENT_ENABLED=true to enable."
+        )
+    if ALLOWED_EXTENSIONS and extension_name not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Extension '{extension_name}' is not in the allowed list"
+        )
+
+
 @router.post("/extensions/{extension_name}/load", dependencies=[Depends(verify_api_key)])
 async def load_extension(extension_name: str):
-    """Extensionをロード"""
+    """Extensionをロード（セキュリティ: 許可リストで制限）"""
+    _check_extension_allowed(extension_name)
     bot = get_bot()
     try:
         await bot.load_extension(extension_name)
@@ -145,7 +182,8 @@ async def load_extension(extension_name: str):
 
 @router.post("/extensions/{extension_name}/unload", dependencies=[Depends(verify_api_key)])
 async def unload_extension(extension_name: str):
-    """Extensionをアンロード"""
+    """Extensionをアンロード（セキュリティ: 許可リストで制限）"""
+    _check_extension_allowed(extension_name)
     bot = get_bot()
     try:
         await bot.unload_extension(extension_name)
@@ -156,7 +194,8 @@ async def unload_extension(extension_name: str):
 
 @router.post("/extensions/{extension_name}/reload", dependencies=[Depends(verify_api_key)])
 async def reload_extension(extension_name: str):
-    """Extensionをリロード"""
+    """Extensionをリロード（セキュリティ: 許可リストで制限）"""
+    _check_extension_allowed(extension_name)
     bot = get_bot()
     try:
         await bot.reload_extension(extension_name)

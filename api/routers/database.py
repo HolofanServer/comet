@@ -4,6 +4,7 @@ Database API ルーター
 全DBの状態確認・クエリ実行
 """
 import os
+import re
 
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +15,24 @@ from cogs.cp.db import checkpoint_db
 from utils.database import get_db_pool
 
 router = APIRouter()
+
+# セキュリティ: テーブル名の検証用正規表現（英数字とアンダースコアのみ許可）
+TABLE_NAME_PATTERN = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+
+
+def validate_table_name(table_name: str) -> bool:
+    """
+    テーブル名が安全かどうかを検証する
+
+    Args:
+        table_name: 検証するテーブル名
+
+    Returns:
+        テーブル名が安全な場合True
+    """
+    if not table_name or len(table_name) > 128:
+        return False
+    return bool(TABLE_NAME_PATTERN.match(table_name))
 
 # 追加DBのプール（遅延初期化）
 _extra_pools: dict[str, asyncpg.Pool | None] = {
@@ -153,6 +172,10 @@ async def get_tables(db_name: str):
     tables = []
     for row in rows:
         table_name = row["tablename"]
+        # セキュリティ: pg_tablesから取得したテーブル名も検証
+        if not validate_table_name(table_name):
+            continue
+        # パラメータ化クエリは識別子に使えないため、検証済みのテーブル名を使用
         count = await pool.fetchval(f'SELECT COUNT(*) FROM "{table_name}"')
         tables.append({"name": table_name, "count": count})
 
@@ -167,6 +190,10 @@ async def get_table_data(
     offset: int = Query(default=0, ge=0),
 ):
     """テーブルのデータを取得"""
+    # セキュリティ: テーブル名を検証してSQLインジェクションを防止
+    if not validate_table_name(table_name):
+        raise HTTPException(status_code=400, detail="Invalid table name")
+
     pool = await resolve_pool(db_name)
 
     # カラム情報を取得
@@ -178,7 +205,7 @@ async def get_table_data(
             ORDER BY ordinal_position
         """, table_name)
 
-        # データを取得
+        # データを取得（検証済みのテーブル名を使用）
         rows = await conn.fetch(
             f'SELECT * FROM "{table_name}" LIMIT $1 OFFSET $2',
             limit, offset
@@ -198,11 +225,30 @@ async def get_table_data(
 
 @router.post("/query/{db_name}", dependencies=[Depends(verify_api_key)])
 async def execute_query(db_name: str, request: QueryRequest):
-    """SQLクエリを実行（SELECTのみ）"""
-    # SELECTのみ許可
-    query = request.query.strip().upper()
-    if not query.startswith("SELECT"):
+    """SQLクエリを実行（SELECTのみ、セキュリティ強化版）"""
+    query_normalized = request.query.strip()
+    query_upper = query_normalized.upper()
+
+    # セキュリティ: SELECTのみ許可（複文やサブクエリでの攻撃を防止）
+    if not query_upper.startswith("SELECT"):
         raise HTTPException(status_code=400, detail="Only SELECT queries allowed")
+
+    # セキュリティ: 危険なキーワードをブロック
+    dangerous_keywords = [
+        "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "TRUNCATE",
+        "GRANT", "REVOKE", "EXECUTE", "EXEC", "INTO OUTFILE", "INTO DUMPFILE",
+        "LOAD_FILE", "PG_SLEEP", "BENCHMARK", "WAITFOR", "DBLINK",
+    ]
+    for keyword in dangerous_keywords:
+        if keyword in query_upper:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Query contains forbidden keyword: {keyword}"
+            )
+
+    # セキュリティ: セミコロンによる複文実行を防止
+    if ";" in query_normalized:
+        raise HTTPException(status_code=400, detail="Multiple statements not allowed")
 
     pool = await resolve_pool(db_name)
 
@@ -219,4 +265,8 @@ async def execute_query(db_name: str, request: QueryRequest):
             "count": len(rows),
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        # セキュリティ: エラーメッセージから機密情報を除去
+        error_msg = str(e)
+        if "password" in error_msg.lower() or "secret" in error_msg.lower():
+            error_msg = "Query execution failed"
+        raise HTTPException(status_code=400, detail=error_msg) from e
