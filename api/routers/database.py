@@ -279,7 +279,9 @@ async def execute_query(db_name: str, request: QueryRequest):
         )
 
     # セキュリティ: セミコロンによる複文実行を防止
-    if ";" in query_compact:
+    # 文字列リテラル内のセミコロンは許可するため、文字列リテラルを除去してからチェック
+    query_without_strings = re.sub(r"'(?:[^']|'')*'", '', query_compact)
+    if ";" in query_without_strings:
         raise HTTPException(status_code=400, detail="Multiple statements not allowed")
 
     pool = await resolve_pool(db_name)

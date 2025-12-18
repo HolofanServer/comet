@@ -24,12 +24,34 @@ load_dotenv()
 
 settings = get_settings()
 
+def _get_env_flag(name: str, default: bool = False) -> bool:
+    """
+    環境変数からブール値を取得するヘルパー。
+    一般的な真偽値表現をサポートする（true/false, yes/no, 1/0, on/off など）。
+    
+    Args:
+        name: 環境変数名
+        default: デフォルト値
+    
+    Returns:
+        ブール値
+    """
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    
+    normalized = str(value).strip().lower()
+    truthy_values = {"1", "true", "yes", "y", "on"}
+    return normalized in truthy_values
+
+
 # セキュリティ: 起動時の自動更新を制御するフラグ
 # デフォルトはfalse（セキュリティファースト）
 # 開発環境で自動更新が必要な場合は明示的にtrueを設定してください
 # BREAKING CHANGE: 以前のデフォルトはtrueでした
-AUTO_GIT_PULL_ENABLED = os.environ.get("AUTO_GIT_PULL_ENABLED", "false").lower() == "true"
-AUTO_PIP_INSTALL_ENABLED = os.environ.get("AUTO_PIP_INSTALL_ENABLED", "false").lower() == "true"
+# 受け入れる値: true, True, TRUE, yes, Yes, YES, y, Y, 1, on, On, ON
+AUTO_GIT_PULL_ENABLED = _get_env_flag("AUTO_GIT_PULL_ENABLED", default=False)
+AUTO_PIP_INSTALL_ENABLED = _get_env_flag("AUTO_PIP_INSTALL_ENABLED", default=False)
 
 bot_owner_id = settings.bot_owner_id
 startup_channel_id = settings.admin_startup_channel_id
