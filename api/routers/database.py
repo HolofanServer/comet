@@ -4,6 +4,7 @@ Database API ルーター
 全DBの状態確認・クエリ実行
 """
 import os
+import re
 
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +15,29 @@ from cogs.cp.db import checkpoint_db
 from utils.database import get_db_pool
 
 router = APIRouter()
+
+# セキュリティ: テーブル名の検証用正規表現（英数字とアンダースコアのみ許可）
+TABLE_NAME_PATTERN = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+
+
+def validate_table_name(table_name: str) -> bool:
+    """
+    テーブル名が安全かどうかを検証する
+
+    Args:
+        table_name: 検証するテーブル名
+
+    Returns:
+        テーブル名が安全な場合True
+    """
+    if not table_name or len(table_name) > 128:
+        return False
+    if not TABLE_NAME_PATTERN.match(table_name):
+        return False
+    # セキュリティ: PostgreSQLの内部テーブルや拡張機能のテーブルへのアクセスを防止
+    if table_name.startswith(("_pg_", "_timescaledb_")):
+        return False
+    return True
 
 # 追加DBのプール（遅延初期化）
 _extra_pools: dict[str, asyncpg.Pool | None] = {
@@ -153,6 +177,10 @@ async def get_tables(db_name: str):
     tables = []
     for row in rows:
         table_name = row["tablename"]
+        # セキュリティ: pg_tablesから取得したテーブル名も検証
+        if not validate_table_name(table_name):
+            continue
+        # パラメータ化クエリは識別子に使えないため、検証済みのテーブル名を使用
         count = await pool.fetchval(f'SELECT COUNT(*) FROM "{table_name}"')
         tables.append({"name": table_name, "count": count})
 
@@ -167,6 +195,10 @@ async def get_table_data(
     offset: int = Query(default=0, ge=0),
 ):
     """テーブルのデータを取得"""
+    # セキュリティ: テーブル名を検証してSQLインジェクションを防止
+    if not validate_table_name(table_name):
+        raise HTTPException(status_code=400, detail="Invalid table name")
+
     pool = await resolve_pool(db_name)
 
     # カラム情報を取得
@@ -178,7 +210,7 @@ async def get_table_data(
             ORDER BY ordinal_position
         """, table_name)
 
-        # データを取得
+        # データを取得（検証済みのテーブル名を使用）
         rows = await conn.fetch(
             f'SELECT * FROM "{table_name}" LIMIT $1 OFFSET $2',
             limit, offset
@@ -196,13 +228,59 @@ async def get_table_data(
     }
 
 
+def _normalize_query_for_security(query: str) -> str:
+    """
+    セキュリティチェック用にクエリを正規化する
+
+    SQLコメントを除去し、連続する空白を1つにまとめる
+    これにより、コメントや空白を使ったキーワードバイパスを防止する
+    """
+    # ブロックコメント /* ... */ を除去
+    normalized = re.sub(r'/\*.*?\*/', ' ', query, flags=re.DOTALL)
+    # 行コメント -- ... を除去
+    normalized = re.sub(r'--[^\n]*', ' ', normalized)
+    # 連続する空白を1つにまとめる
+    normalized = re.sub(r'\s+', ' ', normalized).strip()
+    return normalized
+
+
 @router.post("/query/{db_name}", dependencies=[Depends(verify_api_key)])
 async def execute_query(db_name: str, request: QueryRequest):
-    """SQLクエリを実行（SELECTのみ）"""
-    # SELECTのみ許可
-    query = request.query.strip().upper()
-    if not query.startswith("SELECT"):
+    """SQLクエリを実行（SELECTのみ、セキュリティ強化版）"""
+    query_normalized = request.query.strip()
+
+    # セキュリティ: コメントと空白を正規化してバイパスを防止
+    query_compact = _normalize_query_for_security(query_normalized).upper()
+
+    # セキュリティ: SELECTのみ許可（複文やサブクエリでの攻撃を防止）
+    if not query_compact.startswith("SELECT"):
         raise HTTPException(status_code=400, detail="Only SELECT queries allowed")
+
+    # セキュリティ: 危険なキーワードをブロック（単語境界でマッチ）
+    # 単語境界を使用することで、カラム名（updated_at, deleted_flag等）の誤検知を防止
+    dangerous_keywords = [
+        "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "TRUNCATE",
+        "GRANT", "REVOKE", "EXECUTE", "EXEC", "INTO OUTFILE", "INTO DUMPFILE",
+        "LOAD_FILE", "PG_SLEEP", "BENCHMARK", "WAITFOR",
+    ]
+    for keyword in dangerous_keywords:
+        # 単語境界でマッチ（\bは単語境界を表す）
+        if re.search(rf'\b{re.escape(keyword)}\b', query_compact):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Query contains forbidden keyword: {keyword}"
+            )
+
+    # セキュリティ: DBLINK関数呼び出しをブロック（関数呼び出しパターンのみ）
+    if re.search(r'\bDBLINK\s*\(', query_compact) or re.search(r'\bDBLINK_CONNECT\s*\(', query_compact):
+        raise HTTPException(
+            status_code=400,
+            detail="Query contains forbidden keyword: DBLINK"
+        )
+
+    # セキュリティ: セミコロンによる複文実行を防止
+    if ";" in query_compact:
+        raise HTTPException(status_code=400, detail="Multiple statements not allowed")
 
     pool = await resolve_pool(db_name)
 
@@ -219,4 +297,13 @@ async def execute_query(db_name: str, request: QueryRequest):
             "count": len(rows),
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        # セキュリティ: エラーメッセージから機密情報を除去
+        error_msg = str(e)
+        error_msg_lower = error_msg.lower()
+        sensitive_patterns = [
+            "password", "passwd", "secret", "token", "key",
+            "credential", "auth", "api_key", "apikey", "private"
+        ]
+        if any(pattern in error_msg_lower for pattern in sensitive_patterns):
+            error_msg = "Query execution failed"
+        raise HTTPException(status_code=400, detail=error_msg) from e
