@@ -279,7 +279,24 @@ async def execute_query(db_name: str, request: QueryRequest):
         )
 
     # セキュリティ: セミコロンによる複文実行を防止
-    if ";" in query_compact:
+    # 文字列リテラル内のセミコロンは許可するため、文字列リテラルを除去してからチェック
+    # PostgreSQLの複数の文字列リテラル形式に対応:
+    # - 単一引用符: 'text' または 'O''Brien' (エスケープされた引用符)
+    # - 二重引用符: "identifier" (識別子用だがセミコロンも含む可能性がある)
+    # - ドルクォート: $$text$$ または $tag$text$tag$ 
+    query_without_strings = query_compact
+    # 単一引用符リテラル（エスケープされた引用符を含む）を除去
+    query_without_strings = re.sub(r"'(?:[^']|'')*'", '', query_without_strings)
+    # 二重引用符リテラル（識別子）を除去
+    query_without_strings = re.sub(r'"(?:[^"]|"")*"', '', query_without_strings)
+    # ドルクォートリテラル（$$...$$または$tag$...$tag$形式）を除去
+    # まず tagged dollar quotes ($tag$...$tag$) を処理
+    # バックリファレンスを使用して開始タグと終了タグが一致することを保証
+    query_without_strings = re.sub(r'\$([a-zA-Z_][a-zA-Z0-9_]*)\$.*?\$\1\$', '', query_without_strings, flags=re.DOTALL)
+    # 次に simple dollar quotes ($$...$$) を処理
+    query_without_strings = re.sub(r'\$\$.*?\$\$', '', query_without_strings, flags=re.DOTALL)
+    
+    if ";" in query_without_strings:
         raise HTTPException(status_code=400, detail="Multiple statements not allowed")
 
     pool = await resolve_pool(db_name)
