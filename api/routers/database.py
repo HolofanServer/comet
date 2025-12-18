@@ -291,7 +291,8 @@ async def execute_query(db_name: str, request: QueryRequest):
     query_without_strings = re.sub(r'"(?:[^"]|"")*"', '', query_without_strings)
     # ドルクォートリテラル（$$...$$または$tag$...$tag$形式）を除去
     # まず tagged dollar quotes ($tag$...$tag$) を処理
-    query_without_strings = re.sub(r'\$[a-zA-Z_][a-zA-Z0-9_]*\$.*?\$[a-zA-Z_][a-zA-Z0-9_]*\$', '', query_without_strings, flags=re.DOTALL)
+    # バックリファレンスを使用して開始タグと終了タグが一致することを保証
+    query_without_strings = re.sub(r'\$([a-zA-Z_][a-zA-Z0-9_]*)\$.*?\$\1\$', '', query_without_strings, flags=re.DOTALL)
     # 次に simple dollar quotes ($$...$$) を処理
     query_without_strings = re.sub(r'\$\$.*?\$\$', '', query_without_strings, flags=re.DOTALL)
     

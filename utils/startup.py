@@ -24,6 +24,9 @@ load_dotenv()
 
 settings = get_settings()
 
+# 環境変数の真偽値として認識される値（パフォーマンス最適化のため定数化）
+_TRUTHY_VALUES = frozenset({'1', 'true', 'yes', 'y', 'on'})
+
 def _get_env_flag(name: str, default: bool = False) -> bool:
     """
     環境変数からブール値を取得するヘルパー。
@@ -41,8 +44,7 @@ def _get_env_flag(name: str, default: bool = False) -> bool:
         return default
     
     normalized = str(value).strip().lower()
-    truthy_values = {"1", "true", "yes", "y", "on"}
-    return normalized in truthy_values
+    return normalized in _TRUTHY_VALUES
 
 
 # セキュリティ: 起動時の自動更新を制御するフラグ
