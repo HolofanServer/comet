@@ -347,13 +347,14 @@ class EarthquakeChannel(commands.Cog):
             if max_scale < min_scale:
                 continue
 
-            # 既にオープン中ならスキップ
-            if guild_id in self._active_sessions:
-                logger.info(f"サーバー {guild_id} は既に地震チャンネルがオープン中です")
-                continue
-
             guild = self.bot.get_guild(guild_id)
             if not guild:
+                continue
+
+            # 既にオープン中なら終了時間を延長
+            if guild_id in self._active_sessions:
+                logger.info(f"サーバー {guild_id} は既に地震チャンネルがオープン中です。終了時間を延長します。")
+                await self._extend_session(guild, earthquake_info=info)
                 continue
 
             # 自動オープン
@@ -485,6 +486,65 @@ class EarthquakeChannel(commands.Cog):
         msg = ComponentsV2Message()
         msg.add(container)
         return msg
+
+    async def _extend_session(
+        self,
+        guild: discord.Guild,
+        earthquake_info: Optional[dict] = None
+    ) -> None:
+        """
+        既存セッションの終了時間を延長し、新しい地震情報を投稿する
+
+        Args:
+            guild: 対象のサーバー
+            earthquake_info: 地震情報（省略可）
+        """
+        if guild.id not in self._active_sessions:
+            return
+
+        session = self._active_sessions[guild.id]
+
+        # 終了時間を24時間後に延長
+        now = datetime.now(JST)
+        new_closes_at = now + timedelta(hours=24)
+
+        # メモリ更新
+        session['closes_at'] = new_closes_at
+
+        # DB更新
+        await execute_query(
+            '''
+            UPDATE earthquake_channel_sessions
+            SET closes_at = $1
+            WHERE guild_id = $2 AND is_active = TRUE
+            ''',
+            new_closes_at,
+            guild.id,
+            fetch_type='status'
+        )
+
+        logger.info(f"セッション延長: {guild.name} -> {new_closes_at}")
+
+        # 地震情報があれば情報共有チャンネルに投稿
+        if earthquake_info and session.get('info_channel_id'):
+            info_channel = guild.get_channel(session['info_channel_id'])
+            if not info_channel:
+                try:
+                    info_channel = await self.bot.fetch_channel(session['info_channel_id'])
+                except Exception:
+                    info_channel = None
+
+            if info_channel:
+                try:
+                    eq_msg = self._format_earthquake_info(earthquake_info)
+                    await send_components_v2_to_channel(
+                        info_channel,
+                        eq_msg,
+                        self.bot.http.token
+                    )
+                    logger.info(f"追加の地震情報を投稿: {info_channel.name}")
+                except Exception as e:
+                    logger.error(f"地震情報投稿エラー: {e}")
 
     async def _open_earthquake_channel(
         self,
@@ -622,30 +682,40 @@ class EarthquakeChannel(commands.Cog):
         # Components V2 + View を送信
         # viewのコンポーネントをdict形式に変換
         view_data = [{"type": 1, "components": [c.to_dict() for c in view.children]}]
-        message_id = await send_components_v2_to_channel(
-            notification_channel,
-            notify_msg,
-            self.bot.http.token,
-            content=notification_role.mention,
-            view_components=view_data,
-            allowed_mentions={"roles": [notification_role.id]}
-        )
-        message = await notification_channel.fetch_message(int(message_id))
+        try:
+            message_id = await send_components_v2_to_channel(
+                notification_channel,
+                notify_msg,
+                self.bot.http.token,
+                content=notification_role.mention,
+                view_components=view_data,
+                allowed_mentions={"roles": [notification_role.id]}
+            )
+            message = await notification_channel.fetch_message(int(message_id))
+            logger.info(f"通知チャンネルへの送信成功: {notification_channel.name} (ID: {message_id})")
+        except Exception as e:
+            logger.error(f"通知チャンネルへの送信に失敗: {e}")
+            return False, f"通知チャンネルへの送信に失敗しました: {e}"
 
         # チャットチャンネルにもメンションなしで通知
+        logger.info(f"チャットチャンネルID: {settings.hfs_chat_channel_id}")
         chat_channel = self.bot.get_channel(settings.hfs_chat_channel_id)
         if chat_channel:
+            logger.info(f"チャットチャンネル取得成功: {chat_channel.name}")
             try:
                 chat_view = EarthquakeRoleButton(role.id, talk_channel.id)
                 chat_view_data = [{"type": 1, "components": [c.to_dict() for c in chat_view.children]}]
-                await send_components_v2_to_channel(
+                chat_msg_id = await send_components_v2_to_channel(
                     chat_channel,
                     notify_msg,
                     self.bot.http.token,
                     view_components=chat_view_data
                 )
+                logger.info(f"チャットチャンネルへの送信成功: {chat_channel.name} (ID: {chat_msg_id})")
             except Exception as e:
-                logger.warning(f"チャットチャンネルへの通知に失敗: {e}")
+                logger.error(f"チャットチャンネルへの通知に失敗: {e}")
+        else:
+            logger.warning(f"チャットチャンネルが見つかりません: ID={settings.hfs_chat_channel_id}")
 
         # DBに保存
         await execute_query(
@@ -727,12 +797,25 @@ class EarthquakeChannel(commands.Cog):
         deleted_channels = []
         for ch_key in ['talk_channel_id', 'info_channel_id']:
             ch_id = session.get(ch_key)
+            logger.info(f"削除対象チャンネル {ch_key}: {ch_id}")
             if ch_id:
+                # guild.get_channel()がキャッシュにない場合があるのでfetchも試す
                 ch = guild.get_channel(ch_id)
+                if not ch:
+                    try:
+                        ch = await self.bot.fetch_channel(ch_id)
+                        logger.info(f"チャンネルをfetchで取得: {ch.name}")
+                    except discord.NotFound:
+                        logger.warning(f"チャンネルが存在しません: {ch_id}")
+                        continue
+                    except Exception as e:
+                        logger.error(f"チャンネル取得エラー: {e}")
+                        continue
                 if ch:
                     try:
                         await ch.delete(reason="地震チャンネルクローズ")
                         deleted_channels.append(ch.name)
+                        logger.info(f"チャンネル削除成功: {ch.name}")
                     except discord.Forbidden:
                         logger.warning(f"チャンネル削除権限がありません: {ch.name}")
                     except Exception as e:

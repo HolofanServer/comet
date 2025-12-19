@@ -100,8 +100,7 @@ class MyBot(commands.AutoShardedBot):
 
     async def setup_hook(self) -> None:
         try:
-            await self.auth()
-            logger.info("認証に成功しました。データベースの初期化を開始します。")
+            logger.info("データベースの初期化を開始します。")
             from utils.db_manager import db
             await db.initialize()
             logger.info("データベースの初期化が完了しました。Cogのロードを開始します。")
