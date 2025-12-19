@@ -302,6 +302,199 @@ HOMEPAGE_API_TOKEN=your_api_token_here
 
 ---
 
+### 3. サーバーアナライザー (`server_analyzer.py`)
+
+**目的**: OpenAI APIを使用してサーバー情報を分析し、ホームページ用のコンテンツを自動生成します。
+
+**主要機能**:
+- **週次自動分析**: `@tasks.loop(hours=168)`により1週間ごとにサーバー分析を実行
+- **チャンネルデータ収集**: メッセージ数、アクティブユーザー、頻出ワードを収集
+- **ロールデータ収集**: ロール情報とメンバー数を収集
+- **AI分析**: OpenAI GPT-4oによるサーバー特徴分析
+- **コンテンツ生成**: キャッチコピー、スローガン、歓迎メッセージを自動生成
+- **API連携**: 分析結果をウェブサイトAPIに送信
+
+#### システムアーキテクチャ
+
+```python
+class ServerAnalyzer(commands.Cog):
+    """OpenAI APIを使用してサーバー情報を分析し、ホームページ用の内容を生成するCog"""
+    
+    def __init__(self, bot):
+        self.bot = bot
+        self.openai_api_key = settings.etc_api_openai_api_key
+        self.api_base_url = "https://hfs.jp/api"
+        self.api_token = settings.homepage_api_token
+        self.target_guild_id = settings.homepage_target_guild_id
+        self.cache_dir = os.path.join(os.getcwd(), "cache", "server_analysis")
+```
+
+#### 分析機能
+
+**チャンネルデータ収集** (`collect_channel_data`):
+- 指定期間（デフォルト7日間）のメッセージを収集
+- 最大300件のメッセージを分析
+- アクティブユーザーの特定
+- 頻出ワードの抽出（上位20個）
+
+**ロールデータ収集** (`collect_roles_data`):
+- 全ロールの情報を収集
+- メンバー数、色、作成日時を記録
+
+**サーバー要約生成** (`generate_server_summary`):
+- サーバー基本情報の収集
+- アクティブチャンネルランキング
+- 人気ロールランキング
+- OpenAI APIによる詳細分析
+
+#### AI生成コンテンツ
+
+1. **サーバー分析**: コミュニティの雰囲気、関心事、コミュニケーションスタイルを分析
+2. **キャッチコピー・スローガン**: 4カテゴリ×3案を生成
+   - 短いキャッチコピー（10文字程度）
+   - 説明的なキャッチコピー（20〜30文字）
+   - フレンドリーなスローガン
+   - 特徴を表すフレーズ
+3. **歓迎メッセージ**: 3つのバージョンを生成
+   - 短い挨拶文（100文字程度）
+   - 中程度の説明（300文字程度）
+   - 詳細な案内（500文字程度）
+
+#### 利用可能なコマンド
+
+| コマンド | タイプ | 権限 | 説明 |
+|---------|------|------|------|
+| `/homepage` | スラッシュ | 誰でも | ホームページコマンドグループ |
+| `/homepage analyze` | スラッシュ | Administrator | サーバー分析を手動実行 |
+
+#### `/homepage analyze` - サーバー分析
+
+サーバーの詳細分析を手動で実行します。
+
+**動作**:
+1. チャンネルデータを収集
+2. ロールデータを収集
+3. OpenAI APIで分析・コンテンツ生成
+4. 結果をキャッシュに保存
+5. ウェブサイトAPIに送信
+6. 分析結果をDiscordに表示（長文は分割送信）
+
+**出力内容**:
+- サーバー基本情報（メンバー数、チャンネル数、ロール数など）
+- サーバー分析結果
+- キャッチコピー・スローガン案
+- 歓迎メッセージ案
+
+#### 環境変数
+
+```bash
+# OpenAI API
+OPENAI_API_KEY=your_openai_api_key_here
+
+# ホームページAPI
+HOMEPAGE_API_URL=https://hfs.jp/api
+HOMEPAGE_API_TOKEN=your_api_token_here
+HOMEPAGE_TARGET_GUILD_ID=1092138492173242430
+```
+
+#### キャッシュ管理
+
+- キャッシュディレクトリ: `cache/server_analysis/`
+- ファイル形式: `server_analysis_YYYYMMDD_HHMMSS.json`
+- 分析結果はJSON形式で保存
+
+---
+
+### 4. ウェブサイト連携 (`website_integration.py`)
+
+**目的**: Discordサーバーの統計情報をウェブサイトと定期的に同期します。
+
+**主要機能**:
+- **定期統計更新**: `@tasks.loop(minutes=10)`により10分ごとにサーバー統計を更新
+- **メンバー数同期**: オンライン/オフラインメンバー数を送信
+- **バナー画像同期**: サーバーバナーをBase64エンコードして送信
+- **ロール統計**: ロールごとのメンバー数を送信
+
+#### システムアーキテクチャ
+
+```python
+class WebsiteIntegration(commands.Cog):
+    """ウェブサイト連携機能を提供するCog"""
+    
+    def __init__(self, bot):
+        self.bot = bot
+        self.api_base_url = "https://hfs.jp/api"
+        self.api_token = settings.homepage_api_token
+        self.target_guild_id = settings.homepage_target_guild_id
+        self.cache_dir = os.path.join(os.getcwd(), "cache", "website")
+```
+
+#### 自動同期機能
+
+**サーバー統計更新** (`server_stats_update`):
+```python
+@tasks.loop(minutes=10)
+async def server_stats_update(self):
+    """サーバー統計情報を定期的に更新"""
+    stats = {
+        "member_count": guild.member_count,
+        "online_count": len([m for m in guild.members if m.status != discord.Status.offline]),
+        "updated_at": datetime.utcnow().isoformat(),
+        "server_name": guild.name
+    }
+    await self.send_to_api("/server-stats", stats)
+```
+
+**バナー画像更新** (`update_server_banner`):
+- サーバーバナーを取得
+- ローカルにPNG形式で保存
+- Base64エンコードしてAPIに送信
+
+#### 利用可能なコマンド
+
+| コマンド | タイプ | 権限 | 説明 |
+|---------|------|------|------|
+| `website` | プレフィックス | 誰でも | ウェブサイトコマンドグループ |
+| `website update` | プレフィックス | Administrator | ウェブサイト情報を手動更新 |
+
+#### `website update` - 手動更新
+
+ウェブサイトの情報を手動で更新します。
+
+**動作**:
+1. サーバー統計情報を更新
+2. ロール情報を収集・送信
+3. 完了メッセージを表示
+
+**送信データ**:
+- サーバー統計（メンバー数、オンライン数）
+- バナー画像（Base64）
+- ロール統計（名前、色、メンバー数）
+
+#### APIエンドポイント
+
+| エンドポイント | メソッド | 説明 |
+|--------------|--------|------|
+| `/server-stats` | POST | サーバー統計情報 |
+| `/server-banner` | POST | バナー画像（Base64） |
+| `/role-stats` | POST | ロール統計情報 |
+
+#### 環境変数
+
+```bash
+# ホームページAPI
+HOMEPAGE_API_URL=https://hfs.jp/api
+HOMEPAGE_API_TOKEN=your_api_token_here
+HOMEPAGE_TARGET_GUILD_ID=1092138492173242430
+```
+
+#### キャッシュ管理
+
+- キャッシュディレクトリ: `cache/website/`
+- バナー画像: `server_banner.png`
+
+---
+
 ## 関連ドキュメント
 
 - [API統合](../04-utilities/02-api-integration.md)

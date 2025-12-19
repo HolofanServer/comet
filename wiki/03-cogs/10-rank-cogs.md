@@ -2,102 +2,78 @@
 
 ## 概要
 
-COMET ボットの高度なレベリング・実績システムは、従来のメッセージカウント方式を超越した、多次元エンゲージメント評価を実現します。カスタマイズ可能なレベル公式、ボイスアクティビティ追跡、AI品質分析、実績システムを統合した包括的なコミュニティエンゲージメントプラットフォームです。
+HFS Rankシステムは、Discordサーバー内のユーザー活動を追跡し、XPとレベルを管理する機能を提供します。メッセージ送信、VC参加、リアクション、おみくじなどの活動に応じてXPを付与し、レベルアップや常連ロールの自動付与を行います。
 
 ## システムアーキテクチャ
 
 ```
-rank/
-├── __init__.py                    # ランクモジュールエクスポート
-├── rank.py                        # メインランクCog
-├── rank_config.py                 # ランク設定管理
-├── voice_config.py                # ボイス設定管理
-├── voice_tracker.py               # ボイスアクティビティ追跡
-├── formula_config.py              # レベル公式設定
-└── achievements.py                # 実績システムCog
-
-models/rank/
-├── __init__.py
-├── level_config.py                # レベル設定モデル
-├── level_formula.py               # レベル公式モデル
-├── voice_activity.py              # ボイスアクティビティモデル
-├── achievements.py                # 実績モデル
-└── quality_analysis.py            # 品質分析モデル
-
-utils/rank/
-├── __init__.py
-├── formula_manager.py             # レベル公式マネージャー
-├── voice_manager.py               # ボイスマネージャー
-├── quality_analyzer.py            # AI品質分析
-├── achievement_manager.py         # 実績マネージャー
-└── ai_config.py                   # AI設定
+cogs/rank/
+├── __init__.py                    # Cogs セットアップ・エントリーポイント
+├── ranking.py                     # メインCog・コマンド実装
+├── service.py                     # XP計算・付与ロジック
+├── models.py                      # データモデル・DBアクセス
+└── logging.py                     # イベントログ収集Cog
 ```
 
 ## 主要機能
 
-### 1. 高度なXP計算システム
+### 1. XP計算システム
 
-#### 多次元エンゲージメント評価
+#### RankService
 
-従来の単純なメッセージカウントではなく、複数の要素を総合評価：
+XP計算と付与を担当するサービスクラス：
 
 ```python
-class AdvancedXPCalculator:
-    """高度なXP計算エンジン"""
+class RankService:
+    """Rankサービスクラス"""
     
-    async def calculate_xp(
-        self, 
-        message: discord.Message,
-        guild_config: GuildConfig
+    def calculate_final_xp(
+        self,
+        base_xp: int,
+        content: str,
+        channel_id: int,
+        streak: int,
+        config: RankConfig,
     ) -> int:
-        base_xp = guild_config.base_xp_per_message
+        """
+        最終的なXPを計算（全ての倍率・ボーナスを適用）
+        """
+        # 品質ボーナス
+        quality_bonus = self._calculate_quality_bonus(content) if config.quality_bonus_enabled else 0
         
-        # 複数要素による動的XP計算
-        multipliers = {
-            'message_quality': await self._analyze_message_quality(message),
-            'interaction_density': await self._calculate_interaction_score(message),
-            'time_context': self._get_time_multiplier(message.created_at),
-            'channel_importance': guild_config.channel_weights.get(message.channel.id, 1.0),
-            'streak_bonus': await self._calculate_streak_multiplier(message.author.id),
-            'community_engagement': await self._measure_social_impact(message)
-        }
+        # ストリーク倍率
+        streak_multiplier = self._calculate_streak_multiplier(streak) if config.streak_bonus_enabled else 1.0
         
-        final_xp = base_xp * reduce(lambda x, y: x * y, multipliers.values())
-        return int(final_xp * guild_config.global_multiplier)
+        # チャンネル倍率
+        channel_multiplier = self._get_channel_multiplier(channel_id, config)
+        
+        # グローバル倍率（イベント用）
+        global_multiplier = config.global_multiplier
+        
+        # 最終XP計算
+        final_xp = (base_xp + quality_bonus) * streak_multiplier * channel_multiplier * global_multiplier
+        return int(final_xp)
 ```
 
-#### AI品質分析
+#### メッセージ品質ボーナス
 
 ```python
-class QualityAnalyzer:
-    """AI搭載メッセージ品質分析"""
-    
-    async def analyze_message_quality(self, content: str) -> float:
-        """
-        メッセージの質を分析
-        
-        評価基準:
-        - 文章の長さと構造
-        - 語彙の多様性
-        - 建設的な内容
-        - スパム/低品質検出
-        
-        Returns:
-            float: 品質スコア (0.5 ~ 2.0)
-        """
-        # 基本的な品質チェック
-        if len(content) < 10:
-            return 0.5  # 短すぎるメッセージ
-            
-        if self._is_spam(content):
-            return 0.3  # スパム検出
-            
-        # AI分析（オプション）
-        if self.ai_enabled:
-            return await self._ai_analyze(content)
-            
-        # 基本的な品質評価
-        return self._basic_quality_score(content)
+def _calculate_quality_bonus(self, content: str) -> int:
+    """
+    メッセージ品質に応じたボーナスXPを計算
+    - 長文（100文字以上）: +2 XP
+    - 長文（50文字以上）: +1 XP
+    - 絵文字/カスタム絵文字: +1 XP
+    - URL含む: +1 XP
+    - 最大5XPまで
+    """
+    bonus = 0
+    if len(content) >= 100:
+        bonus += 2
+    elif len(content) >= 50:
+        bonus += 1
+    # 絵文字・URL検出...
+    return min(bonus, 5)
 ```
 
 ### 2. カスタマイズ可能なレベル公式
@@ -437,202 +413,224 @@ CREATE INDEX idx_quality_cache_expiry ON quality_cache (analyzed_at);
 
 ### ユーザーコマンド
 
-#### `/rank [@user]`
-ランクカードを表示
+#### `/rank [user]`
+ランクを表示
 
 **パラメータ**:
-- `user` (オプション): 表示するユーザー
+- `user` (オプション): 表示するユーザー（省略時は自分）
 
 **表示内容**:
-- 現在レベル・XP
-- 次レベルまでの進捗
-- サーバー内順位
-- メッセージ数・ボイス時間
-- カスタマイズ可能なランクカード画像
+- 順位
+- レベル・XP
+- 次レベルまでの進捗バー
+- 連続ログイン日数（ストリークボーナス表示）
+- アクティブ日数
+- 通算XP
 
-#### `/leaderboard [page]`
-リーダーボードを表示
+#### `/ranktop [category]`
+XPランキングを表示
 
 **パラメータ**:
-- `page` (オプション): ページ番号（1-based）
+- `category` (オプション): ランキングカテゴリ
+  - `yearly_xp` (デフォルト): 今年のXP
+  - `lifetime_xp`: 通算XP
+  - `active_days`: アクティブ日数
 
 **表示内容**:
-- トップ10ユーザー（ページネーション）
-- レベル・総XP
-- メッセージ数
+- トップ10ユーザー
+- レベル・XP
 
-#### `/achievements [@user]`
-実績一覧を表示
-
-**パラメータ**:
-- `user` (オプション): 表示するユーザー
+#### `/top`
+サーバーのランキング一覧を表示
 
 **表示内容**:
-- 取得済み実績
-- 未取得実績（進捗表示）
-- 総実績数・取得率
+- メッセージ送信者ランキング（Top5）
+- ボイチャ勢ランキング（Top5）
+- XPランキング（Top5）
+- おみくじ勢ランキング（Top5）
 
 ### 管理者コマンド
 
-#### `/rank_config`
-ランクシステム設定
+#### `/rank-settings view`
+現在の設定を表示
 
-**必要権限**: `manage_guild`
+**必要権限**: Moderator
 
-**設定項目**:
-- ベースXP（メッセージごと）
-- グローバル乗数
-- 除外チャンネル
-- ロールリワード
-- レベルアップ通知
+**表示内容**:
+- ステータス（有効/無効）
+- XP設定（メッセージ、おみくじ、VC）
+- 常連ロール設定
+- 除外ロール・チャンネル
 
-#### `/formula_create <name> <type>`
-レベル公式を作成
+#### `/rank-settings toggle`
+Rankシステムの有効/無効を切り替え
 
-**必要権限**: `manage_guild`
+**必要権限**: Moderator
+
+#### `/rank-settings exclude-role <action> <role>`
+除外ロールを追加/削除
+
+**必要権限**: Moderator
 
 **パラメータ**:
-- `name`: 公式名
-- `type`: `linear` | `exponential` | `logarithmic` | `mee6_style` | `custom`
+- `action`: `追加` | `削除`
+- `role`: 対象のロール
 
-#### `/formula_list`
-公式一覧を表示
+#### `/rank-settings exclude-channel <action> <channel>`
+除外チャンネルを追加/削除
 
-**必要権限**: `manage_guild`
+**必要権限**: Moderator
 
-#### `/formula_activate <formula_id>`
-公式をアクティブ化
+**パラメータ**:
+- `action`: `追加` | `削除`
+- `channel`: 対象のチャンネル
 
-**必要権限**: `manage_guild`
+#### `/rank-settings xp [message_xp] [omikuji_xp] [vc_xp] [cooldown]`
+XP設定を変更
 
-#### `/add_xp <user> <amount>`
+**必要権限**: Moderator
+
+**パラメータ**:
+- `message_xp` (オプション): メッセージXP
+- `omikuji_xp` (オプション): おみくじXP
+- `vc_xp` (オプション): VC XP（10分あたり）
+- `cooldown` (オプション): クールダウン秒数
+
+#### `/rank-settings regular <role> [xp_threshold] [days_threshold]`
+常連ロール設定を変更
+
+**必要権限**: Moderator
+
+**パラメータ**:
+- `role`: 常連ロール
+- `xp_threshold` (オプション): 必要XP
+- `days_threshold` (オプション): 必要日数
+
+#### `/rank-settings regular-clear`
+常連ロール設定をクリア
+
+**必要権限**: Moderator
+
+### 管理者専用コマンド（rank-admin）
+
+#### `/rank-admin add-xp <user> <amount>`
 XPを手動付与
 
-**必要権限**: `manage_guild`
+**必要権限**: Administrator
 
-#### `/remove_xp <user> <amount>`
+#### `/rank-admin remove-xp <user> <amount>`
 XPを手動削除
 
-**必要権限**: `manage_guild`
+**必要権限**: Administrator
 
-#### `/reset_user <user>`
-ユーザーのレベルをリセット
+#### `/rank-admin set-xp <user> <yearly_xp> [lifetime_xp]`
+XPを直接設定
 
-**必要権限**: `administrator`
+**必要権限**: Administrator
+
+#### `/rank-admin reset <user>`
+ユーザーのランクデータをリセット
+
+**必要権限**: Administrator
+
+#### `/rank-admin check <user>`
+ユーザーの詳細データを確認
+
+**必要権限**: Administrator
+
+#### `/rank-admin channel-multiplier <channel> <multiplier>`
+チャンネルXP倍率を設定
+
+**必要権限**: Administrator
+
+**パラメータ**:
+- `channel`: 対象チャンネル
+- `multiplier`: 倍率（0.0〜5.0）
+
+#### `/rank-admin event <multiplier>`
+グローバルXP倍率を設定（イベント用）
+
+**必要権限**: Administrator
+
+**パラメータ**:
+- `multiplier`: 倍率（0.5〜5.0）
 
 ## セットアップガイド
 
-### 1. データベースマイグレーション
+### 1. データベーステーブル
 
-```bash
-# 順番に実行
-psql $DATABASE_URL -f migrations/create_level_formulas.sql
-psql $DATABASE_URL -f migrations/create_level_configs.sql
-psql $DATABASE_URL -f migrations/create_voice_system.sql
-psql $DATABASE_URL -f migrations/create_achievements_system.sql
-psql $DATABASE_URL -f migrations/create_quality_cache.sql
+Rankシステムは以下のテーブルを使用します（CP Databaseに作成）：
+
+```sql
+-- ユーザーランク情報
+CREATE TABLE rank_users (
+    user_id BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    yearly_xp INTEGER DEFAULT 0,
+    lifetime_xp BIGINT DEFAULT 0,
+    active_days INTEGER DEFAULT 0,
+    current_level INTEGER DEFAULT 1,
+    is_regular BOOLEAN DEFAULT FALSE,
+    current_streak INTEGER DEFAULT 0,
+    last_message_xp_at TIMESTAMP WITH TIME ZONE,
+    last_omikuji_xp_date DATE,
+    last_active_date DATE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, guild_id)
+);
+
+-- ギルド設定
+CREATE TABLE rank_config (
+    guild_id BIGINT PRIMARY KEY,
+    message_xp INTEGER DEFAULT 5,
+    message_cooldown_seconds INTEGER DEFAULT 60,
+    omikuji_xp INTEGER DEFAULT 15,
+    vc_xp_per_10min INTEGER DEFAULT 5,
+    regular_xp_threshold INTEGER DEFAULT 10000,
+    regular_days_threshold INTEGER DEFAULT 50,
+    regular_role_id BIGINT,
+    excluded_channels BIGINT[],
+    excluded_roles BIGINT[],
+    is_enabled BOOLEAN DEFAULT TRUE,
+    streak_bonus_enabled BOOLEAN DEFAULT TRUE,
+    quality_bonus_enabled BOOLEAN DEFAULT TRUE,
+    channel_multipliers JSONB,
+    global_multiplier FLOAT DEFAULT 1.0,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- レベル閾値
+CREATE TABLE rank_levels (
+    level INTEGER PRIMARY KEY,
+    required_xp INTEGER NOT NULL
+);
 ```
 
-### 2. 環境変数設定（オプション）
+### 2. Cogsロード
 
-```bash
-# AI品質分析を有効化する場合
-RANK_AI_ENABLED=true
-RANK_AI_MODEL=gpt-3.5-turbo
-
-# キャッシュ設定
-RANK_CACHE_ENABLED=true
-RANK_CACHE_TTL=3600
-```
-
-### 3. Cogsロード
+Rankシステムは自動的にロードされます：
 
 ```python
-@bot.event
-async def on_ready():
-    await bot.load_extension('rank.rank')
-    await bot.load_extension('rank.achievements')
-    await bot.load_extension('rank.voice_tracker')
-    await bot.tree.sync()
+# cogs/rank/__init__.py
+from .logging import RankLogging
+from .ranking import RankCommands
+
+async def setup(bot):
+    await bot.add_cog(RankLogging(bot))
+    await bot.add_cog(RankCommands(bot))
 ```
 
-### 4. デフォルト公式セットアップ
+### 3. 初期設定
 
-```python
-# 初回セットアップ時に実行
-await formula_manager.create_default_formula(
-    guild_id=guild.id,
-    formula_type='mee6_style'
-)
-```
+サーバーでRankシステムを有効化するには：
 
-## パフォーマンス最適化
-
-### キャッシング戦略
-
-```python
-from functools import lru_cache
-import redis.asyncio as redis
-
-class RankCache:
-    def __init__(self):
-        self.redis = redis.from_url(os.getenv('REDIS_URL'))
-        self.local_cache = {}
-    
-    @lru_cache(maxsize=1000)
-    async def get_user_xp(self, user_id: int, guild_id: int):
-        """L1: メモリキャッシュ"""
-        cache_key = f"xp:{guild_id}:{user_id}"
-        
-        # L2: Redis
-        cached = await self.redis.get(cache_key)
-        if cached:
-            return int(cached)
-        
-        # L3: データベース
-        xp = await self.db.fetch_user_xp(user_id, guild_id)
-        await self.redis.setex(cache_key, 3600, xp)
-        
-        return xp
-```
-
-### バッチ処理
-
-```python
-class BatchProcessor:
-    """XP更新のバッチ処理"""
-    
-    def __init__(self):
-        self.batch_queue = []
-        self.batch_size = 100
-        
-    async def add_to_batch(self, user_id: int, guild_id: int, xp: int):
-        """バッチキューに追加"""
-        self.batch_queue.append((user_id, guild_id, xp))
-        
-        if len(self.batch_queue) >= self.batch_size:
-            await self.flush_batch()
-    
-    async def flush_batch(self):
-        """バッチを一括処理"""
-        if not self.batch_queue:
-            return
-            
-        await self.db.bulk_update_xp(self.batch_queue)
-        self.batch_queue.clear()
-```
+1. `/rank-settings view` で現在の設定を確認
+2. `/rank-settings toggle` で有効化
+3. `/rank-settings regular <role>` で常連ロールを設定
+4. `/rank-settings exclude-channel` で除外チャンネルを設定
 
 ## 関連ドキュメント
 
 - [データベース管理](../04-utilities/01-database-management.md)
-- [AI統合](../04-utilities/03-ai-integration.md)
+- [チェックポイントシステム](./12-cp-cogs.md)
 - [パフォーマンス最適化](../05-development/02-monitoring-debugging.md)
-
-## バージョン履歴
-
-- **v2.0** (2025-11): 高度なシステム実装
-  - AI品質分析統合
-  - カスタムレベル公式
-  - ボイスアクティビティ追跡
-  - 実績システム
-  - 多次元エンゲージメント評価
