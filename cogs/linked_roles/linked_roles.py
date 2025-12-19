@@ -16,7 +16,7 @@ Discord Developer Portal設定が必要:
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import aiohttp
@@ -353,12 +353,13 @@ class LinkedRolesCog(commands.Cog):
                     user_id = user_data["userId"]
                     discord_id = user_data.get("discordId", "unknown")
 
-                    # トークン期限チェック
+                    # トークン期限チェック（期限の1時間前にリフレッシュ）
                     expires_at = datetime.fromisoformat(
                         user_data["tokenExpiresAt"].replace("Z", "+00:00")
                     )
+                    refresh_threshold = datetime.now(timezone.utc) + timedelta(hours=1)
 
-                    if expires_at < datetime.now(timezone.utc):
+                    if expires_at < refresh_threshold:
                         # トークンリフレッシュ
                         try:
                             new_tokens = await self.refresh_user_token(
