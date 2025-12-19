@@ -1,0 +1,2 @@
+-- Placeholder migration file for CI test
+-- This file ensures the migrations directory is tracked by git

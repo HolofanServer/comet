@@ -9,7 +9,7 @@ description = "COMET Discord Bot - Community of Oshilove Moderation & Enjoyment 
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "HolofanServer", email = "admin@holofanserver.com"}
+    {name = "HFS Dev Team", email = "dev@hfs.com"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

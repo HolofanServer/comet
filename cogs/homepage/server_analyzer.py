@@ -366,7 +366,7 @@ JSONフォーマットで返答せず、自然な日本語で分析結果を提�
         await self.bot.wait_until_ready()
         logger.info("サーバー分析タスクの準備完了")
 
-    @commands.hybrid_group(name="homepage_analyzer")
+    @commands.group(name="homepage_analyzer")
     async def homepage(self, ctx):
         """ホームページ関連のコマンドグループ"""
         if ctx.invoked_subcommand is None:
