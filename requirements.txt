@@ -21,7 +21,7 @@ Pygments==2.19.1
 ruff==0.14.4
 
 sentry-sdk==2.44.0
-matplotlib==3.9.4
+matplotlib==3.10.8
 pynacl==1.6.1
 aiofiles==25.1.0
 asyncpg==0.30.0
