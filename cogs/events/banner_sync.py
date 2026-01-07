@@ -115,7 +115,7 @@ class BannerSync(commands.Cog):
         await self.bot.wait_until_ready()
         logger.info("バナー同期タスクを開始します")
 
-    @commands.hybrid_command(name="sync_banner", description="BOTのバナーをサーバーのバナーと手動で同期します")
+    @commands.command(name="sync_banner", description="BOTのバナーをサーバーのバナーと手動で同期します")
     @commands.has_permissions(administrator=True)
     async def manual_sync(self, ctx):
         """BOTのバナーをサーバーのバナーと手動で同期するコマンド"""
