@@ -349,19 +349,118 @@ class EarthquakeChannel(commands.Cog):
 
             guild = self.bot.get_guild(guild_id)
             if not guild:
+                logger.warning(f"サーバーが見つかりません: {guild_id}")
                 continue
 
+            # DBからアクティブセッションを再確認（メモリとDBの同期）
+            active_session = await self._check_active_session(guild_id)
+
             # 既にオープン中なら終了時間を延長
-            if guild_id in self._active_sessions:
-                logger.info(f"サーバー {guild_id} は既に地震チャンネルがオープン中です。終了時間を延長します。")
+            if active_session:
+                logger.info(f"サーバー {guild.name} は既に地震チャンネルがオープン中です。終了時間を延長します。")
                 await self._extend_session(guild, earthquake_info=info)
                 continue
 
             # 自動オープン
             logger.info(f"{mode}サーバー {guild.name} で地震チャンネルを自動オープンします")
-            await self._open_earthquake_channel(guild, earthquake_info=info)
+            success, message = await self._open_earthquake_channel(guild, earthquake_info=info)
+            if success:
+                logger.info(f"{mode}サーバー {guild.name} で地震チャンネルを自動オープンしました")
+            else:
+                logger.error(f"{mode}サーバー {guild.name} で地震チャンネルのオープンに失敗: {message}")
 
     # === チャンネル操作 ===
+
+    async def _check_active_session(self, guild_id: int) -> Optional[dict]:
+        """
+        アクティブセッションをDBから確認し、メモリと同期する
+        Returns:
+            セッション情報（存在する場合）、Noneの場合はセッションなし
+        """
+        # メモリにある場合は、チャンネルが実際に存在するか確認
+        if guild_id in self._active_sessions:
+            session = self._active_sessions[guild_id]
+            talk_ch_id = session.get('talk_channel_id')
+            if talk_ch_id:
+                guild = self.bot.get_guild(guild_id)
+                if guild:
+                    ch = guild.get_channel(talk_ch_id)
+                    if ch:
+                        return session
+                    # チャンネルが存在しない場合、fetchを試みる
+                    try:
+                        ch = await self.bot.fetch_channel(talk_ch_id)
+                        if ch:
+                            return session
+                    except discord.NotFound:
+                        # チャンネルが削除されている - セッションをクリア
+                        logger.warning(f"セッションのチャンネルが見つかりません。セッションをクリアします: {guild_id}")
+                        await self._cleanup_orphaned_session(guild_id)
+                        return None
+                    except Exception:
+                        pass
+
+        # DBから確認
+        db_session = await execute_query(
+            '''
+            SELECT guild_id, message_id, channel_id, talk_channel_id, info_channel_id, closes_at
+            FROM earthquake_channel_sessions
+            WHERE guild_id = $1 AND is_active = TRUE
+            ORDER BY created_at DESC
+            LIMIT 1
+            ''',
+            guild_id,
+            fetch_type='one'
+        )
+
+        if not db_session:
+            # DBにもないのでメモリからも削除
+            if guild_id in self._active_sessions:
+                del self._active_sessions[guild_id]
+            return None
+
+        # DBにセッションがある場合、チャンネルが存在するか確認
+        talk_ch_id = db_session.get('talk_channel_id')
+        if talk_ch_id:
+            guild = self.bot.get_guild(guild_id)
+            if guild:
+                ch = guild.get_channel(talk_ch_id)
+                if not ch:
+                    try:
+                        ch = await self.bot.fetch_channel(talk_ch_id)
+                    except discord.NotFound:
+                        # チャンネルが存在しない - DBのセッションをクローズ
+                        logger.warning(f"DBセッションのチャンネルが見つかりません。セッションをクローズします: {guild_id}")
+                        await self._cleanup_orphaned_session(guild_id)
+                        return None
+                    except Exception:
+                        pass
+
+        # メモリに同期
+        self._active_sessions[guild_id] = {
+            'message_id': db_session['message_id'],
+            'channel_id': db_session['channel_id'],
+            'talk_channel_id': db_session.get('talk_channel_id'),
+            'info_channel_id': db_session.get('info_channel_id'),
+            'closes_at': db_session['closes_at'],
+        }
+
+        return self._active_sessions[guild_id]
+
+    async def _cleanup_orphaned_session(self, guild_id: int):
+        """孤立したセッションをクリーンアップ"""
+        await execute_query(
+            '''
+            UPDATE earthquake_channel_sessions
+            SET is_active = FALSE, closed_at = NOW()
+            WHERE guild_id = $1 AND is_active = TRUE
+            ''',
+            guild_id,
+            fetch_type='status'
+        )
+        if guild_id in self._active_sessions:
+            del self._active_sessions[guild_id]
+        logger.info(f"孤立したセッションをクリーンアップしました: {guild_id}")
 
     async def _get_or_create_role(self, guild: discord.Guild) -> Optional[discord.Role]:
         """地震チャンネル閲覧ロールを取得または作成"""
@@ -646,10 +745,44 @@ class EarthquakeChannel(commands.Cog):
             await info_msg.pin()
 
         except discord.Forbidden:
+            logger.error(f"チャンネル作成権限がありません: {guild.name}")
             return False, "チャンネルの作成に失敗しました。"
         except Exception as e:
             logger.error(f"チャンネル作成エラー: {e}")
             return False, f"チャンネルの作成中にエラーが発生しました: {e}"
+
+        # チャンネル作成成功 - 先にDBとメモリにセッションを保存（通知失敗してもチャンネルは存在するため）
+        logger.info(f"地震チャンネル作成成功: {guild.name} - 話題={talk_channel.id}, 情報共有={info_channel.id}")
+
+        # 仮のメッセージID（通知送信後に更新）
+        temp_message_id = 0
+
+        # DBに先に保存（重複作成防止）
+        await execute_query(
+            '''
+            INSERT INTO earthquake_channel_sessions
+            (guild_id, message_id, channel_id, talk_channel_id, info_channel_id, opened_at, closes_at, earthquake_info)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ''',
+            guild.id,
+            temp_message_id,
+            notification_channel.id,
+            talk_channel.id,
+            info_channel.id,
+            now,
+            closes_at,
+            json.dumps(earthquake_info) if earthquake_info else None,
+            fetch_type='status'
+        )
+
+        # メモリにも保存
+        self._active_sessions[guild.id] = {
+            'message_id': temp_message_id,
+            'channel_id': notification_channel.id,
+            'talk_channel_id': talk_channel.id,
+            'info_channel_id': info_channel.id,
+            'closes_at': closes_at,
+        }
 
         # 通知メッセージを作成 (Components V2)
         title = "# 🚨 臨時の地震チャンネルが作成されました"
@@ -682,8 +815,9 @@ class EarthquakeChannel(commands.Cog):
         # Components V2 + View を送信
         # viewのコンポーネントをdict形式に変換
         view_data = [{"type": 1, "components": [c.to_dict() for c in view.children]}]
+        notification_message_id = 0
         try:
-            message_id = await send_components_v2_to_channel(
+            notification_message_id = await send_components_v2_to_channel(
                 notification_channel,
                 notify_msg,
                 self.bot.http.token,
@@ -691,61 +825,44 @@ class EarthquakeChannel(commands.Cog):
                 view_components=view_data,
                 allowed_mentions={"roles": [notification_role.id]}
             )
-            message = await notification_channel.fetch_message(int(message_id))
-            logger.info(f"通知チャンネルへの送信成功: {notification_channel.name} (ID: {message_id})")
+            logger.info(f"通知チャンネルへの送信成功: {notification_channel.name} (ID: {notification_message_id})")
+
+            # メッセージIDを更新
+            await execute_query(
+                '''
+                UPDATE earthquake_channel_sessions
+                SET message_id = $1
+                WHERE guild_id = $2 AND is_active = TRUE
+                ''',
+                int(notification_message_id),
+                guild.id,
+                fetch_type='status'
+            )
+            self._active_sessions[guild.id]['message_id'] = int(notification_message_id)
         except Exception as e:
             logger.error(f"通知チャンネルへの送信に失敗: {e}")
-            return False, f"通知チャンネルへの送信に失敗しました: {e}"
+            # 通知失敗してもチャンネルは作成済みなので続行
 
-        # チャットチャンネルにもメンションなしで通知
-        logger.info(f"チャットチャンネルID: {settings.hfs_chat_channel_id}")
-        chat_channel = self.bot.get_channel(settings.hfs_chat_channel_id)
-        if chat_channel:
-            logger.info(f"チャットチャンネル取得成功: {chat_channel.name}")
-            try:
-                chat_view = EarthquakeRoleButton(role.id, talk_channel.id)
-                chat_view_data = [{"type": 1, "components": [c.to_dict() for c in chat_view.children]}]
-                chat_msg_id = await send_components_v2_to_channel(
-                    chat_channel,
-                    notify_msg,
-                    self.bot.http.token,
-                    view_components=chat_view_data
-                )
-                logger.info(f"チャットチャンネルへの送信成功: {chat_channel.name} (ID: {chat_msg_id})")
-            except Exception as e:
-                logger.error(f"チャットチャンネルへの通知に失敗: {e}")
-        else:
-            logger.warning(f"チャットチャンネルが見つかりません: ID={settings.hfs_chat_channel_id}")
-
-        # DBに保存
-        await execute_query(
-            '''
-            INSERT INTO earthquake_channel_sessions
-            (guild_id, message_id, channel_id, talk_channel_id, info_channel_id, opened_at, closes_at, earthquake_info)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            ''',
-            guild.id,
-            message.id,
-            notification_channel.id,
-            talk_channel.id,
-            info_channel.id,
-            now,
-            closes_at,
-            json.dumps(earthquake_info) if earthquake_info else None,
-            fetch_type='status'
-        )
-
-        # メモリに保存
-        self._active_sessions[guild.id] = {
-            'message_id': message.id,
-            'channel_id': notification_channel.id,
-            'talk_channel_id': talk_channel.id,
-            'info_channel_id': info_channel.id,
-            'closes_at': closes_at,
-        }
+        # チャットチャンネルにもメンションなしで通知（同じサーバーの場合のみ）
+        if guild_settings.get('notification_channel_id') and settings.hfs_chat_channel_id:
+            chat_channel = self.bot.get_channel(settings.hfs_chat_channel_id)
+            # 通知チャンネルと同じサーバーのチャットチャンネルのみ
+            if chat_channel and chat_channel.guild.id == guild.id:
+                try:
+                    chat_view = EarthquakeRoleButton(role.id, talk_channel.id)
+                    chat_view_data = [{"type": 1, "components": [c.to_dict() for c in chat_view.children]}]
+                    chat_msg_id = await send_components_v2_to_channel(
+                        chat_channel,
+                        notify_msg,
+                        self.bot.http.token,
+                        view_components=chat_view_data
+                    )
+                    logger.info(f"チャットチャンネルへの送信成功: {chat_channel.name} (ID: {chat_msg_id})")
+                except Exception as e:
+                    logger.error(f"チャットチャンネルへの通知に失敗: {e}")
 
         mode = "自動(テスト)" if self._use_sandbox else "自動"
-        logger.info(f"地震チャンネルを{mode}オープン: {guild.name}")
+        logger.info(f"地震チャンネルを{mode}オープン完了: {guild.name}")
         return True, "地震チャンネルをオープンしました。"
 
     @tasks.loop(minutes=1)
@@ -754,6 +871,28 @@ class EarthquakeChannel(commands.Cog):
         now = datetime.now(JST)
         to_close = []
 
+        # DBからもアクティブセッションを確認（メモリとの同期）
+        db_sessions = await execute_query(
+            '''
+            SELECT guild_id, message_id, channel_id, talk_channel_id, info_channel_id, closes_at
+            FROM earthquake_channel_sessions
+            WHERE is_active = TRUE
+            ''',
+            fetch_type='all'
+        )
+
+        for db_session in db_sessions:
+            guild_id = db_session['guild_id']
+            # メモリにない場合は同期
+            if guild_id not in self._active_sessions:
+                self._active_sessions[guild_id] = {
+                    'message_id': db_session['message_id'],
+                    'channel_id': db_session['channel_id'],
+                    'talk_channel_id': db_session.get('talk_channel_id'),
+                    'info_channel_id': db_session.get('info_channel_id'),
+                    'closes_at': db_session['closes_at'],
+                }
+
         for guild_id, session in list(self._active_sessions.items()):
             closes_at = session['closes_at']
             if closes_at.tzinfo is None:
@@ -761,11 +900,17 @@ class EarthquakeChannel(commands.Cog):
 
             if now >= closes_at:
                 to_close.append(guild_id)
+                logger.info(f"自動クローズ対象: guild_id={guild_id}, closes_at={closes_at}")
 
         for guild_id in to_close:
             guild = self.bot.get_guild(guild_id)
             if guild:
+                logger.info(f"自動クローズ実行: {guild.name}")
                 await self._close_earthquake_channel(guild, auto=True)
+            else:
+                # サーバーが見つからない場合はセッションをクリーンアップ
+                logger.warning(f"自動クローズ: サーバーが見つかりません: {guild_id}")
+                await self._cleanup_orphaned_session(guild_id)
 
     @auto_close_check.before_loop
     async def before_auto_close_check(self):
@@ -782,13 +927,18 @@ class EarthquakeChannel(commands.Cog):
         guild_settings = self._settings.get(guild.id)
 
         if not guild_settings:
-            return False, "設定が見つかりません。"
+            # 設定がなくてもチャンネル削除は続行
+            logger.warning(f"設定が見つかりませんがチャンネル削除を続行: {guild.name}")
 
-        role = guild.get_role(guild_settings.get('earthquake_role_id'))
-        if not role:
-            return False, "地震ch閲覧ロールが見つかりません。"
-
-        removed_count = await self._remove_role_from_all(guild, role)
+        # ロールがなくてもチャンネル削除は続行
+        removed_count = 0
+        role = None
+        if guild_settings:
+            role = guild.get_role(guild_settings.get('earthquake_role_id'))
+        if role:
+            removed_count = await self._remove_role_from_all(guild, role)
+        else:
+            logger.warning(f"地震ch閲覧ロールが見つかりません: {guild.name}")
 
         channel = self.bot.get_channel(session['channel_id'])
         if channel:
