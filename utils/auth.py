@@ -6,12 +6,17 @@ import httpx
 with open('config/bot.json') as f:
     bot_config = json.load(f)
 
+# セキュリティ: 認証エンドポイントのベースURL（環境変数で上書き可能）
+# 本番環境ではHTTPSを使用することを強く推奨
+AUTH_API_BASE_URL = os.environ.get("AUTH_API_BASE_URL", "https://auth.frwi.net")
+
+
 async def get_auth():
     """
     FastAPIの認証APIから新しい認証情報を取得する。
     """
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"http://auth.frwi.net/generate?label={bot_config['name']}")
+        response = await client.get(f"{AUTH_API_BASE_URL}/generate?label={bot_config['name']}")
         try:
             if response.status_code == 200:
                 auth_data = response.json()
@@ -53,7 +58,10 @@ async def verify_auth(auth: dict):
     auth_id = auth["id"]
 
     async with httpx.AsyncClient() as client:
-        response = await client.post("http://auth.frwi.net/verify", json={"id": auth_id, "auth_code": auth_code})
+        response = await client.post(
+            f"{AUTH_API_BASE_URL}/verify",
+            json={"id": auth_id, "auth_code": auth_code}
+        )
         if response.status_code == 200:
             return response.json().get("result", False)
         else:

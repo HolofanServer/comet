@@ -22,4 +22,4 @@ jobs:
           embed-author-icon-url: ${{ github.event.deployment.creator.avatar_url }}
           embed-author-name: ${{ github.event.deployment.creator.login }}
           embed-author-url: ${{ github.event.deployment.creator.html_url }}
-          embed-url: ${{ github.event.deployment.url }}
+                # embed-url: ${{ github.event.deployment.url }}

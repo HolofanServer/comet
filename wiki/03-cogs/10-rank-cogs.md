@@ -627,7 +627,6 @@ class BatchProcessor:
 - [データベース管理](../04-utilities/01-database-management.md)
 - [AI統合](../04-utilities/03-ai-integration.md)
 - [パフォーマンス最適化](../05-development/02-monitoring-debugging.md)
-- [full_rank_guide.md](../../full_rank_guide.md) - 詳細設計書
 
 ## バージョン履歴
 

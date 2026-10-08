@@ -24,6 +24,13 @@ load_dotenv()
 
 settings = get_settings()
 
+# セキュリティ: 起動時の自動更新を制御するフラグ
+# デフォルトはfalse（セキュリティファースト）
+# 開発環境で自動更新が必要な場合は明示的にtrueを設定してください
+# BREAKING CHANGE: 以前のデフォルトはtrueでした
+AUTO_GIT_PULL_ENABLED = os.environ.get("AUTO_GIT_PULL_ENABLED", "false").lower() == "true"
+AUTO_PIP_INSTALL_ENABLED = os.environ.get("AUTO_PIP_INSTALL_ENABLED", "false").lower() == "true"
+
 bot_owner_id = settings.bot_owner_id
 startup_channel_id = settings.admin_startup_channel_id
 startup_guild_id = settings.admin_dev_guild_id
@@ -153,19 +160,29 @@ async def startup_send_webhook(bot, guild_id):
 
     cogs_description = ""
     for directory, cogs in cogs_by_directory.items():
-        cogs_description += f"> **{directory.capitalize()}**\n" + '\n'.join(cogs) + "\n\n"
+        cogs_description += f"> **{directory.capitalize()}**: {len(cogs)}個\n"
 
     if not cogs_by_directory:
         cogs_description = "ロードされているCogはありません。"
 
-    embed.add_field(name="Cogs", value=cogs_description, inline=False)
+    # 1024文字制限
+    if len(cogs_description) > 1024:
+        cogs_description = cogs_description[:1020] + "..."
+
+    embed.add_field(name=f"Cogs ({len(bot.extensions)}個)", value=cogs_description, inline=False)
     embed.set_footer(text="Botは正常に起動しました。" if not failed_cogs else "Botは正常に起動していません。")
     embed.set_author(name=session_id)
 
     if failed_cogs:
         failed_embed = discord.Embed(title="正常に読み込めなかったCogファイル一覧", color=discord.Color.red())
-        for cog, error in failed_cogs.items():
-            failed_embed.add_field(name=cog, value=error, inline=False)
+        # 最大24フィールドまで（25フィールド制限）
+        for i, (cog, error) in enumerate(failed_cogs.items()):
+            if i >= 24:
+                failed_embed.add_field(name="...", value=f"他 {len(failed_cogs) - 24} 件", inline=False)
+                break
+            # エラーメッセージも1024文字制限
+            error_msg = error[:1020] + "..." if len(error) > 1024 else error
+            failed_embed.add_field(name=cog, value=error_msg, inline=False)
         webhook = await channel.create_webhook(name=webhook_name)
         await webhook.send(embeds=[embed, failed_embed])
         await webhook.delete()
@@ -186,7 +203,8 @@ async def startup_send_botinfo(bot):
         logger.warning("指定されたチャンネルが見つかりません。")
         return
 
-    discord_py_hash = get_detailed_discord_version().split(discord.__version__)[1]
+    version_parts = get_detailed_discord_version().split(discord.__version__)
+    discord_py_hash = version_parts[1] if len(version_parts) > 1 else ""
     os_info = f"{platform.system()} {platform.release()} ({platform.version()})"
     cpu_info = get_cpu_model_name()
     cpu_cores = f"{psutil.cpu_count(logical=True)} / {psutil.cpu_count(logical=False)}"
@@ -248,6 +266,16 @@ def rainbow_text(text):
     return colored_text + reset
 
 async def git_pull():
+    """
+    起動時にgit pullを実行する
+
+    セキュリティ: AUTO_GIT_PULL_ENABLED=falseで無効化可能
+    サプライチェーン攻撃を防ぐため、本番環境では無効化を推奨
+    """
+    if not AUTO_GIT_PULL_ENABLED:
+        logger.info("Git pull is disabled (AUTO_GIT_PULL_ENABLED=false)")
+        return
+
     logger.info("Git pull started")
     process = await asyncio.create_subprocess_exec(
         "git", "pull",
@@ -257,7 +285,18 @@ async def git_pull():
     await process.communicate()
     logger.info("Git pull completed")
 
+
 async def pip_install():
+    """
+    起動時にpip installを実行する
+
+    セキュリティ: AUTO_PIP_INSTALL_ENABLED=falseで無効化可能
+    サプライチェーン攻撃を防ぐため、本番環境では無効化を推奨
+    """
+    if not AUTO_PIP_INSTALL_ENABLED:
+        logger.info("Pip install is disabled (AUTO_PIP_INSTALL_ENABLED=false)")
+        return
+
     logger.info("Pip install started")
     process = await asyncio.create_subprocess_exec(
         sys.executable, "-m", "pip", "install", "--upgrade", "pip",
