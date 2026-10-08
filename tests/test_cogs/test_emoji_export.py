@@ -3,10 +3,12 @@
 import asyncio
 import importlib
 import io
+import json
+import random
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from zipfile import ZipFile
 
 import pytest
@@ -47,6 +49,7 @@ def export_context():
             id=123,
             filesize_limit=1024 * 1024,
             fetch_emojis=AsyncMock(return_value=[]),
+            fetch_stickers=AsyncMock(return_value=[]),
         ),
         interaction=None,
         author=SimpleNamespace(guild_permissions=SimpleNamespace(administrator=True)),
@@ -57,9 +60,9 @@ def export_context():
     )
 
 
-async def run_export(module, ctx):
+async def run_export(module, ctx, command_name="export_emojis_temp"):
     cog = module.EmojiExport(SimpleNamespace())
-    await cog.export_emojis_temp.callback(cog, ctx)
+    await getattr(cog, command_name).callback(cog, ctx)
 
 
 @pytest.mark.asyncio
@@ -227,8 +230,9 @@ async def test_send_failure_reports_number_already_sent(export_module, export_co
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("denied", ["dm", "administrator", "attach_files"])
+@pytest.mark.parametrize("command_name", ["export_emojis_temp", "export_stickers_temp"])
 async def test_command_checks_reject_invalid_context(
-    export_module, export_context, denied
+    export_module, export_context, denied, command_name
 ):
     errors = export_module.commands
     expected = errors.NoPrivateMessage
@@ -240,13 +244,14 @@ async def test_command_checks_reject_invalid_context(
     else:
         export_context.bot_permissions.attach_files = False
         expected = errors.BotMissingPermissions
-    command = export_module.EmojiExport.export_emojis_temp
+    command = getattr(export_module.EmojiExport, command_name)
     with pytest.raises(expected):
         await export_module.discord.utils.async_all(
             check(export_context) for check in command.checks
         )
     if export_context.guild is not None:
         export_context.guild.fetch_emojis.assert_not_awaited()
+        export_context.guild.fetch_stickers.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -256,14 +261,205 @@ async def test_extension_registers_and_unloads_both_command_forms(export_module)
     )
     try:
         await bot.load_extension("cogs.manage.emoji_export")
-        command = bot.get_command("export_emojis_temp")
-        slash = bot.tree.get_command("export_emojis_temp")
-        assert command is not None
-        assert slash is not None
-        assert slash.guild_only
-        assert slash.default_permissions.administrator
+        for name in ("export_emojis_temp", "export_stickers_temp"):
+            command = bot.get_command(name)
+            slash = bot.tree.get_command(name)
+            assert command is not None
+            assert slash is not None
+            assert slash.guild_only
+            assert slash.default_permissions.administrator
         await bot.unload_extension("cogs.manage.emoji_export")
-        assert bot.get_command("export_emojis_temp") is None
-        assert bot.tree.get_command("export_emojis_temp") is None
+        for name in ("export_emojis_temp", "export_stickers_temp"):
+            assert bot.get_command(name) is None
+            assert bot.tree.get_command(name) is None
     finally:
         await bot.close()
+
+
+def make_sticker(module, sticker_id, name, data=PNG, format_name="png"):
+    return SimpleNamespace(
+        id=sticker_id,
+        name=name,
+        description="移行用の説明",
+        emoji="wave",
+        format=getattr(module.discord.StickerFormatType, format_name),
+        read=AsyncMock(return_value=data),
+    )
+
+
+@pytest.mark.asyncio
+async def test_stickers_preserve_formats_names_and_migration_metadata(
+    export_module, export_context
+):
+    apng = PNG + b"acTL animation data"
+    stickers = [
+        make_sticker(export_module, 1, "こんにちは"),
+        make_sticker(export_module, 2, "m_animated", apng, "apng"),
+        make_sticker(export_module, 3, "dance", GIF, "gif"),
+    ]
+    export_context.guild.fetch_stickers.return_value = stickers
+    await run_export(export_module, export_context, "export_stickers_temp")
+    export_context.guild.fetch_emojis.assert_not_awaited()
+    export_context.defer.assert_awaited_once()
+    assert len(export_context.attachments) == 1
+    filename, data, path, stream = export_context.attachments[0]
+    assert filename == "stickers_123.zip"
+    with ZipFile(io.BytesIO(data)) as archive:
+        assert archive.read("こんにちは.png") == PNG
+        assert archive.read("m_animated.png") == apng
+        assert archive.read("dance.gif") == GIF
+        metadata = json.loads(archive.read("_metadata/stickers.json"))
+        assert [entry["name"] for entry in metadata] == [s.name for s in stickers]
+        assert [entry["format"] for entry in metadata] == ["png", "apng", "gif"]
+        assert all(entry["description"] == "移行用の説明" for entry in metadata)
+        assert all(entry["emoji"] == "wave" for entry in metadata)
+        assert all(entry["file"] in archive.namelist() for entry in metadata)
+    assert stream.closed
+    assert not path.parent.exists()
+
+
+@pytest.mark.asyncio
+async def test_sticker_paths_are_portable_and_do_not_collide(
+    export_module, export_context
+):
+    names = [
+        "../hello",
+        "..\\hello",
+        "SAME",
+        "same",
+        "CON",
+        "...",
+        "café",
+        "cafe\u0301",
+    ]
+    export_context.guild.fetch_stickers.return_value = [
+        make_sticker(export_module, index, name)
+        for index, name in enumerate(names, start=1)
+    ]
+    await run_export(export_module, export_context, "export_stickers_temp")
+    with ZipFile(io.BytesIO(export_context.attachments[0][1])) as archive:
+        assert archive.namelist() == [
+            "1/_hello.png",
+            "2/_hello.png",
+            "3/SAME.png",
+            "4/same.png",
+            "_CON.png",
+            "sticker.png",
+            "7/café.png",
+            "8/café.png",
+            "_metadata/stickers.json",
+        ]
+        assert [
+            item["name"] for item in json.loads(archive.read("_metadata/stickers.json"))
+        ] == names
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("payload", [b'{"v":"5.5.0","layers":[]}', b"invalid json"])
+async def test_lottie_downloads_json_without_discord_read(
+    export_module, export_context, payload, monkeypatch
+):
+    sticker = make_sticker(export_module, 42, "lottie", format_name="lottie")
+    export_context.guild.fetch_stickers.return_value = [sticker]
+    response = SimpleNamespace(
+        raise_for_status=MagicMock(), read=AsyncMock(return_value=payload)
+    )
+    request = MagicMock()
+    request.__aenter__ = AsyncMock(return_value=response)
+    session = MagicMock()
+    session.get.return_value = request
+    session.__aenter__ = AsyncMock(return_value=session)
+    client_session = MagicMock(return_value=session)
+    monkeypatch.setattr(export_module.aiohttp, "ClientSession", client_session)
+
+    await run_export(export_module, export_context, "export_stickers_temp")
+
+    sticker.read.assert_not_awaited()
+    session.get.assert_called_once_with("https://cdn.discordapp.com/stickers/42.json")
+    response.raise_for_status.assert_called_once()
+    if payload == b"invalid json":
+        assert not export_context.attachments
+        assert "全件の出力は完了していません" in export_context.send.call_args.args[0]
+    else:
+        with ZipFile(io.BytesIO(export_context.attachments[0][1])) as archive:
+            assert archive.read("lottie.json") == payload
+
+
+@pytest.mark.asyncio
+async def test_no_stickers_sends_no_empty_zip(export_module, export_context):
+    await run_export(export_module, export_context, "export_stickers_temp")
+    assert not export_context.attachments
+    assert "スタンプはありません" in export_context.send.call_args.args[0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["http", "timeout", "image"])
+async def test_sticker_download_failure_reports_incomplete_and_cleans_up(
+    export_module, export_context, failure, monkeypatch
+):
+    sticker = make_sticker(export_module, 2, "broken", b"not an image")
+    if failure == "http":
+        sticker.read.side_effect = export_module.discord.HTTPException(
+            SimpleNamespace(status=404, reason="Not Found"), "deleted"
+        )
+    elif failure == "timeout":
+        sticker.read.side_effect = asyncio.TimeoutError()
+    export_context.guild.fetch_stickers.return_value = [
+        make_sticker(export_module, 1, "ok"),
+        sticker,
+    ]
+    paths = []
+    original_write = Path.write_bytes
+
+    def capture_write(path, data):
+        paths.append(path)
+        return original_write(path, data)
+
+    monkeypatch.setattr(Path, "write_bytes", capture_write)
+    await run_export(export_module, export_context, "export_stickers_temp")
+    assert not export_context.attachments
+    assert "スタンプ ZIP の出力に失敗" in export_context.send.call_args.args[0]
+    assert paths and all(not path.parent.exists() for path in paths)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fail_send", [False, True])
+async def test_sticker_zip_parts_respect_limit_and_report_partial_send(
+    export_module, export_context, fail_send
+):
+    payload = PNG + random.Random(123).randbytes(400)
+    export_context.interaction = SimpleNamespace(filesize_limit=650)
+    export_context.guild.fetch_stickers.return_value = [
+        make_sticker(export_module, index, f"sticker{index}", payload)
+        for index in range(1, 4)
+    ]
+    capture_send = export_context.send.side_effect
+
+    async def send(content, *, file=None):
+        if fail_send and file is not None and export_context.attachments:
+            raise export_module.discord.HTTPException(
+                SimpleNamespace(status=403, reason="Forbidden"), "upload denied"
+            )
+        await capture_send(content, file=file)
+
+    export_context.send.side_effect = send
+    await run_export(export_module, export_context, "export_stickers_temp")
+    if fail_send:
+        assert len(export_context.attachments) == 1
+        assert "送信済み ZIP は 1 個" in export_context.send.call_args.args[0]
+    else:
+        assert len(export_context.attachments) > 1
+    entries = {}
+    for index, (filename, data, path, stream) in enumerate(
+        export_context.attachments, start=1
+    ):
+        assert filename == f"stickers_123_{index:02d}.zip"
+        assert len(data) <= 650
+        with ZipFile(io.BytesIO(data)) as archive:
+            entries.update({name: archive.read(name) for name in archive.namelist()})
+        assert stream.closed
+        assert not path.parent.exists()
+    if not fail_send:
+        assert len(entries) == 4
+        assert all(entries[f"sticker{index}.png"] == payload for index in range(1, 4))
+        assert len(json.loads(entries["_metadata/stickers.json"])) == 3

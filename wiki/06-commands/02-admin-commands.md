@@ -75,6 +75,28 @@ comet/export_emojis_temp
 
 **形式の根拠**: Discord は WebP / AVIF 由来の絵文字の形式変換に制約を設けているため、取得画像の実形式を保持します。[Discord 公式の画像形式仕様](https://docs.discord.com/developers/reference#image-formatting) を参照してください（確認日: 2026-10-05）。
 
+### `/export_stickers_temp` - スタンプ ZIP 出力（一時用）
+
+**説明**: 実行したサーバーに登録されたスタンプ全件を、移行・バックアップ用の ZIP にまとめて実行チャンネルへ送信します。
+
+**権限**: サーバー管理者のみ。Bot に「ファイルを添付」の権限が必要です。
+
+```text
+/export_stickers_temp
+comet/export_stickers_temp
+```
+
+- スタンプは `m_` から始まる名前も含めて全件対象です。Discord の標準スタンプパックは対象外です。
+- PNG・APNG は `.png`、GIF は `.gif`、Lottie は `.json` として保存します。画像変換は行わず、アニメーションを含む元データを保持します。
+- 日本語を含む元の名前をファイル名に使います。パス区切りやOSの禁止文字は `_` に置換し、前後の空白・ピリオドを除去します。Windowsの予約名には `_` を付け、空名は `sticker` にします。Unicodeの正規化・置換後に同名となる場合は、ID別フォルダに格納します。
+- `_metadata/stickers.json` にスタンプID・変更前の名前・説明・関連絵文字・形式・ZIP内のファイルパスを記録します。移行先への登録時に参照してください。
+- 通常は `stickers_<サーバーID>.zip`、添付上限を超える場合は `stickers_<サーバーID>_01.zip` などに分割します。各ZIPは単独で展開できます。分割時はメタデータが別のZIPに入る場合があるため、全ZIPを取得してください。
+- 同じサーバーでは同時に1回まで実行できます。途中で失敗した場合は送信済みZIP数と未完了を通知します。一時ファイルは成功・失敗のどちらでも削除します。
+
+**導入・移行**: 絵文字と共通の `cogs/manage/emoji_export.py` で提供します。既存の `/export_emojis_temp` の使い方は変わりません。Bot の再起動・コマンド同期で追加され、設定・DBの移行は不要です。ZIP取得後の移行先へのスタンプ登録は手動で行います。元サーバーのスタンプは変更・削除しません。Lottieを再登録できるのはDiscordが認める認証済み・パートナーサーバーです。
+
+**形式の根拠**（確認日: 2026-10-07）: [Discord公式スタンプ仕様](https://docs.discord.com/developers/resources/sticker)、[discord.py公式実装](https://github.com/Rapptz/discord.py/blob/master/discord/sticker.py)、[Discord公式のアップロード案内](https://discord.com/blog/how-to-create-upload-your-own-stickers-on-discord)。discord.pyの `read()` はLottieを扱わないため、公開CDNからJSONを取得します。Context7・DeepWiki・Firecrawl Search MCPは利用できず、上記一次情報で補完しました。
+
 ### `/warning` - ユーザー警告システム
 
 **説明**: ユーザーの警告を管理します。

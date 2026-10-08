@@ -1,6 +1,9 @@
-"""絵文字の移行作業が終わったら Cog ごと削除できる一時コマンド。"""
+"""絵文字・スタンプの移行作業が終わったら Cog ごと削除できる一時コマンド。"""
 
 import asyncio
+import json
+import re
+import unicodedata
 from collections import Counter
 from contextlib import closing
 from pathlib import Path
@@ -44,6 +47,68 @@ async def _download_emojis(
     return entries
 
 
+def _sticker_basename(name: str) -> str:
+    # スタンプ名は絵文字より自由なので、展開先OSの禁止文字とパスを除く。
+    name = unicodedata.normalize("NFC", name)
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f]', "_", name).strip(" .")
+    if not name:
+        return "sticker"
+    if re.fullmatch(r"CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]", name.split(".")[0], re.I):
+        name = f"_{name}"
+    return name
+
+
+async def _download_stickers(
+    stickers: list[discord.GuildSticker], directory: Path
+) -> list[tuple[Path, str]]:
+    basenames = [_sticker_basename(sticker.name) for sticker in stickers]
+    names = Counter(name.casefold() for name in basenames)
+    entries = []
+    metadata = []
+    for sticker, name in zip(stickers, basenames):
+        if sticker.format == discord.StickerFormatType.lottie:
+            # discord.py の read() は Lottie を拒否するため公開CDNから取得する。
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as session:
+                async with session.get(
+                    f"https://cdn.discordapp.com/stickers/{sticker.id}.json"
+                ) as response:
+                    response.raise_for_status()
+                    data = await response.read()
+            if not isinstance(json.loads(data), dict):
+                raise ValueError("スタンプの Lottie JSON が不正です。")
+            extension = "json"
+        else:
+            data = await asyncio.wait_for(sticker.read(), timeout=30)
+            extension = _image_extension(data)
+        filename = f"{name}.{extension}"
+        archive_name = (
+            f"{sticker.id}/{filename}" if names[name.casefold()] > 1 else filename
+        )
+        path = directory / str(sticker.id)
+        await asyncio.to_thread(path.write_bytes, data)
+        entries.append((path, archive_name))
+        metadata.append(
+            {
+                "id": str(sticker.id),
+                "name": sticker.name,
+                "description": sticker.description,
+                "emoji": sticker.emoji,
+                "format": sticker.format.name,
+                "file": archive_name,
+            }
+        )
+    path = directory / "stickers.json"
+    await asyncio.to_thread(
+        path.write_text,
+        json.dumps(metadata, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    entries.append((path, "_metadata/stickers.json"))
+    return entries
+
+
 def _build_archives(
     entries: list[tuple[Path, str]], directory: Path, size_limit: int
 ) -> list[Path]:
@@ -60,7 +125,7 @@ def _build_archives(
             return
         path.unlink()
         if len(batch) == 1:
-            raise ValueError("絵文字1個の ZIP が添付上限を超えるため送信できません。")
+            raise ValueError("ファイル1個の ZIP が添付上限を超えるため送信できません。")
         middle = len(batch) // 2
         pack(batch[:middle])
         pack(batch[middle:])
@@ -84,6 +149,21 @@ class EmojiExport(commands.Cog):
     @commands.max_concurrency(1, per=commands.BucketType.guild, wait=False)
     @app_commands.default_permissions(administrator=True)
     async def export_emojis_temp(self, ctx: commands.Context) -> None:
+        await self._export(ctx, stickers=False)
+
+    @commands.hybrid_command(
+        name="export_stickers_temp",
+        description="サーバーのスタンプを元の形式と名前を保持した ZIP で送信（一時用）",
+    )
+    @commands.guild_only()
+    @commands.has_guild_permissions(administrator=True)
+    @commands.bot_has_permissions(attach_files=True)
+    @commands.max_concurrency(1, per=commands.BucketType.guild, wait=False)
+    @app_commands.default_permissions(administrator=True)
+    async def export_stickers_temp(self, ctx: commands.Context) -> None:
+        await self._export(ctx, stickers=True)
+
+    async def _export(self, ctx: commands.Context, *, stickers: bool) -> None:
         await ctx.defer()
         guild = ctx.guild
         # guild_only に加えて型と直接呼び出し時の前提を明示する。
@@ -91,18 +171,25 @@ class EmojiExport(commands.Cog):
             await ctx.send("このコマンドはサーバー内で実行してください。")
             return
 
+        label = "スタンプ" if stickers else "絵文字"
+        prefix = "stickers" if stickers else "emojis"
         sent = 0
-        with TemporaryDirectory(prefix="comet-emoji-export-") as temporary:
+        with TemporaryDirectory(prefix=f"comet-{prefix}-export-") as temporary:
             directory = Path(temporary)
             try:
-                emojis = [
-                    emoji
-                    for emoji in await guild.fetch_emojis()
-                    if not emoji.name.startswith("m_")
-                ]
-                if not emojis:
+                if stickers:
+                    assets = await guild.fetch_stickers()
+                else:
+                    assets = [
+                        emoji
+                        for emoji in await guild.fetch_emojis()
+                        if not emoji.name.startswith("m_")
+                    ]
+                if not assets:
                     await ctx.send(
-                        "m_ から始まるもの以外のサーバー絵文字はありません。"
+                        "サーバーのスタンプはありません。"
+                        if stickers
+                        else "m_ から始まるもの以外のサーバー絵文字はありません。"
                     )
                     return
 
@@ -110,8 +197,9 @@ class EmojiExport(commands.Cog):
                     guild.filesize_limit,
                     getattr(ctx.interaction, "filesize_limit", guild.filesize_limit),
                 )
+                download = _download_stickers if stickers else _download_emojis
                 entries = await asyncio.wait_for(
-                    _download_emojis(emojis, directory), timeout=600
+                    download(assets, directory), timeout=600
                 )
                 archives = await asyncio.to_thread(
                     _build_archives, entries, directory, size_limit
@@ -119,10 +207,11 @@ class EmojiExport(commands.Cog):
                 for index, path in enumerate(archives, start=1):
                     suffix = f"_{index:02d}" if len(archives) > 1 else ""
                     with closing(
-                        discord.File(path, filename=f"emojis_{guild.id}{suffix}.zip")
+                        discord.File(path, filename=f"{prefix}_{guild.id}{suffix}.zip")
                     ) as attachment:
                         await ctx.send(
-                            f"m_ 以外の絵文字: 合計 {len(emojis)} 個 "
+                            f"{'スタンプ' if stickers else 'm_ 以外の絵文字'}: "
+                            f"合計 {len(assets)} 個 "
                             f"（ZIP {index}/{len(archives)}）",
                             file=attachment,
                         )
@@ -134,18 +223,19 @@ class EmojiExport(commands.Cog):
                 OSError,
                 ValueError,
             ):
-                logger.exception("絵文字 ZIP の出力に失敗: guild_id=%s", guild.id)
+                logger.exception("%s ZIP の出力に失敗: guild_id=%s", label, guild.id)
                 await ctx.send(
-                    "絵文字 ZIP の出力に失敗しました。"
+                    f"{label} ZIP の出力に失敗しました。"
                     f"送信済み ZIP は {sent} 個です。全件の出力は完了していません。"
                     "添付上限・Bot の権限・ログを確認して再実行してください。"
                 )
                 return
 
         logger.info(
-            "絵文字 ZIP を送信: guild_id=%s emojis=%s archives=%s",
+            "%s ZIP を送信: guild_id=%s assets=%s archives=%s",
+            label,
             guild.id,
-            len(emojis),
+            len(assets),
             sent,
         )
 
