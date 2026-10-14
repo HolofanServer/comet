@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import sys
 import uuid
 
 #from discord.ext.prometheus import PrometheusLoggingHandler
@@ -19,7 +20,7 @@ from logging import (
 from typing import Optional
 
 logger = getLogger(__name__)
-handler = StreamHandler()
+handler = StreamHandler(sys.stdout)  # stdoutに出力してRailwayでエラー扱いされないようにする
 handler.setLevel(DEBUG)
 logger.setLevel(DEBUG)
 logger.addHandler(handler)
@@ -117,7 +118,7 @@ def setup_logging(mode: Optional[str] = None):
         api_logger = getLogger("API")
         api_logger.setLevel(DEBUG)
 
-        api_stream_handler = StreamHandler()
+        api_stream_handler = StreamHandler(sys.stdout)  # stdoutに出力
         api_stream_handler.setLevel(DEBUG)
         api_stream_handler.setFormatter(CustomFormatter())
         api_logger.addHandler(api_stream_handler)
@@ -134,7 +135,7 @@ def setup_logging(mode: Optional[str] = None):
 
     logger.setLevel(level)
 
-    handler = StreamHandler()
+    handler = StreamHandler(sys.stdout)  # stdoutに出力してRailwayでエラー扱いされないようにする
     handler.setLevel(level)
     handler.setFormatter(CustomFormatter())
     logger.addHandler(handler)
