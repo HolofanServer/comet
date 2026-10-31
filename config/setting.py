@@ -58,10 +58,25 @@ class Settings:
         self.homepage_target_guild_id: int = int(os.getenv("HOMEPAGE_TARGET_GUILD_ID", "0"))
         self.staff_api_key: str = os.getenv("STAFF_API_KEY", "")
 
+        # HFS Members Card
+        self.hfs_api_base_url: str = os.getenv("HFS_API_BASE_URL", "https://example.com")
+        self.hfs_api_key: str = os.getenv("HFS_API_KEY", "")
+        self.hfs_guild_id: int = int(os.getenv("HFS_GUILD_ID", "0"))
+
+        # MyHFS Linked Roles
+        self.discord_client_id: str = os.getenv("DISCORD_CLIENT_ID", "")
+        self.discord_client_secret: str = os.getenv("DISCORD_CLIENT_SECRET", "")
+        self.myhfs_linked_roles_api_url: str = os.getenv(
+            "MYHFS_LINKED_ROLES_API_URL", "https://card.hfs.jp/api"
+        )
+        self.myhfs_linked_roles_token: str = os.getenv("MYHFS_LINKED_ROLES_TOKEN", "")
+
         #db
         self.database_public_url: str = os.getenv("DATABASE_PUBLIC_URL", "")
         self.tag_moderation_database_url: str = os.getenv("TAG_MODERATION_DATABASE_URL", "")
         self.aus_database_url: str = os.getenv("AUS_DATABASE_URL", "")
+        self.cp_database_url: str = os.getenv("CP_DATABASE_URL", "")
+        self.voice_database_url: str = os.getenv("VOICE_DATABASE_URL", "")
 
         # Note通知機能
         self.note_rss_url: str = os.getenv("NOTE_RSS_URL", "https://note.com/hfs_discord/rss")
@@ -78,6 +93,36 @@ class Settings:
         self.saucenao_api_key: str = os.getenv("SAUCENAO_API_KEY", "")
         self.google_cloud_credentials_json: str = os.getenv("GOOGLE_CLOUD_CREDENTIALS_JSON", "")
         self.google_application_credentials: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+
+        # HFS Server Config
+        self.hfs_main_guild_id: int = int(os.getenv("HFS_MAIN_GUILD_ID", "1092138492173242430"))
+        self.hfs_chat_channel_id: int = int(os.getenv("HFS_CHAT_CHANNEL_ID", "1092138493582520355"))
+        self.hfs_rules_channel_id: int = int(os.getenv("HFS_RULES_CHANNEL_ID", "1120609874158563419"))
+        self.hfs_intro_channel_id: int = int(os.getenv("HFS_INTRO_CHANNEL_ID", "1092682540986408990"))
+        self.hfs_welcome_image_channel_id: int = int(os.getenv("HFS_WELCOME_IMAGE_CHANNEL_ID", "1373853775235649639"))
+
+        # Omikuji Config
+        omikuji_ids = os.getenv("OMIKUJI_CHANNEL_IDS", "889075104481423461,1096027971900428388")
+        self.omikuji_channel_ids: list[int] = [int(x) for x in omikuji_ids.split(",") if x]
+
+        # Bump Notice
+        self.disboard_bot_id: int = int(os.getenv("DISBOARD_BOT_ID", "302050872383242240"))
+        self.bump_image_url: str = os.getenv("BUMP_IMAGE_URL", "https://images.frwi.net/data/images/3908cc04-e168-4801-8783-f5799fa92c57.png")
+
+        # Oshi Role Panel
+        self.oshi_panel_image_url: str = os.getenv("OSHI_PANEL_IMAGE_URL", "https://images.frwi.net/data/images/31dd6e9b-25e3-4a15-a783-1c7b0054b10f.png")
+
+        # Holopittan Forum
+        self.holopittan_forum_channel_id: int = int(os.getenv("HOLOPITTAN_FORUM_CHANNEL_ID", "1378760737027260466"))
+        self.holopittan_guide_channel_id: int = int(os.getenv("HOLOPITTAN_GUIDE_CHANNEL_ID", "1378761943531126937"))
+        self.holopittan_feedback_channel_id: int = int(os.getenv("HOLOPITTAN_FEEDBACK_CHANNEL_ID", "1378761627280867498"))
+
+        # P2P地震情報
+        self.p2p_earthquake_sandbox: bool = os.getenv("P2P_EARTHQUAKE_SANDBOX", "false").lower() == "true"
+
+        # API CORS
+        cors_origins = os.getenv("API_CORS_ORIGINS", "http://localhost:3000")
+        self.api_cors_origins: list[str] = [x.strip() for x in cors_origins.split(",") if x.strip()]
 
 _settings = None
 

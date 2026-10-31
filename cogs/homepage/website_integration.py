@@ -118,7 +118,7 @@ class WebsiteIntegration(commands.Cog):
             pass
             return False
 
-    @commands.hybrid_group(name="website")
+    @commands.group(name="website")
     async def website(self, ctx):
         """ウェブサイト関連のコマンドグループ"""
         if ctx.invoked_subcommand is None:

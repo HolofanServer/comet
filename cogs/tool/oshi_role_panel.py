@@ -10,10 +10,15 @@ import httpx
 from discord import app_commands
 from discord.ext import commands
 
+from config.setting import get_settings
 from utils.db_manager import db
 from utils.logging import setup_logging
 
 logger = setup_logging("D")
+settings = get_settings()
+
+# 設定から取得
+OSHI_PANEL_IMAGE_URL = settings.oshi_panel_image_url
 
 # --- 推しロールパネル用のCog ---
 class OshiRolePanel(commands.Cog):
@@ -219,7 +224,7 @@ class OshiRolePanel(commands.Cog):
 
         await self.scan_roles_for_icons(ctx.guild)
 
-        image_url = "https://images.frwi.net/data/images/31dd6e9b-25e3-4a15-a783-1c7b0054b10f.png"
+        image_url = OSHI_PANEL_IMAGE_URL
 
         await ctx.send(f"{channel.mention}に推しロールパネルを作成します...")
         _text = "選択欄の横にある絵文字が付きます。\n\n仕様上リストの上のメンバーの絵文字から優先してつきますので、ご了承ください。\n\n《例》\nそらともと35Pを選択した場合は**そらちゃんのみ**名前の横に表示されます。"

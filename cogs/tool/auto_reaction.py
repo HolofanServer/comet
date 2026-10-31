@@ -100,6 +100,10 @@ class AutoReactionCog(commands.Cog):
         if message.author.bot:
             return
 
+        # DMは無視
+        if not message.guild:
+            return
+
         async with db.pool.acquire() as conn:
             reactions = await conn.fetch(
                 "SELECT reaction FROM auto_reactions WHERE guild_id = $1 AND $2 LIKE '%' || trigger_word || '%'",

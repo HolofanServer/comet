@@ -364,7 +364,7 @@ class StaffManager(commands.Cog):
         else:
             await ctx.send("❌ スタッフ情報の更新中にエラーが発生しました。詳細はログを確認してください。")
 
-    @commands.hybrid_command(name="ひとこと")
+    @commands.command(name="ひとこと")
     async def set_message_command(self, ctx, *, message: str = None):
         """自分の一言メッセージを設定するコマンド"""
         try:
@@ -410,7 +410,7 @@ class StaffManager(commands.Cog):
             logger.error(f'メッセージ設定中にエラーが発生しました: {e}')
             await ctx.send("❌ メッセージの設定中にエラーが発生しました。")
 
-    @commands.hybrid_command(name="ひとことリセット")
+    @commands.command(name="ひとことリセット")
     async def clear_message_command(self, ctx):
         """自分の一言メッセージをリセットするコマンド"""
         try:

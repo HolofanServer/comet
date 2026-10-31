@@ -105,6 +105,203 @@ self.config_path = 'config/members.json'
 
 ---
 
+### 2. メンバーズカード (`members_card.py`)
+
+**目的**: HFS Members Card APIとの連携、メンバーカードURL管理機能を提供します。
+
+**主要機能**:
+- **プロフィール表示**: ユーザーのメンバーカード情報を表示
+- **統計情報**: サーバー全体のメンバーカード統計を表示
+- **リンク管理**: ユーザーのリンク一覧を表示
+- **推し管理**: ユーザーの推しメンバー情報を表示
+- **メンバー同期**: 10秒ごとにDiscordメンバーリストをAPIに同期
+- **Members Card URL管理**: メンバーカードURLの設定・取得・削除
+
+#### API設定
+```python
+# HFS Members Card API
+self.api_base_url = settings.hfs_api_base_url  # https://card.hfs.jp/api/bot
+self.api_key = settings.hfs_api_key
+self.hfs_guild_id = settings.hfs_guild_id
+
+# ウェブサイトAPI（Members Card URL管理用）
+self.website_api_url = "https://hfs.jp"
+self.website_api_token = settings.homepage_api_token
+```
+
+#### 利用可能なコマンド
+
+##### プロフィール表示コマンド
+
+| コマンド | タイプ | 権限 | 説明 |
+|---------|------|------|------|
+| `/card` | スラッシュ | 誰でも | ユーザーのプロフィールを表示 |
+| `/cstats` | スラッシュ | 誰でも | サーバー全体の統計情報を表示 |
+| `/links` | スラッシュ | 誰でも | ユーザーのリンク一覧を表示 |
+| `/oshi` | スラッシュ | 誰でも | 推しメンバーの情報を表示 |
+| `/cranking` | スラッシュ | 誰でも | 各種ランキングを表示（開発中） |
+
+##### Members Card URL管理コマンド
+
+| コマンド | タイプ | 権限 | 説明 |
+|---------|------|------|------|
+| `/set_card_url` | スラッシュ | 誰でも | HFS Members Card URLを設定 |
+| `/get_card_url` | スラッシュ | 誰でも | HFS Members Card URLを取得 |
+| `/delete_card_url` | スラッシュ | 誰でも | HFS Members Card URLを削除 |
+
+#### `/card` - プロフィール表示
+
+メンバーカード情報を詳細に表示します。
+
+**パラメータ**:
+- `ユーザー` (オプション): 表示するユーザー（省略で自分）
+- `メンバー番号` (オプション): メンバー番号で検索
+- `ユーザー名` (オプション): ユーザー名で検索
+
+**表示内容**:
+- メンバー番号（#0001形式）
+- 表示名とプロフィール画像
+- 自己紹介
+- ロール（Admin, Mod, Staff, CMod）
+- バッジ
+- 推しメンバー
+- リンク一覧（上位5件、クリック数付き）
+- 統計情報（総リンク数、閲覧数、クリック数）
+- 短縮URL
+
+#### `/cstats` - 統計情報表示
+
+サーバー全体のメンバーカード統計を表示します。
+
+**表示内容**:
+- 総ユーザー数
+- プロフィール作成済みユーザー数
+- 総リンク数
+- 総閲覧数
+- 最近登録したユーザー（上位5名）
+
+#### `/links` - リンク一覧表示
+
+ユーザーのリンク一覧を詳細に表示します。
+
+**パラメータ**:
+- `ユーザー` (オプション): 表示するユーザー（省略で自分）
+- `メンバー番号` (オプション): メンバー番号で検索
+
+**表示内容**:
+- リンクタイトル
+- リンクURL
+- クリック数
+
+#### `/oshi` - 推し情報表示
+
+ユーザーの推しメンバー情報を表示します。
+
+**パラメータ**:
+- `ユーザー` (オプション): 表示するユーザー（省略で自分）
+
+**表示内容**:
+- 推しメンバーの絵文字と名前
+- 推しの色（Embedカラーに反映）
+
+#### Members Card URL管理機能
+
+HFS Members Card URLの設定・取得・削除を行います。
+
+**API詳細**:
+- **エンドポイント**: `https://hfs.jp/api/members/update-card-url`
+- **認証**: `HOMEPAGE_API_TOKEN`によるBearerトークン
+- **対象**: スタッフ、スペシャルサンクス、テスターのメンバー
+
+##### `/set_card_url` - URL設定
+
+HFS Members Card URLを設定または更新します。
+
+**パラメータ**:
+- `url` (必須): HFS Members Card URL
+  - 形式: `https://card.hfs.jp/members/[番号]` または `https://c.hfs.jp/[スラッグ]`
+
+**使用例**:
+```
+/set_card_url url:https://card.hfs.jp/members/1
+/set_card_url url:https://c.hfs.jp/freewifi
+```
+
+**レスポンス**:
+- 成功: ✅ HFS Members Card URLを設定しました！
+- エラー: ❌ エラーが発生しました: [エラー内容]
+
+##### `/get_card_url` - URL取得
+
+HFS Members Card URLを取得します。
+
+**パラメータ**:
+- `ユーザー` (オプション): URLを取得するユーザー（省略で自分）
+
+**使用例**:
+```
+/get_card_url
+/get_card_url ユーザー:@FreeWiFi
+```
+
+**レスポンス**:
+- 設定済み: 📇 [名前] のHFS Members Card URL: [URL]
+- 未設定: 📇 [名前] のHFS Members Card URLは未設定です。
+- エラー: ❌ メンバーが見つかりませんでした。
+
+##### `/delete_card_url` - URL削除
+
+HFS Members Card URLを削除します。
+
+**使用例**:
+```
+/delete_card_url
+```
+
+**レスポンス**:
+- 成功: ✅ HFS Members Card URLを削除しました！
+- エラー: ❌ エラーが発生しました: [エラー内容]
+
+#### メンバー同期機能
+
+**自動同期**:
+```python
+@tasks.loop(seconds=10)
+async def sync_members_task(self):
+    await self.sync_members_to_api()
+```
+
+**同期タイミング**:
+- 10秒ごとの定期同期
+- メンバー参加時（`on_member_join`）
+- メンバー退出時（`on_member_remove`）
+
+**送信データ**:
+- ギルドID
+- メンバーIDリスト（Bot除く）
+
+#### エラーハンドリング
+
+- API認証エラー: 設定不備を警告
+- レート制限: 429ステータスを検出して待機を促す
+- ユーザー未検出: 404エラーを適切に処理
+- タイムアウト: 10秒のタイムアウトを設定
+
+#### 環境変数
+
+```bash
+# HFS Members Card API
+HFS_API_BASE_URL=https://card.hfs.jp/api/bot
+HFS_API_KEY=your_api_key_here
+HFS_GUILD_ID=1092138492173242430
+
+# ウェブサイトAPI（Members Card URL管理用）
+HOMEPAGE_API_URL=https://hfs.jp/api/
+HOMEPAGE_API_TOKEN=your_api_token_here
+```
+
+---
+
 ## 関連ドキュメント
 
 - [API統合](../04-utilities/02-api-integration.md)
