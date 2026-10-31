@@ -21,6 +21,8 @@ PROTECTED_ROLE_IDS = {1093678152317935696, 1093387737840746646, 1092988310378512
 # Staff を表示せず管理者ロールを使っている、依頼者自身の運営アカウント。
 EXEMPT_MEMBER_IDS = {1092294459317833748}
 BACKUP_DIRECTORY = Path("data/server_closure")
+# Discord JSON error 30060: channel permission overwrite limit.
+MAX_PERMISSION_OVERWRITES = 1000
 OverwriteMap = dict[tuple[int, int], discord.PermissionOverwrite]
 
 
@@ -172,7 +174,10 @@ def _plan(snapshot: Snapshot, bot_id: int) -> Plan:
 
         # @everyone 拒否によって運営・Bot が失う既存の閲覧権限だけを補う。
         for role_id in protected:
-            if _can_view(guild, roles, [role_id], None, before):
+            # 管理者はチャンネルの拒否を無視するため、上書きを増やさない。
+            if not roles[role_id].permissions.administrator and _can_view(
+                guild, roles, [role_id], None, before
+            ):
                 after.setdefault(
                     (0, role_id), discord.PermissionOverwrite()
                 ).view_channel = True
@@ -187,11 +192,32 @@ def _plan(snapshot: Snapshot, bot_id: int) -> Plan:
                 ).view_channel = visible_before
 
         if before != after:
+            if len(after) > MAX_PERMISSION_OVERWRITES:
+                blockers.append(
+                    f"権限上書き数が上限 {MAX_PERMISSION_OVERWRITES} を超えます: "
+                    f"{channel.id}（変更後 {len(after)} 件）"
+                )
             permissions = channel.permissions_for(members[bot_id])
             if not (permissions.manage_roles and permissions.manage_channels):
                 blockers.append(f"Bot の権限不足: {channel.id}")
             changes.append(Change(channel, before, after))
     return Plan(snapshot, protected, changes, blockers)
+
+
+async def _check_onboarding(plan: Plan) -> None:
+    guild = plan.snapshot.guild
+    if not plan.changes or "COMMUNITY" not in guild.features:
+        return
+    onboarding = await guild.onboarding()
+    blocked = {change.channel.id for change in plan.changes} & (
+        onboarding.default_channel_ids if onboarding.enabled else set()
+    )
+    if blocked:
+        plan.blockers.append(
+            "オンボーディングのデフォルトチャンネルは非公開にできません"
+            "（Discord 350003）。サーバー設定でオンボーディングを解除してから"
+            "再実行してください。対象: " + ", ".join(map(str, sorted(blocked)))
+        )
 
 
 def _save_backup(plan: Plan, actor_id: int) -> Path:
@@ -243,6 +269,23 @@ def _verify(plan: Plan, latest: Snapshot, bot_id: int) -> None:
         raise ValueError("処理中にサーバーのロール構成・権限が変更されました。")
 
 
+def _failure_detail(error: Exception) -> str:
+    if isinstance(error, discord.HTTPException):
+        detail = f"Discord HTTP {error.status} / code {error.code}: {error.text}"
+        if error.code == 350003:
+            detail = (
+                "オンボーディング対象チャンネルの非公開化が Discord に拒否されました。"
+                "サーバー設定でオンボーディングとデフォルトチャンネルの設定を"
+                "解除してから再実行してください。 " + detail
+            )
+    elif isinstance(error, asyncio.TimeoutError):
+        detail = "Discord との通信がタイムアウトしました。"
+    else:
+        detail = f"{type(error).__name__}: {error}"
+    # API の長い入力検証エラーでも Discord のメッセージ上限を超えない。
+    return detail if len(detail) <= 800 else detail[:797] + "..."
+
+
 class ServerClose(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -272,13 +315,18 @@ class ServerClose(commands.Cog):
         await ctx.defer(ephemeral=True)
         completed = 0
         backup = None
+        phase = "情報取得"
+        channel_id = None
         try:
             snapshot = await _snapshot(self.bot)
             # decorator に加え、現在の実行者の権限を REST の情報で再確認。
             actor = snapshot.members.get(ctx.author.id)
             if actor is None or not actor.guild_permissions.administrator:
                 raise ValueError("実行者の管理者権限を確認できません。")
+            phase = "計画作成"
             plan = _plan(snapshot, self.bot.user.id)
+            phase = "オンボーディング確認"
+            await _check_onboarding(plan)
             summary = (
                 f"変更対象: {len(plan.changes)} チャンネル（カテゴリを含む）。\n"
                 f"例外: <#{EXCLUDED_CHANNEL_ID}> の権限は変更しません。\n"
@@ -305,7 +353,9 @@ class ServerClose(commands.Cog):
             if not plan.changes:
                 await ctx.send("変更対象はありません。", ephemeral=True)
                 return
+            phase = "バックアップ保存"
             backup = await asyncio.to_thread(_save_backup, plan, ctx.author.id)
+            phase = "バックアップ送信"
             with closing(discord.File(backup, filename=backup.name)) as attachment:
                 await ctx.send(
                     summary
@@ -316,6 +366,8 @@ class ServerClose(commands.Cog):
                 )
             reason = f"HFS server_close by {ctx.author.id}; backup={backup.name}"
             for change in plan.changes:
+                phase = "チャンネル取得"
+                channel_id = change.channel.id
                 current = await snapshot.guild.fetch_channel(change.channel.id)
                 if (
                     _overwrites(current) != change.before
@@ -324,6 +376,7 @@ class ServerClose(commands.Cog):
                     raise ValueError(
                         f"処理中に権限・カテゴリが変更されました: {current.id}"
                     )
+                phase = "権限更新"
                 await current.edit(
                     overwrites=_edit_overwrites(change.after), reason=reason
                 )
@@ -334,6 +387,8 @@ class ServerClose(commands.Cog):
                     current.id,
                     ctx.author.id,
                 )
+            phase = "最終検証"
+            channel_id = None
             _verify(plan, await _snapshot(self.bot), self.bot.user.id)
         except (
             discord.HTTPException,
@@ -343,18 +398,26 @@ class ServerClose(commands.Cog):
             asyncio.TimeoutError,
         ) as error:
             logger.exception(
-                "サーバー閉鎖未完了: guild_id=%s updated=%s", GUILD_ID, completed
+                "サーバー閉鎖未完了: guild_id=%s updated=%s phase=%s "
+                "channel_id=%s backup=%s",
+                GUILD_ID,
+                completed,
+                phase,
+                channel_id,
+                backup.name if backup else None,
             )
             await ctx.send(
                 f"閉鎖は完了していません。更新成功: {completed} チャンネル。"
-                "権限・同時変更・ログを確認してください。"
-                + (f" {error}" if isinstance(error, ValueError) else "")
+                f"\n処理: {phase}"
+                + (f" / チャンネル: {channel_id}" if channel_id else "")
+                + f"\n原因: {_failure_detail(error)}"
                 + (
-                    f" バックアップ: {backup.name}"
+                    f"\nバックアップ: {backup.name}"
                     if backup
-                    else " 変更前バックアップ未作成。"
+                    else "\n変更前バックアップ未作成。"
                 ),
                 ephemeral=True,
+                allowed_mentions=discord.AllowedMentions.none(),
             )
             return
         await ctx.send(

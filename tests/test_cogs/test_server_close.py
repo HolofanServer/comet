@@ -1,5 +1,6 @@
 """実際の discord.py 権限計算で閉鎖計画とコマンドを検証する。通信は行わない。"""
 
+import asyncio
 import copy
 import importlib
 import json
@@ -150,7 +151,8 @@ def test_closes_every_channel_type_and_individual_escape_routes(close_module, pa
     before = snapshot_from(module, payload)
     plan = module._plan(before, BOT)
     assert not plan.blockers
-    assert len(plan.changes) == 8
+    assert len(plan.changes) == 7
+    assert PRIVATE not in {change.channel.id for change in plan.changes}
     assert plan.changes[-1].channel.id == CATEGORY
     after = snapshot_from(module, apply_to_payload(module, payload, plan))
     for channel in after.channels:
@@ -385,7 +387,7 @@ async def test_execute_backs_up_before_edit_and_verifies(close_module, execution
     await execution.cog.server_close.callback(
         execution.cog, execution.ctx, execute=True
     )
-    assert len(observed) == 8
+    assert len(observed) == 7
     assert "権限検証が完了" in execution.ctx.send.call_args.args[0]
     assert execution.collector.await_count == 2
     assert all("reason" in item for item in observed)
@@ -414,7 +416,7 @@ async def test_failures_never_claim_success(
         execution.cog, execution.ctx, execute=True
     )
     assert "閉鎖は完了していません" in execution.ctx.send.call_args.args[0]
-    expected = {"backup": 0, "attachment": 0, "second_edit": 2, "verify": 8}[failure]
+    expected = {"backup": 0, "attachment": 0, "second_edit": 2, "verify": 7}[failure]
     assert execution.edits.await_count == expected
     if failure == "second_edit":
         assert "更新成功: 1" in execution.ctx.send.call_args.args[0]
@@ -506,3 +508,200 @@ async def test_extension_registers_and_unloads_hybrid_command(close_module):
         assert bot.tree.get_command("server_close") is None
     finally:
         await bot.close()
+
+
+def test_admin_bot_role_does_not_gain_redundant_overwrite(close_module, payload):
+    plan = close_module._plan(snapshot_from(close_module, payload), BOT)
+    for change in plan.changes:
+        assert (0, MANAGED_BOT) not in change.after
+    final = snapshot_from(close_module, apply_to_payload(close_module, payload, plan))
+    assert not close_module._plan(final, BOT).changes
+    close_module._verify(plan, final, BOT)
+
+
+def test_overwrite_limit_blocks_before_execution(close_module, payload):
+    channel = payload["channels"][1]
+    channel["permission_overwrites"] = [
+        overwrite(10000 + index, kind=1) for index in range(999)
+    ] + [overwrite(close_module.GUILD_ID)]
+    plan = close_module._plan(snapshot_from(close_module, payload), BOT)
+    assert any(str(TEXT) in item and "1000" in item for item in plan.blockers)
+
+
+@pytest.mark.asyncio
+async def test_third_edit_reports_http_failure_and_channel(close_module, execution):
+    error = close_module.discord.Forbidden(
+        SimpleNamespace(status=403, reason="Forbidden"),
+        {"code": 50013, "message": "Missing Permissions " + "x" * 3000},
+    )
+    execution.edits.side_effect = [None, None, error]
+    await execution.cog.server_close.callback(
+        execution.cog, execution.ctx, execute=True
+    )
+    message = execution.ctx.send.call_args.args[0]
+    assert "更新成功: 2" in message
+    assert "処理: 権限更新" in message
+    assert f"チャンネル: {execution.plan.changes[2].channel.id}" in message
+    assert "403" in message and "50013" in message
+    assert "原因:" in message
+    assert len(message) <= 2000
+    assert execution.edits.await_count == 3
+    mentions = execution.ctx.send.call_args.kwargs["allowed_mentions"]
+    assert not mentions.everyone and not mentions.users and not mentions.roles
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("failure", "phase", "cause"),
+    [
+        ("timeout", "チャンネル取得", "タイムアウト"),
+        ("backup", "バックアップ保存", "disk full"),
+        ("verify", "最終検証", "未閉鎖"),
+    ],
+)
+async def test_failures_report_phase_and_cause(
+    close_module, execution, monkeypatch, failure, phase, cause
+):
+    if failure == "timeout":
+        monkeypatch.setattr(
+            close_module.discord.Guild,
+            "fetch_channel",
+            AsyncMock(side_effect=asyncio.TimeoutError()),
+        )
+    elif failure == "backup":
+
+        def fail_backup(*args):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(close_module, "_save_backup", fail_backup)
+    else:
+        execution.collector.side_effect = [execution.initial, execution.initial]
+    await execution.cog.server_close.callback(
+        execution.cog, execution.ctx, execute=True
+    )
+    message = execution.ctx.send.call_args.args[0]
+    assert f"処理: {phase}" in message
+    assert "原因:" in message and cause in message
+    assert len(message) <= 2000
+    mentions = execution.ctx.send.call_args.kwargs["allowed_mentions"]
+    assert not mentions.everyone and not mentions.users and not mentions.roles
+
+
+def test_exact_overwrite_limit_is_allowed(close_module, payload):
+    channel = payload["channels"][1]
+    channel["permission_overwrites"] = [
+        overwrite(10000 + index, kind=1) for index in range(996)
+    ] + [overwrite(close_module.GUILD_ID)]
+    plan = close_module._plan(snapshot_from(close_module, payload), BOT)
+    change = next(change for change in plan.changes if change.channel.id == TEXT)
+    assert len(change.after) == 1000
+    assert not plan.blockers
+
+
+@pytest.mark.asyncio
+async def test_overwrite_limit_aborts_before_backup_or_edit(
+    close_module, execution, payload, tmp_path
+):
+    payload["channels"][1]["permission_overwrites"] = [
+        overwrite(10000 + index, kind=1) for index in range(999)
+    ] + [overwrite(close_module.GUILD_ID)]
+    execution.collector.side_effect = [snapshot_from(close_module, payload)]
+    await execution.cog.server_close.callback(
+        execution.cog, execution.ctx, execute=True
+    )
+    execution.edits.assert_not_awaited()
+    assert not list(tmp_path.iterdir())
+    message = execution.ctx.send.call_args.args[0]
+    assert "実行不可（変更なし）" in message
+    assert "1000" in message and str(TEXT) in message
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("enabled", "default_ids", "blocked"),
+    [(True, [TEXT], True), (False, [TEXT], False), (True, [], False)],
+)
+async def test_onboarding_default_channels_checked_before_backup(
+    close_module, execution, monkeypatch, tmp_path, enabled, default_ids, blocked
+):
+    execution.initial.guild.features.append("COMMUNITY")
+    fetch = AsyncMock(
+        return_value=SimpleNamespace(
+            enabled=enabled, default_channel_ids=set(default_ids)
+        )
+    )
+    monkeypatch.setattr(close_module.discord.Guild, "onboarding", fetch)
+    await execution.cog.server_close.callback(
+        execution.cog, execution.ctx, execute=True
+    )
+    fetch.assert_awaited_once()
+    message = execution.ctx.send.call_args.args[0]
+    if blocked:
+        execution.edits.assert_not_awaited()
+        assert not list(tmp_path.iterdir())
+        for expected in ("オンボーディング", "350003", str(TEXT), "解除"):
+            assert expected in message
+    else:
+        assert "権限検証が完了" in message
+
+
+@pytest.mark.asyncio
+async def test_onboarding_exception_channel_does_not_block(
+    close_module, execution, monkeypatch
+):
+    execution.initial.guild.features.append("COMMUNITY")
+    monkeypatch.setattr(
+        close_module.discord.Guild,
+        "onboarding",
+        AsyncMock(
+            return_value=SimpleNamespace(
+                enabled=True, default_channel_ids={close_module.EXCLUDED_CHANNEL_ID}
+            )
+        ),
+    )
+    await execution.cog.server_close.callback(
+        execution.cog, execution.ctx, execute=True
+    )
+    assert "権限検証が完了" in execution.ctx.send.call_args.args[0]
+
+
+@pytest.mark.asyncio
+async def test_onboarding_fetch_failure_prevents_all_writes(
+    close_module, execution, monkeypatch, tmp_path
+):
+    execution.initial.guild.features.append("COMMUNITY")
+    monkeypatch.setattr(
+        close_module.discord.Guild,
+        "onboarding",
+        AsyncMock(
+            side_effect=close_module.discord.Forbidden(
+                SimpleNamespace(status=403, reason="Forbidden"),
+                {"code": 50013, "message": "Missing Permissions"},
+            )
+        ),
+    )
+    await execution.cog.server_close.callback(
+        execution.cog, execution.ctx, execute=True
+    )
+    execution.edits.assert_not_awaited()
+    assert not list(tmp_path.iterdir())
+    message = execution.ctx.send.call_args.args[0]
+    assert "処理: オンボーディング確認" in message
+    assert "50013" in message
+
+
+@pytest.mark.asyncio
+async def test_onboarding_http_race_explains_settings_removal(close_module, execution):
+    execution.edits.side_effect = close_module.discord.HTTPException(
+        SimpleNamespace(status=400, reason="Bad Request"),
+        {
+            "code": 350003,
+            "message": "Onboarding channels must be readable by everyone.",
+        },
+    )
+    await execution.cog.server_close.callback(
+        execution.cog, execution.ctx, execute=True
+    )
+    message = execution.ctx.send.call_args.args[0]
+    for expected in ("350003", "オンボーディング", "解除"):
+        assert expected in message
